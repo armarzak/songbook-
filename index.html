@@ -41,6 +41,25 @@
   --chord:#86B6FF; --accent:#86B6FF; --on-accent:#0A1424; --danger:#FF8A80; --bar:rgba(17,19,18,.94); --grid:#343A35; --string:#5E665F; --warn:#F2A35E; --warn-bg:#33251A; --good:#7DD08E; --good-bg:#1C2E20; --shadow:rgba(0,0,0,.4); --scrim:rgba(0,0,0,.55);
   color-scheme:dark;
 }
+/* Chosen skins override the automatic light/dark palette */
+:root[data-skin="midnight"]{
+  --bg:#000000; --surface:#0E0E10; --sunk:#1B1B1F; --fg:#F2EFE9; --muted:#9A968E; --line:#27272C;
+  --chord:#FFB648; --accent:#FFB648; --on-accent:#1A1100; --danger:#FF7A6E; --bar:rgba(0,0,0,.9); --scrim:rgba(0,0,0,.65);
+  --grid:#2A2A30; --string:#5C5C64; --warn:#FF9F5A; --warn-bg:#2A1A0C; --good:#7DD08E; --good-bg:#12241A; --shadow:rgba(0,0,0,.6);
+  color-scheme:dark;
+}
+:root[data-skin="ocean"]{
+  --bg:#0B1622; --surface:#112233; --sunk:#182C41; --fg:#E6F1FA; --muted:#8FA6BA; --line:#223B53;
+  --chord:#5EE0D0; --accent:#5EE0D0; --on-accent:#04201D; --danger:#FF8A80; --bar:rgba(11,22,34,.92); --scrim:rgba(2,8,14,.6);
+  --grid:#25415B; --string:#4F6E89; --warn:#F7B267; --warn-bg:#2E2416; --good:#7FE3A6; --good-bg:#12302A; --shadow:rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+:root[data-skin="lavender"]{
+  --bg:#F4F2FA; --surface:#FFFFFF; --sunk:#E9E5F5; --fg:#1E1A2E; --muted:#6B6585; --line:#DAD4EC;
+  --chord:#6A3FD0; --accent:#6A3FD0; --on-accent:#FFFFFF; --danger:#B3261E; --bar:rgba(244,242,250,.92); --scrim:rgba(20,14,40,.35);
+  --grid:#D3CCE8; --string:#9C94B8; --warn:#A8520A; --warn-bg:#FBEBDD; --good:#2D7A3E; --good-bg:#E2F1E5; --shadow:rgba(40,20,90,.12);
+  color-scheme:light;
+}
 html,body{background:var(--bg);color:var(--fg)}
 body{font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
 *{box-sizing:border-box}
@@ -175,6 +194,15 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 .verdict.ok{background:var(--good-bg);color:var(--good)}
 .verdict.bad{background:var(--warn-bg);color:var(--warn)}
 
+.skins{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:4px}
+.skin{all:unset;box-sizing:border-box;cursor:pointer;border-radius:14px;border:2px solid var(--line);overflow:hidden;background:var(--surface)}
+.skin:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.skin[aria-pressed="true"]{border-color:var(--accent)}
+.skin .sw{display:flex;flex-direction:column;justify-content:center;gap:3px;height:64px;padding:0 12px;font-family:var(--f-mono)}
+.skin .sw b{font-size:15px}
+.skin .sw i{font-style:normal;font-size:11px;opacity:.8;font-family:var(--f-body)}
+.skin .nm{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;font-size:13px;font-weight:600}
+.skin .nm span{color:var(--accent);font-size:15px}
 .backup{margin-top:28px;padding-top:6px;border-top:1px solid var(--line)}
 label.btn{cursor:pointer}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
@@ -668,6 +696,10 @@ function renderList(){
     <ul class="songs" id="songs"></ul>
     <p class="note" id="note"></p>
     <section class="backup">
+      <h3 class="sec-h">Оформление</h3>
+      <div class="skins" id="skins"></div>
+    </section>
+    <section class="backup">
       <h3 class="sec-h">Резервная копия</h3>
       <p class="sec-p">Один файл со всеми песнями и вашими схемами. Через него песни переносятся между облачной и офлайн-версией песенника или на новый телефон.</p>
       <div class="actions" style="justify-content:flex-start">
@@ -677,7 +709,34 @@ function renderList(){
       </div>
     </section>
   </div>`;
-  fillList();
+  fillList(); fillSkins();
+}
+
+/* ---------- themes ---------- */
+/* Swatches depict each theme's own colors, so they use fixed values on purpose. */
+const SKINS=[
+  {id:'auto',name:'Авто',hint:'как на телефоне',bg:'linear-gradient(135deg,#F1F2EE 50%,#111312 50%)',fg:'#191B19',ch:'#1A57AE'},
+  {id:'midnight',name:'Полночь',hint:'для сцены и темноты',bg:'#000000',fg:'#F2EFE9',ch:'#FFB648'},
+  {id:'ocean',name:'Океан',hint:'спокойный тёмный',bg:'#0B1622',fg:'#E6F1FA',ch:'#5EE0D0'},
+  {id:'lavender',name:'Лаванда',hint:'мягкий светлый',bg:'#F4F2FA',fg:'#1E1A2E',ch:'#6A3FD0'}
+];
+const themeMetas=[...document.querySelectorAll('meta[name="theme-color"]')].map(m=>({m,c:m.getAttribute('content'),media:m.getAttribute('media')}));
+function applySkin(id){
+  const root=document.documentElement;
+  if(!SKINS.some(s=>s.id===id))id='auto';
+  if(id==='auto')delete root.dataset.skin; else root.dataset.skin=id;
+  S.skin=id;
+  const bg=getComputedStyle(root).getPropertyValue('--bg').trim();
+  themeMetas.forEach(({m,c,media})=>{
+    if(id==='auto'){m.setAttribute('content',c);if(media)m.setAttribute('media',media)}
+    else{m.setAttribute('content',bg);m.removeAttribute('media')}
+  });
+}
+function fillSkins(){
+  const el=document.getElementById('skins'); if(!el)return;
+  el.innerHTML=SKINS.map(s=>`<button class="skin" data-act="skin" data-s="${s.id}" aria-pressed="${S.skin===s.id}">
+    <span class="sw" style="background:${s.bg};color:${s.fg}"><b style="color:${s.ch}">Am&nbsp;&nbsp;F&nbsp;&nbsp;C</b><i>${esc(s.hint)}</i></span>
+    <span class="nm">${esc(s.name)}${S.skin===s.id?'<span aria-hidden="true">✓</span>':''}</span></button>`).join('');
 }
 function fillList(){
   const ul=document.getElementById('songs'); if(!ul)return;
@@ -1018,6 +1077,7 @@ document.addEventListener('click',e=>{
   else if(a==='tab-chart')renderChart();
   else if(a==='import')renderImport();
   else if(a==='export')exportBackup();
+  else if(a==='skin'){applySkin(b.dataset.s);lsSet('sb.skin',S.skin);fillSkins()}
   else if(a==='imp-save'){const f=impFields();if(!f.title){document.getElementById('ie-title').textContent='Введите название песни.';document.getElementById('i-title').focus();return}saveSong(null,f)}
   else if(a==='imp-edit')renderEditor(null,impFields());
   else if(a==='new-shape')renderShapeEditor(null);
@@ -1061,6 +1121,7 @@ document.addEventListener('input',e=>{
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden)closeSheet()});
 
 /* ---------- boot ---------- */
+applySkin(lsGet('sb.skin')||'auto');
 renderList();
 initStore().then(st=>{
   store=st;
