@@ -1,0 +1,1087 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Песенник">
+<meta name="theme-color" content="#F1F2EE" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111312" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-180.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<script>window.SONGBOOK_OFFLINE=true</script>
+</head>
+<body><title>Мой песенник</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+:root{
+  /* Layout: one-column phone songbook. Sticky header, monospaced chord sheet, toolbar in thumb reach at the bottom. */
+  --bg:#F1F2EE; --surface:#FFFFFF; --sunk:#E5E8E1; --fg:#191B19; --muted:#636A61; --line:#D3D8CD;
+  --chord:#1A57AE; --accent:#1A57AE; --on-accent:#FFFFFF; --danger:#B3261E; --bar:rgba(241,242,238,.94); --grid:#CDD2C8; --string:#9AA196; --warn:#A8520A; --warn-bg:#FBEBDD; --good:#2D7A3E; --good-bg:#E2F1E5; --shadow:rgba(0,0,0,.1); --scrim:rgba(10,12,10,.38);
+  --f-display:"Unbounded",system-ui,sans-serif;
+  --f-body:"Onest",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --fs:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111312; --surface:#1A1D1B; --sunk:#232724; --fg:#ECEEE9; --muted:#9BA298; --line:#2F3430;
+    --chord:#86B6FF; --accent:#86B6FF; --on-accent:#0A1424; --danger:#FF8A80; --bar:rgba(17,19,18,.94); --grid:#343A35; --string:#5E665F; --warn:#F2A35E; --warn-bg:#33251A; --good:#7DD08E; --good-bg:#1C2E20; --shadow:rgba(0,0,0,.4); --scrim:rgba(0,0,0,.55);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111312; --surface:#1A1D1B; --sunk:#232724; --fg:#ECEEE9; --muted:#9BA298; --line:#2F3430;
+  --chord:#86B6FF; --accent:#86B6FF; --on-accent:#0A1424; --danger:#FF8A80; --bar:rgba(17,19,18,.94); --grid:#343A35; --string:#5E665F; --warn:#F2A35E; --warn-bg:#33251A; --good:#7DD08E; --good-bg:#1C2E20; --shadow:rgba(0,0,0,.4); --scrim:rgba(0,0,0,.55);
+  color-scheme:dark;
+}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+*{box-sizing:border-box}
+button{font-family:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:14px 32px}
+body.has-tools .wrap{padding-block-end:120px}
+
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--bar);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.bar-in{max-width:760px;margin:0 auto;padding:10px 16px;display:flex;gap:8px;align-items:center;min-height:60px}
+.bar-title{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand{flex:1;font-family:var(--f-display);font-weight:700;font-size:19px;letter-spacing:-.01em}
+
+.btn{font:500 15px var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:8px 13px;min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:transparent;font-weight:600}
+.btn.danger{color:var(--danger)}
+.btn.icon{width:40px;padding:0}
+.btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+input,select,textarea{font:16px var(--f-body);color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+textarea{font-family:var(--f-mono);font-size:16px;line-height:1.4;min-height:50vh;resize:vertical;white-space:pre;overflow-x:auto}
+input::placeholder,textarea::placeholder{color:var(--muted)}
+
+/* Library */
+.search{margin-block:4px 8px}
+.songs{list-style:none;margin:0;padding:0}
+.songs li+li{border-top:1px solid var(--line)}
+.song-row{all:unset;box-sizing:border-box;width:100%;display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center;padding:13px 4px;cursor:pointer}
+.song-row:focus-visible{outline:2px solid var(--accent);border-radius:8px}
+.song-row .t{font-weight:600;font-size:17px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.song-row .a{grid-column:1;color:var(--muted);font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.song-row .k{grid-column:2;grid-row:1/3;font:700 14px var(--f-mono);color:var(--chord);background:var(--sunk);border-radius:8px;padding:4px 8px;min-width:44px;text-align:center}
+.tag{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+.note{color:var(--muted);font-size:14px;margin-block:14px 0}
+.empty{padding-block:18px 6px;color:var(--muted)}
+.empty b{color:var(--fg)}
+
+/* Song */
+.song-head h1{font-family:var(--f-display);font-weight:700;font-size:23px;line-height:1.2;margin:4px 0 2px;text-wrap:balance;letter-spacing:-.01em}
+.song-head .by{color:var(--muted);margin:0}
+.song-head .meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.pill{font-size:13px;background:var(--sunk);border-radius:999px;padding:3px 10px;color:var(--fg)}
+.pill b{font-family:var(--f-mono);color:var(--chord)}
+
+.strip{display:flex;gap:8px;overflow-x:auto;padding-block:12px 10px;margin-inline:-16px;padding-inline:16px;scrollbar-width:none}
+.strip::-webkit-scrollbar{display:none}
+.chip{all:unset;box-sizing:border-box;flex:0 0 auto;width:84px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px 4px 4px;text-align:center;cursor:pointer}
+.chip:focus-visible{outline:2px solid var(--accent)}
+.chip .n{font:700 14px var(--f-mono);color:var(--chord);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip .q{display:block;height:64px;line-height:64px;color:var(--muted);font-size:22px}
+
+.sheet-body{font-family:var(--f-mono);font-size:var(--fs);line-height:1.4;white-space:pre;overflow-x:auto;padding-block:6px 12px}
+.ln{min-height:1.4em}
+.ln.ch{color:var(--chord);font-weight:700}
+.ln.gap{min-height:.8em}
+.ln.head{font-family:var(--f-body);font-weight:600;font-size:.82em;letter-spacing:.04em;color:var(--muted);margin-top:.5em}
+button.c{all:unset;cursor:pointer;color:var(--chord);border-radius:4px;white-space:pre}
+button.c:hover{background:var(--sunk)}
+button.c:focus-visible{outline:2px solid var(--accent)}
+
+/* Diagrams */
+.dia{display:block;width:100%;height:auto;max-width:210px;margin-inline:auto}
+.dia .fr{stroke:var(--grid);stroke-width:1.2}
+.dia .st{stroke:var(--string);stroke-width:1.4}
+.dia .nut{fill:var(--fg)}
+.dia .dot{fill:var(--fg)}
+.dia .open{fill:none;stroke:var(--fg);stroke-width:1.8}
+.dia text{font-family:var(--f-mono);font-weight:700}
+.dia .fg{fill:var(--surface);font-size:12px}
+.dia .mute{fill:var(--muted);font-size:16px;font-weight:400}
+.dia .pos{fill:var(--muted);font-size:13px}
+.dia.mini .fg{display:none}
+.dia.mini .mute{font-size:20px}
+
+/* Toolbar */
+.tools{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--bar);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))}
+.tools-in{max-width:760px;margin:0 auto;display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}
+.grp{display:flex;align-items:center;gap:2px;background:var(--sunk);border-radius:12px;padding:3px}
+.grp .lbl{font:700 13px var(--f-mono);min-width:30px;text-align:center;font-variant-numeric:tabular-nums}
+.grp .cap{font-size:11px;color:var(--muted);padding-inline:6px 2px;letter-spacing:.03em}
+.grp button{background:transparent;border:0;min-width:36px;height:36px;border-radius:9px;color:var(--fg);font:600 15px var(--f-body);display:inline-flex;align-items:center;justify-content:center}
+.grp button.on{background:var(--accent);color:var(--on-accent)}
+.grp button svg{width:16px;height:16px;fill:currentColor}
+
+/* Editor */
+.form{display:flex;flex-direction:column;gap:14px}
+.row2{display:grid;grid-template-columns:1fr 120px;gap:10px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:13px;font-weight:600;color:var(--muted)}
+.hint{font-size:13px;color:var(--muted);line-height:1.5}
+.hint code{font-family:var(--f-mono);color:var(--chord);background:var(--sunk);border-radius:4px;padding:0 4px}
+.err{color:var(--danger);font-size:13px;min-height:0}
+
+/* Bottom sheet */
+.sheet{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;background:var(--scrim)}
+.panel{background:var(--surface);width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:85%;overflow:auto}
+.panel h2{font-family:var(--f-mono);font-size:26px;color:var(--chord);margin:0}
+.panel-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.vars{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:10px}
+.var{background:var(--bg);border-radius:12px;padding:8px 10px 10px}
+.var .l{font-size:12px;font-weight:600;text-align:center;margin-top:4px}
+.one{padding-block:8px 4px}
+.one .dia{max-width:240px}
+.one .info{font:14px/1.6 var(--f-mono);color:var(--muted);text-align:center;margin-top:10px}
+.var .info{font:12px/1.5 var(--f-mono);color:var(--muted);text-align:center;margin-top:4px}
+.panel p{margin:6px 0}
+.actions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+
+.tabs{display:flex;gap:4px;background:var(--sunk);border-radius:12px;padding:3px;margin-block:2px 12px}
+.tabs button{flex:1;border:0;background:transparent;border-radius:9px;min-height:38px;font:600 14px var(--f-body);color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px var(--shadow)}
+.wrap.wide{max-width:920px}
+.chart-sum p{margin:0 0 8px;color:var(--muted);font-size:14px;max-width:65ch}
+.sum-line{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.warn-line{color:var(--warn);font-weight:600}
+.link{all:unset;cursor:pointer;text-decoration:underline;text-underline-offset:2px;color:var(--warn)}
+.link:focus-visible{outline:2px solid var(--accent)}
+.chart-scroll{overflow-x:auto;margin-inline:-16px;padding-inline:16px;padding-block:6px 10px}
+.chart-grid{display:grid;grid-template-columns:repeat(11,76px);gap:10px 4px;width:max-content}
+.cell{all:unset;box-sizing:border-box;position:relative;cursor:pointer;text-align:center;border-radius:10px;padding:4px 2px 2px;border:1.5px solid transparent}
+.cell:hover{background:var(--sunk)}
+.cell:focus-visible{outline:2px solid var(--accent)}
+.cell .n{display:block;font:700 13px var(--f-body);white-space:nowrap}
+.cell.flag{border-color:var(--warn);background:var(--warn-bg)}
+.cell.done .n{color:var(--good)}
+.cell .badge,.cell .tick{position:absolute;top:2px;right:3px;width:16px;height:16px;border-radius:50%;font:700 11px/16px var(--f-body);text-align:center}
+.cell .badge{background:var(--warn);color:var(--surface)}
+.cell .tick{background:var(--good);color:var(--surface)}
+.cell.flag.done .tick{right:21px}
+.verdict{font-size:14px;border-radius:10px;padding:10px 12px;margin-top:10px}
+.verdict.ok{background:var(--good-bg);color:var(--good)}
+.verdict.bad{background:var(--warn-bg);color:var(--warn)}
+
+.backup{margin-top:28px;padding-top:6px;border-top:1px solid var(--line)}
+label.btn{cursor:pointer}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.sec-h{font-family:var(--f-display);font-weight:500;font-size:15px;margin:14px 0 4px}
+.sec-p{margin:0 0 8px;color:var(--muted);font-size:14px}
+.mine-grid{display:flex;flex-wrap:wrap;gap:10px 4px;margin-bottom:6px}
+.mine-grid .cell{width:76px}
+.steps{margin:0;padding-left:20px;color:var(--muted);font-size:14px;display:flex;flex-direction:column;gap:4px;max-width:65ch}
+.imp-src{min-height:28vh;font-size:14px}
+.imp-prev{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;max-height:60vh;overflow:auto}
+.verdict:empty{display:none}
+.verdict:not(.ok):not(.bad){background:var(--sunk);color:var(--muted)}
+input.mono{font-family:var(--f-mono)}
+.se-wrap{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;justify-content:center}
+.se-wrap>div{min-width:0}
+.se-base{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px;font-size:14px;font-weight:600}
+.se-base span{min-width:96px;text-align:center}
+.board{display:grid;grid-template-columns:repeat(6,44px);grid-auto-rows:48px}
+.board .top{all:unset;cursor:pointer;height:36px;align-self:end;text-align:center;font:400 22px/36px var(--f-mono);color:var(--muted)}
+.board .fret{all:unset;cursor:pointer;position:relative;background:linear-gradient(var(--string),var(--string)) center/1.5px 100% no-repeat;border-bottom:1.5px solid var(--grid)}
+.board .fret.first{box-shadow:inset 0 5px 0 var(--fg)}
+.board .fret:nth-child(n+7):nth-child(-n+12):not(.first){border-top:1.5px solid var(--grid)}
+.board .fret.on::after{content:"";position:absolute;inset:0;margin:auto;width:28px;height:28px;border-radius:50%;background:var(--fg)}
+.board .fret:hover:not(.on)::after{content:"";position:absolute;inset:0;margin:auto;width:24px;height:24px;border-radius:50%;background:var(--sunk)}
+.board .top:focus-visible,.board .fret:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.se-prev{width:200px}
+.se-prev .info{font:13px/1.6 var(--f-mono);color:var(--muted);text-align:center;margin-top:6px}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(70px + env(safe-area-inset-top,0px));z-index:60;background:var(--fg);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px)}
+
+@media (prefers-reduced-motion:no-preference){
+  .panel{animation:up .18s ease-out}
+  @keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
+}
+</style>
+
+<div id="app"></div>
+<div id="tools" class="tools" hidden></div>
+<div id="sheet" class="sheet" hidden></div>
+<div id="toast" class="toast" hidden role="status"></div>
+
+<script>
+/* ---------- music theory ---------- */
+const NS=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const NFL=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+const BASE={C:0,D:2,E:4,F:5,G:7,A:9,B:11,H:11};
+function noteIndex(n){let i=BASE[n[0]];if(n[1]==='#')i++;else if(n[1]==='b')i--;return (i+12)%12}
+const CHORD_RE=/^([A-H])([#b]?)([^\/\s]*)(?:\/([A-H][#b]?))?$/;
+const QUAL_OK=/^(?:maj|min|m|M|dim|aug|sus|add|no|[0-9]|b|#|\+|°|ø|Δ|\(|\)|-|o)*$/;
+function parseChord(t){
+  const m=CHORD_RE.exec(t); if(!m||!QUAL_OK.test(m[3]))return null;
+  return {txt:t,root:noteIndex(m[1]+m[2]),q:m[3],bass:m[4]?noteIndex(m[4]):null};
+}
+function chordTok(t){
+  let c=parseChord(t); if(c)return {pre:'',c,post:''};
+  // decorated chords: (Am), /*D*/, *G*, [C], {Em}, |F|
+  const m=/^([(\[{*\/|<~.-]*)(.*?)([)\]}*\/|>~.,-]*)$/.exec(t);
+  if(m&&(m[1]||m[3])&&m[2]){c=parseChord(m[2]); if(c)return {pre:m[1],c,post:m[3]}}
+  return null;
+}
+function chordName(c,shift,flats){
+  if(!shift)return c.txt;
+  const N=flats?NFL:NS;
+  return N[(c.root+shift+120)%12]+c.q+(c.bass!=null?'/'+N[(c.bass+shift+120)%12]:'');
+}
+const QMAP={'':'maj','M':'maj','maj':'maj','m':'m','min':'m','-':'m','7':'7','m7':'m7','min7':'m7','-7':'m7',
+  'maj7':'maj7','M7':'maj7','Δ':'maj7','Δ7':'maj7','sus2':'sus2','2':'sus2','sus4':'sus4','sus':'sus4','4':'sus4',
+  'dim':'dim','°':'dim','o':'dim','dim7':'dim7','°7':'dim7','o7':'dim7','aug':'aug','+':'aug','6':'6','m6':'m6',
+  '9':'9','add9':'add9','5':'5','7sus4':'7sus4','7sus':'7sus4','m7b5':'m7b5','ø':'m7b5','m7-5':'m7b5','ø7':'m7b5'};
+function normQ(q){
+  q=q.replace(/[()]/g,'');
+  if(q in QMAP)return {q:QMAP[q],approx:false};
+  let r='maj';
+  if(/^(maj|M|Δ)/.test(q))r='maj7';
+  else if(/^(m|min|-)/.test(q))r=/\d/.test(q)?'m7':'m';
+  else if(/^sus/.test(q))r='sus4';
+  else if(/^(dim|°|o)/.test(q))r='dim';
+  else if(/^(aug|\+)/.test(q))r='aug';
+  else if(/^(7|9|11|13)/.test(q))r='7';
+  return {q:r,approx:true};
+}
+
+/* ---------- chord shapes (strings: low E → high e, -1 = muted) ---------- */
+const OPEN_RAW={C:'x32010',C7:'x32310',Cmaj7:'x32000',Cadd9:'x32030',Csus4:'x33011',Csus2:'x30013',C6:'x32210',
+  D:'xx0232',Dm:'xx0231',D7:'xx0212',Dm7:'xx0211',Dmaj7:'xx0222',Dsus2:'xx0230',Dsus4:'xx0233',D6:'xx0202',Ddim:'xx0131',
+  E:'022100',Em:'022000',E7:'020100',Em7:'022030',Emaj7:'021100',Esus4:'022200',E5:'022xxx',Em6:'022020',E6:'022120',E7sus4:'020200',Eadd9:'024100',
+  Esus2:'024400',Dm6:'xx0201',Fmaj7:'xx3210',Fsus2:'xx3011',Gsus2:'300033',G:'320003',G7:'320001',Gmaj7:'320002',G6:'320000',Gsus4:'330013',Gadd9:'320203',
+  A:'x02220',Am:'x02210',A7:'x02020',Am7:'x02010',Amaj7:'x02120',Asus2:'x02200',Asus4:'x02230',A6:'x02222',Am6:'x02212',A5:'x022xx',A7sus4:'x02030',
+  B7:'x21202',Bm7:'x20202'};
+const SLASH_RAW={'D/F#':'200232','C/G':'332010','G/B':'x20003','C/E':'032010','Am/G':'3x2210','G/F#':'2x0003','D/A':'x00232','C/B':'x22010','F/C':'x33211','Am/E':'002210'};
+const fretsOf=s=>[...s].map(ch=>ch==='x'?-1:+ch);
+const OPEN={},SLASH={};
+for(const [n,f] of Object.entries(OPEN_RAW)){const c=parseChord(n);OPEN[c.root+':'+normQ(c.q).q]=fretsOf(f)}
+for(const [n,f] of Object.entries(SLASH_RAW)){const c=parseChord(n);SLASH[c.root+':'+normQ(c.q).q+'/'+c.bass]=fretsOf(f)}
+const _=null;
+const SHAPES={
+  E:{note:4,label:'Баррэ, корень на 6-й струне',s:{maj:[0,2,2,1,0,0],m:[0,2,2,0,0,0],'7':[0,2,0,1,0,0],m7:[0,2,0,0,0,0],maj7:[0,_,1,1,0,_],
+    sus2:[0,2,4,4,0,0],sus4:[0,2,2,2,0,0],'7sus4':[0,2,0,2,0,0],'5':[0,2,2,_,_,_],dim:[0,1,2,0,_,_],m7b5:[0,1,0,0,_,_],m6:[0,2,2,0,2,0],'6':[0,2,2,1,2,0],
+    '9':[0,2,0,1,0,2],add9:[0,2,4,1,0,0],dim7:[0,1,2,0,2,0],aug:[0,3,2,1,1,0]}},
+  A:{note:9,label:'Баррэ, корень на 5-й струне',s:{maj:[_,0,2,2,2,0],m:[_,0,2,2,1,0],'7':[_,0,2,0,2,0],m7:[_,0,2,0,1,0],maj7:[_,0,2,1,2,0],
+    sus2:[_,0,2,2,0,0],sus4:[_,0,2,2,3,0],'6':[_,0,2,2,2,2],m6:[_,0,2,2,1,2],'9':[_,0,-1,0,0,0],add9:[_,0,2,4,2,0],'7sus4':[_,0,2,0,3,0],
+    m7b5:[_,0,1,0,1,_],dim:[_,0,1,2,1,_],'5':[_,0,2,2,_,_],aug:[_,0,3,2,2,_],dim7:[_,0,1,-1,1,_]}},
+  D:{note:2,label:'Корень на 4-й струне',s:{maj:[_,_,0,2,3,2],m:[_,_,0,2,3,1],'7':[_,_,0,2,1,2],m7:[_,_,0,2,1,1],maj7:[_,_,0,2,2,2],
+    dim7:[_,_,0,1,0,1],aug:[_,_,0,3,3,2]}}
+};
+function shapeVoicing(root,q,key){
+  const sh=SHAPES[key],off=sh.s[q]; if(!off)return null;
+  let r=(root-sh.note+12)%12;
+  const mk=r=>off.map(o=>o==null?-1:r+o);
+  let f=mk(r);
+  if(off.some((o,i)=>o!=null&&f[i]<0)){r+=12;f=mk(r)}
+  if(Math.max(...f)>16)return null;
+  return {frets:f,barre:key!=='D'&&r>0,label:r===0?'Открытая позиция':sh.label};
+}
+const OPEN_STR=[4,9,2,7,11,4];
+/* ---------- the user's chord chart, row by row exactly as on their sheet ---------- */
+const CHART_COLS=['','m','6','7','9','m6','m7','maj7','dim','+','sus'];
+const CHART_RAW=[
+ [['Ab','4 6 6 5 4 4',4],['G#m','4 6 6 4 4 4',4],['Ab6','4 3 1 1 1 1'],['Ab7','x x 1 1 1 2'],['Ab9','x x 1 3 1 2'],['G#m6','x x x 4 4 4'],['G#m7','x x 1 1 0 2'],['Abmaj7','x x 1 1 1 3'],['G#dim','x x 0 1 0 1'],['Ab+','x x 2 1 1 0'],['Absus','x x 1 1 2 4']],
+ [['A','x 0 2 2 2 0'],['Am','x 0 2 2 1 0'],['A6','x 0 2 2 2 2'],['A7','x 0 2 2 2 3'],['A9','x 0 2 4 2 3'],['Am6','x 0 2 2 1 2'],['Am7','x 0 2 2 1 3'],['Amaj7','x 0 2 1 2 0'],['Adim','x x 1 2 1 2'],['A+','x 0 3 2 2 1'],['Asus','x 0 2 2 3 0']],
+ [['Bb','x 1 3 3 3 1'],['Bbm','x 1 3 3 2 1'],['Bb6','1 1 3 3 3 3'],['Bb7','x x 3 3 3 4',3],['Bb9','3 3 5 3 3 3',3],['Bbm6','x x 3 3 2 3'],['Bbm7','x x 3 3 2 4'],['Bbmaj7','x 1 3 2 3 x'],['Bbdim','x x 2 3 2 3'],['Bb+','x x 0 3 3 2'],['Bbsus','x x 3 3 4 1']],
+ [['B','x 2 4 4 4 2'],['Bm','x 2 4 4 3 2'],['B6','2 2 4 4 4 4'],['B7','x 2 1 2 0 2'],['B9','x 2 1 2 2 2'],['Bm6','x x 4 4 3 4'],['Bm7','x 2 4 2 3 2',2],['Bmaj7','x 2 4 3 4 x'],['Bdim','x x 0 1 0 1'],['B+','x x 5 4 4 3',3],['Bsus','x x 4 4 5 2',2]],
+ [['C','x 3 2 0 1 0'],['Cm','x 3 5 5 4 3',3],['C6','x x 2 2 1 3'],['C7','x 3 2 3 1 0'],['C9','x 3 2 3 3 3'],['Cm6','x x 1 2 1 3'],['Cm7','x x 1 3 1 3'],['Cmaj7','x 3 2 0 0 0'],['Cdim','x x 1 2 1 2'],['C+','x x 2 1 1 0'],['Csus','x x 3 0 1 3']],
+ [['Db','x x 3 1 2 1'],['C#m','x x 2 1 2 0'],['Db6','x x 3 3 2 4'],['Db7','x x 3 4 2 4'],['Db9','x 4 3 4 4 4'],['C#m6','x x 2 3 2 4'],['C#m7','x x 2 4 2 4'],['Dbmaj7','x 4 3 1 1 1'],['C#dim','x x 2 3 2 3'],['Db+','x x 3 2 2 1'],['Dbsus','x x 3 3 4 1']],
+ [['D','x x 0 2 3 2'],['Dm','x x 0 2 3 1'],['D6','x 0 0 2 0 2'],['D7','x x 0 2 1 2'],['D9','2 0 0 2 1 0'],['Dm6','x x 0 2 0 1'],['Dm7','x x 0 2 1 1'],['Dmaj7','x x 0 2 2 2'],['Ddim','x x 0 1 0 1'],['D+','x x 0 3 3 2'],['Dsus','x x 0 2 3 3']],
+ [['Eb','x x 5 3 4 3',3],['Ebm','x x 4 3 4 2'],['Eb6','x x 1 3 1 3'],['Eb7','x x 1 3 2 3'],['Eb9','1 1 1 3 2 1'],['Ebm6','x x 1 3 1 2'],['Ebm7','x x 1 3 2 2'],['Ebmaj7','x x 1 3 3 3'],['Ebdim','x x 1 2 1 2'],['Eb+','x x 1 0 0 3'],['Ebsus','x x 1 3 4 4']],
+ [['E','0 2 2 1 0 0'],['Em','0 2 2 0 0 0'],['E6','0 2 2 1 2 0'],['E7','0 2 2 1 3 0'],['E9','0 2 0 1 0 2'],['Em6','0 2 2 0 2 0'],['Em7','0 2 0 0 0 0'],['Emaj7','0 2 1 1 0 0'],['Edim','x x 2 3 2 3'],['E+','x x 2 1 1 0'],['Esus','0 2 2 2 0 0']],
+ [['F','1 3 3 2 1 1'],['Fm','1 3 3 1 1 1'],['F6','x x 0 2 1 1'],['F7','1 3 1 2 1 1'],['F9','x x 3 2 4 3'],['Fm6','x x 0 1 1 1'],['Fm7','1 3 1 1 1 1'],['Fmaj7','x x 3 2 1 0'],['Fdim','x x 0 1 0 1'],['F+','x x 3 2 2 1'],['Fsus','x x 3 3 1 1']],
+ [['F#','2 4 4 3 2 2'],['F#m','2 4 4 2 2 2'],['Gb6','x 4 4 3 4 x'],['F#7','x x 4 3 2 0'],['F#9','x x 4 3 5 4',3],['F#m6','x x 1 2 2 2'],['F#m7','x x 2 2 2 2'],['Gbmaj7','x x 4 3 2 1'],['F#dim','x x 1 2 1 2'],['Gb+','x x 4 3 3 2'],['Gbsus','x x 4 4 2 2']],
+ [['G','3 2 0 0 0 3'],['Gm','3 5 5 3 3 3',3],['G6','3 2 0 0 0 0'],['G7','3 2 0 0 0 1'],['G9','3 0 0 2 0 1'],['Gm6','x x 2 3 3 3'],['Gm7','3 5 3 3 3 3',3],['Gmaj7','x x 5 4 3 2',2],['Gdim','x x 2 3 2 3'],['G+','x x 1 0 0 3'],['Gsus','x x 0 0 1 3']]
+];
+const CHART_TONES={'':[0,4,7],m:[0,3,7],'6':[0,4,7,9],'7':[0,4,7,10],'9':[0,4,7,10,2],m6:[0,3,7,9],m7:[0,3,7,10],maj7:[0,4,7,11],dim:[0,3,6,9],'+':[0,4,8],sus:[0,5,7]};
+function autoBarre(f){
+  const p=f.filter(x=>x>0); if(!p.length)return false; const min=Math.min(...p);
+  const idx=f.map((x,i)=>x===min?i:-1).filter(i=>i>=0);
+  return idx.length>=2&&idx[idx.length-1]-idx[0]>=3&&f.slice(idx[0],idx[idx.length-1]+1).every(x=>x>=min);
+}
+function checkChart(name,frets){
+  const m=/^([A-G][#b]?)(.*)$/.exec(name),root=noteIndex(m[1]),want=CHART_TONES[m[2]];
+  const N=m[1][1]==='b'?NFL:NS;
+  const have=new Set(frets.map((f,i)=>f<0?null:(OPEN_STR[i]+f-root+120)%12).filter(x=>x!=null));
+  const optional=new Set([0,7]); if(m[2]==='9')optional.add(4);
+  const extra=[...have].filter(x=>!want.includes(x)).map(x=>N[(root+x)%12]);
+  const missing=want.filter(x=>!optional.has(x)&&!have.has(x)).map(x=>N[(root+x)%12]);
+  return {extra,missing,ok:!extra.length&&!missing.length};
+}
+const CHART=CHART_RAW.map(row=>row.map(([name,s,base])=>{
+  const frets=s.split(' ').map(x=>x==='x'?-1:+x);
+  const v={name,frets,base:base||0,barre:autoBarre(frets),label:'Из вашей таблицы'};
+  v.check=checkChart(name,frets);
+  return v;
+}));
+const CHART_BY_KEY={},CHART_BY_NAME={};
+const CQ={'':'maj',m:'m','6':'6','7':'7','9':'9',m6:'m6',m7:'m7',maj7:'maj7',dim:'dim','+':'aug',sus:'sus4'};
+for(const row of CHART)for(const v of row){
+  CHART_BY_NAME[v.name]=v;
+  if(!v.check.ok)continue;
+  const m=/^([A-G][#b]?)(.*)$/.exec(v.name),r=noteIndex(m[1]);
+  CHART_BY_KEY[r+':'+CQ[m[2]]]=v;
+  if(m[2]==='dim')CHART_BY_KEY[r+':dim7']=v;
+}
+/* ---------- the user's own shapes ---------- */
+const TONES={maj:[0,4,7],m:[0,3,7],'7':[0,4,7,10],m7:[0,3,7,10],maj7:[0,4,7,11],sus2:[0,2,7],sus4:[0,5,7],dim:[0,3,6],dim7:[0,3,6,9],
+  aug:[0,4,8],'6':[0,4,7,9],m6:[0,3,7,9],'9':[0,4,7,10,2],add9:[0,4,7,2],'5':[0,7],'7sus4':[0,5,7,10],m7b5:[0,3,6,10]};
+function checkShape(name,frets){
+  const c=parseChord(name); if(!c)return null;
+  const {q,approx}=normQ(c.q); if(approx||!TONES[q])return {unknown:true};
+  const want=TONES[q],allowed=new Set(want);
+  if(q==='dim')allowed.add(9);
+  if(c.bass!=null)allowed.add((c.bass-c.root+12)%12);
+  const N=/^[A-H]b|\/[A-H]b/.test(name)?NFL:NS;
+  const have=new Set(frets.map((f,i)=>f<0?null:(OPEN_STR[i]+f-c.root+120)%12).filter(x=>x!=null));
+  const opt=new Set([0,7]); if(q==='9')opt.add(4);
+  const extra=[...have].filter(x=>!allowed.has(x)).map(x=>N[(c.root+x)%12]);
+  const missing=want.filter(x=>!opt.has(x)&&!have.has(x)).map(x=>N[(c.root+x)%12]);
+  return {extra,missing,ok:!extra.length&&!missing.length&&have.size>0};
+}
+let CUSTOM_BY_KEY={};
+function customKey(c){const {q}=normQ(c.q);return c.root+':'+q+(c.bass!=null&&c.bass!==c.root?'/'+c.bass:'')}
+function setShapes(shapes){
+  CUSTOM_BY_KEY={};
+  for(const [name,s] of Object.entries(shapes||{})){
+    const c=parseChord(name); if(!c||!Array.isArray(s.frets))continue;
+    CUSTOM_BY_KEY[customKey(c)]={name,frets:s.frets,base:s.base||0,barre:autoBarre(s.frets),label:'Моя схема'};
+  }
+  vCache.clear();
+}
+const pretty=n=>n.replace(/^([A-G])b/,'$1♭').replace(/^([A-G])#/,'$1♯');
+
+const vCache=new Map();
+function getVoicings(name){
+  if(vCache.has(name))return vCache.get(name);
+  const c=parseChord(name); let res={list:[],approx:false};
+  if(c){
+    const {q,approx}=normQ(c.q); const list=[];
+    const mine=CUSTOM_BY_KEY[customKey(c)];
+    if(mine){res.list=[mine];vCache.set(name,res);return res}
+    if(c.bass!=null&&c.bass!==c.root){const f=SLASH[c.root+':'+q+'/'+c.bass]; if(f)list.push({frets:f,barre:false,label:'С басом '+name.split('/')[1]})}
+    const ch=CHART_BY_KEY[c.root+':'+q]; if(ch)list.push(ch);
+    const o=OPEN[c.root+':'+q]; if(o)list.push({frets:o,barre:false,label:'Открытая позиция'});
+    const rest=['E','A','D'].map(k=>shapeVoicing(c.root,q,k)).filter(Boolean).sort((a,b)=>Math.max(...a.frets)-Math.max(...b.frets));
+    const seen=new Set(); for(const v of ch?[...list]:[...list,...rest]){const k=v.frets.join();if(!seen.has(k)){seen.add(k);res.list.push(v)}}
+    res.approx=approx;
+  }
+  vCache.set(name,res); return res;
+}
+function barreOf(v){
+  const f=v.frets,p=f.filter(x=>x>0),min=p.length?Math.min(...p):0;
+  if(!v.barre||!min)return null;
+  const idx=f.map((x,i)=>x===min?i:-1).filter(i=>i>=0);
+  if(idx.length<2)return null;
+  const a=idx[0],b=idx[idx.length-1];
+  return f.slice(a,b+1).every(x=>x>=min)?{a,b,fret:min}:null;
+}
+/* Finger numbers: barre takes the index finger, the rest go 1→4 by fret, then from bass to treble. */
+function fingersOf(v,bar){
+  const f=v.frets,fin=f.map(()=>0);let next=1;
+  if(bar){for(let i=bar.a;i<=bar.b;i++)if(f[i]===bar.fret)fin[i]=1;next=2}
+  const rest=f.map((x,i)=>({x,i})).filter(o=>o.x>0&&!fin[o.i]).sort((p,q)=>p.x-q.x||p.i-q.i);
+  for(const o of rest){
+    if(next>4){const same=rest.find(r=>r.x===o.x&&fin[r.i]);fin[o.i]=same?fin[same.i]:4}
+    else fin[o.i]=next++;
+  }
+  return fin;
+}
+function chordInfo(v,name){
+  const flats=/^[A-H]b|\/[A-H]b/.test(name||'');
+  const N=flats?NFL:NS,seen=[];
+  v.frets.forEach((x,i)=>{if(x>=0){const n=N[(OPEN_STR[i]+x)%12];if(!seen.includes(n))seen.push(n)}});
+  return {notes:seen.join(' · '),frets:v.frets.map(x=>x<0?'×':x).join(' ')};
+}
+function diagram(v,mini){
+  const f=v.frets,p=f.filter(x=>x>0),max=p.length?Math.max(...p):0,min=p.length?Math.min(...p):0;
+  const base=v.base||(max<=4?1:min),NF=Math.max(4,max-base+1);
+  const X=i=>34+i*28,Y0=38,FH=32,H=Y0+FH*NF+8,cy=fr=>Y0+(fr-base+.5)*FH;
+  const bar=mini?null:barreOf(v),fin=fingersOf(v,bar);
+  let s=`<svg class="dia${mini?' mini':''}" viewBox="0 0 194 ${H}" aria-hidden="true">`;
+  if(base===1)s+=`<rect class="nut" x="${X(0)-1}" y="${Y0-5}" width="${X(5)-X(0)+2}" height="5" rx="1"/>`;
+  for(let j=base===1?1:0;j<=NF;j++)s+=`<line class="fr" x1="${X(0)}" x2="${X(5)}" y1="${Y0+j*FH}" y2="${Y0+j*FH}"/>`;
+  for(let i=0;i<6;i++)s+=`<line class="st" x1="${X(i)}" x2="${X(i)}" y1="${Y0}" y2="${Y0+FH*NF}"/>`;
+  if(base>1)s+=`<text class="pos" x="${X(0)-14}" y="${cy(base)+5}" text-anchor="end">${base}</text>`;
+  if(bar)s+=`<rect class="dot" x="${X(bar.a)-10}" y="${cy(bar.fret)-9}" width="${X(bar.b)-X(bar.a)+20}" height="18" rx="9"/>`;
+  f.forEach((x,i)=>{
+    if(x<0)s+=`<text class="mute" x="${X(i)}" y="${Y0-12}" text-anchor="middle">×</text>`;
+    else if(x===0)s+=`<circle class="open" cx="${X(i)}" cy="${Y0-17}" r="5.5"/>`;
+    else{
+      const onBar=bar&&x===bar.fret&&i>=bar.a&&i<=bar.b;
+      if(onBar&&i!==bar.a&&i!==bar.b)return;
+      s+=`<circle class="dot" cx="${X(i)}" cy="${cy(x)}" r="11"/>`;
+      if(fin[i])s+=`<text class="fg" x="${X(i)}" y="${cy(x)+4.5}" text-anchor="middle">${fin[i]}</text>`;
+    }
+  });
+  return s+'</svg>';
+}
+
+/* ---------- song text parsing ---------- */
+const IGNORE=/^(\|+|-+|\/|%|\.{2,}|[xх×]\d+|\([xх×]?\d+[xх×]?\)|\d+[xх×]|:?\|\|?:?|N\.C\.?)$/i;
+function isChordLine(line){
+  const toks=line.match(/\S+/g); if(!toks)return false; let n=0;
+  for(const t of toks){if(IGNORE.test(t))continue; if(chordTok(t))n++; else return false}
+  return n>0;
+}
+function inlineToPair(line){
+  let ch='',ly='',last=0,m,found=false; const re=/\[([^\]]*)\]/g;
+  while((m=re.exec(line))){
+    ly+=line.slice(last,m.index); last=re.lastIndex;
+    const tok=m[1].trim();
+    if(!chordTok(tok)){ly+=m[0];continue}
+    found=true; let pos=ly.length; if(ch.length&&pos<ch.length+1)pos=ch.length+1;
+    ch=ch.padEnd(pos,' ')+tok;
+  }
+  ly+=line.slice(last);
+  return found?{ch,ly}:null;
+}
+function parseSong(body){
+  const out=[];
+  for(const raw of (body||'').replace(/\r/g,'').split('\n')){
+    const t=raw.trim(); let m;
+    if(!t){out.push({k:'gap'});continue}
+    if((m=t.match(/^\[([^\]]+)\]$/))&&!chordTok(m[1].trim())){out.push({k:'head',t:m[1]});continue}
+    if((m=t.match(/^\{(?:c|comment|ci|soc|start_of_chorus)(?::\s*(.*))?\}$/i))){out.push({k:'head',t:m[1]||'Припев'});continue}
+    if(/^\{.*\}$/.test(t))continue;
+    if(isChordLine(raw)){out.push({k:'ch',s:raw.replace(/\s+$/,'')});continue}
+    if(raw.includes('[')){const p=inlineToPair(raw);if(p){if(p.ch)out.push({k:'ch',s:p.ch});if(p.ly.trim())out.push({k:'ly',t:p.ly});continue}}
+    out.push({k:'ly',t:raw.replace(/\s+$/,'')});
+  }
+  return out;
+}
+/* ---------- cleaning a page copied from a chords website ---------- */
+const SEC=/^(?:intro|verse|chorus|pre-?chorus|bridge|outro|solo|interlude|instrumental|refrain|hook|coda|куплет|припев|предприпев|проигрыш|вступление|бридж|кода|соло|концовка|окончание)(?:\s*\d+)?\s*:?$/i;
+const JUNK=/^(?:x|×|[\d.,]+k?\s*(?:views|просмотр\p{L}*)|last update|rating|rate this|please rate|comments?|print|report bad tab|tabbed by|tab by|thanks to|transpose|autoscroll|font size|download pdf|add to (?:playlist|favorites)|share|chords? used|strumming|difficulty|tuning|key:|author|added|updated|video|видео|комментари\p{L}*|транспон\p{L}*|поделиться|добавить в|распечатать|скачать|автопрокрутка|подбор\p{L}*|оценк\p{L}*|исправить|аппликатуры аккордов|разбор|смотреть|реклама|advertisement|related|more versions|other versions|all versions|самоучитель|войти|регистрация|log in|sign up)(?![\p{L}\p{N}]).*$/iu;
+const SEC_INLINE=/^((?:intro|verse|chorus|pre-?chorus|bridge|outro|solo|interlude|instrumental|refrain|coda|куплет|припев|предприпев|проигрыш|вступление|бридж|кода|соло|концовка|окончание)(?:\s*\d+)?)\s*:\s*(\S.*)$/i;
+function expandTabs(l){let o='';for(const ch of l){if(ch==='\t')o+=' '.repeat(8-o.length%8);else o+=ch}return o}
+function importParse(raw){
+  const text=raw.replace(/\r/g,'').replace(/ /g,' ').replace(/\[\/?(?:ch|tab)\]/gi,'');
+  const lines=[];
+  for(const raw of text.split('\n')){
+    const l=expandTabs(raw).replace(/\s+$/,''),m=l.trim().match(SEC_INLINE);
+    if(m&&isChordLine(m[2])){lines.push(m[1]+':',m[2])}else lines.push(l);
+  }
+  let title='',artist='',m;
+  for(const l of lines.slice(0,120)){
+    const t=l.trim(); if(!t||title)continue;
+    if((m=t.match(/^(.+?)\s+(?:chords|tabs?|ukulele chords)\s+by\s+(.+)$/i))){title=m[1];artist=m[2]}
+    else if((m=t.match(/^аккорды(?: и текст)?(?: песни)?\s+[«"]?(.+?)[»"]?\s+[-–—]\s+(.+)$/i))){title=m[1];artist=m[2]}
+    else if((m=t.match(/^(.+?)\s+[-–—]\s+(.+?)[,.]?\s+(?:аккорды|chords)(?![\p{L}])/iu))){artist=m[1];title=m[2]}
+  }
+  const cm=text.match(/capo[:\s]*(?:on\s*)?(\d{1,2})|каподастр\w*[^\d\n]{0,20}(\d{1,2})/i);
+  const capo=cm?Math.min(12,+(cm[1]||cm[2])):0;
+  const isHead=t=>SEC.test(t)||(/^\[[^\]]+\]$/.test(t)&&!chordTok(t.slice(1,-1).trim()));
+  const kind=lines.map(l=>{const t=l.trim();
+    if(!t)return 'blank'; if(isHead(t))return 'head'; if(JUNK.test(t))return 'junk';
+    if(isChordLine(l)||(l.includes('[')&&inlineToPair(l)))return 'chord'; return 'text'});
+  const nextText=i=>{let seen=0;for(let j=i+1;j<lines.length&&seen<3;j++){if(kind[j]==='blank')continue;seen++;if(kind[j]==='text')return true;if(kind[j]==='junk')return false}return false};
+  let start=kind.indexOf('head');
+  const firstChord=kind.findIndex((k,i)=>k==='chord'&&nextText(i));
+  if(start<0||(firstChord>=0&&firstChord<start&&kind.slice(firstChord,start).every(k=>k!=='junk')))start=firstChord;
+  if(start<0)return {title,artist,capo,body:'',chordLines:0,parts:0};
+  let end=start; kind.forEach((k,i)=>{if(i>=start&&(k==='chord'||k==='head'))end=i});
+  for(let j=end+1,blank=0,n=0;j<lines.length&&n<14;j++,n++){
+    if(kind[j]==='junk'||kind[j]==='chord')break;
+    if(kind[j]==='blank'){if(++blank>=2)break;continue}
+    blank=0;end=j;
+  }
+  const out=[];
+  for(let i=start;i<=end;i++){
+    const k=kind[i],t=lines[i].trim();
+    if(k==='junk')continue;
+    if(k==='blank'){if(out.length&&out[out.length-1]!=='')out.push('');continue}
+    if(k==='head'){out.push(t.startsWith('[')?t:'['+t.replace(/:$/,'')+']');continue}
+    out.push(lines[i]);
+  }
+  while(out.length&&out[out.length-1]==='')out.pop();
+  return {title:title.trim(),artist:artist.trim(),capo,body:out.join('\n'),
+    chordLines:kind.filter((k,i)=>k==='chord'&&i>=start&&i<=end).length,parts:kind.filter((k,i)=>k==='head'&&i>=start&&i<=end).length};
+}
+const usesFlats=body=>/(^|[\s\[(\/])[A-H]b(?![a-zа-я])/m.test(body||'');
+function chordLineHtml(s,shift,flats,seen){
+  let out='',html=''; const re=/\S+/g; let m;
+  while((m=re.exec(s))){
+    const tk=chordTok(m[0]); let disp=m[0],name=null;
+    if(tk){name=chordName(tk.c,shift,flats);disp=tk.pre+name+tk.post;if(seen&&!seen.includes(name))seen.push(name)}
+    const target=out.length?Math.max(m.index,out.length+1):m.index;
+    const pad=' '.repeat(Math.max(0,target-out.length));
+    html+=pad+(name?`<button class="c" data-act="chord" data-c="${esc(name)}">${esc(disp)}</button>`:esc(disp));
+    out+=pad+disp;
+  }
+  return html;
+}
+function songChords(song,shift){
+  const seen=[],flats=usesFlats(song.body);
+  for(const l of parseSong(song.body))if(l.k==='ch')chordLineHtml(l.s,shift,flats,seen);
+  return seen;
+}
+
+/* ---------- helpers ---------- */
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function lsGet(k){try{return localStorage.getItem(k)}catch{return null}}
+function lsSet(k,v){try{localStorage.setItem(k,v)}catch{}}
+let toastT;
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2800)}
+const ICON={
+  back:'<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
+  edit:'<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>',
+  trash:'<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
+  plus:'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  play:'<svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>',
+  pause:'<svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>'
+};
+
+/* ---------- demo (shown only while the library is empty) ---------- */
+const DEMO={id:'demo',demo:true,title:'Дорога к морю',artist:'Пример песни',capo:0,body:
+`[Куплет]
+Am            F
+Утро тихо стелет туман,
+C               G
+Ветер гонит пыль по пути.
+Am              F
+Старый двор и пустой карман,
+C            G           E
+Всё, что нужно, чтобы уйти.
+
+[Припев]
+[F]Дорога к [G]морю, до[C]рога до[Am]мой,
+[Dm]Солнце в зе[G]ните над [C]головой.
+[F]Пусть эта [G]песня зву[Em]чит со [Am]мной,
+[Dm]Пока мы и[E7]дём по до[Am]роге одной.`};
+
+/* ---------- storage ---------- */
+const S={songs:[],checks:{},shapes:{},loaded:false,mode:'local',view:'list',cur:null,shift:0,q:'',
+  fs:Math.min(26,Math.max(12,+lsGet('sb.fs')||16)),scroll:{on:false,speed:+lsGet('sb.speed')||2}};
+let store=null;
+function localStore(){
+  const read=()=>{try{return JSON.parse(lsGet('sb.songs')||'[]')}catch{return []}};
+  let cb=()=>{};
+  const write=a=>{lsSet('sb.songs',JSON.stringify(a));cb(a)};
+  return {
+    subscribe(f){cb=f;f(read())},
+    async save(s){const a=read().filter(x=>x.id!==s.id);a.push(s);write(a)},
+    async patch(id,p){write(read().map(x=>x.id===id?{...x,...p}:x))},
+    async remove(id){write(read().filter(x=>x.id!==id))}
+  };
+}
+async function initStore(){
+  try{
+    if(window.claude&&window.claude.use){
+      const [db,user]=await Promise.all([claude.use('db'),claude.use('user')]);
+      const uid=user?await user.id():null;
+      if(db&&uid){
+        const col=db.collection('data/users/'+uid);
+        S.mode='cloud';
+        return {
+          subscribe(f){col.onSnapshot(snap=>f(snap.docs.map(d=>({...d.data(),id:d.id}))),e=>toast('Связь с хранилищем потеряна. Обновите страницу.'))},
+          save(s){const {id,...rest}=s;return col.doc(id).set(rest)},
+          patch(id,p){return col.doc(id).update(p)},
+          remove(id){return col.doc(id).delete()}
+        };
+      }
+    }
+  }catch{}
+  S.mode='local';
+  return localStore();
+}
+function saveErr(e){
+  const code=e&&e.code;
+  if(code==='quota_exceeded')toast('Хранилище заполнено. Удалите ненужные песни.');
+  else if(code==='invalid_argument')toast('Сохранить не получилось: у этого аккаунта нет права записи.');
+  else toast('Сохранить не получилось. Проверьте интернет и попробуйте ещё раз.');
+}
+
+/* ---------- views ---------- */
+const app=document.getElementById('app'),tools=document.getElementById('tools'),sheet=document.getElementById('sheet');
+function songsSorted(){return [...S.songs].sort((a,b)=>(a.title||'').localeCompare(b.title||'','ru'))}
+function findSong(id){return id==='demo'?DEMO:S.songs.find(s=>s.id===id)}
+
+function tabsHtml(cur){
+  return `<div class="tabs" role="tablist">
+    <button role="tab" aria-selected="${cur==='list'}" data-act="tab-list">Песни</button>
+    <button role="tab" aria-selected="${cur==='chart'}" data-act="tab-chart">Схемы аккордов</button></div>`;
+}
+function renderChart(){
+  stopScroll(); S.view='chart'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
+  app.innerHTML=`
+  <header class="bar"><div class="bar-in">
+    <div class="brand">Мой песенник</div>
+    <button class="btn primary" data-act="new-shape">${ICON.plus}Своя схема</button>
+  </div></header>
+  <div class="wrap wide">
+    ${tabsHtml('chart')}
+    <div id="mine"></div>
+    <div id="chart-sum" class="chart-sum"></div>
+    <div class="chart-scroll"><div class="chart-grid" id="chart-grid"></div></div>
+  </div>`;
+  fillChart();
+}
+function fillChart(){
+  const grid=document.getElementById('chart-grid'); if(!grid)return;
+  const mine=Object.keys(S.shapes).sort((a,b)=>a.localeCompare(b));
+  document.getElementById('mine').innerHTML=mine.length?`<h3 class="sec-h">Мои схемы</h3>
+    <p class="sec-p">Они заменяют схемы из таблицы и стандартные во всех песнях.</p>
+    <div class="mine-grid">${mine.map(n=>{const s=S.shapes[n],ck=checkShape(n,s.frets);
+      return `<button class="cell${ck&&ck.ok===false?' flag':''}" data-act="mychord" data-c="${esc(n)}"><span class="n">${esc(pretty(n))}</span>${diagram({frets:s.frets,base:s.base||0},true)}${ck&&ck.ok===false?'<span class="badge">!</span>':''}</button>`}).join('')}</div>
+    <h3 class="sec-h">Таблица</h3>`:'';
+  const all=CHART.flat();
+  document.getElementById('chart-sum').innerHTML=`
+    <p>Все ${all.length} схем из вашей таблицы в том же порядке. Строки идут по основной ноте, столбцы по типу аккорда. Нажмите на схему, чтобы увидеть её крупно с номерами пальцев.</p>`;
+  grid.innerHTML=all.map(v=>`<button class="cell" data-act="cchord" data-c="${esc(v.name)}" aria-label="${esc(pretty(v.name))}">
+      <span class="n">${esc(pretty(v.name))}</span>${diagram(v,true)}</button>`).join('');
+}
+function openChartChord(name){
+  const v=CHART_BY_NAME[name]; if(!v)return;
+  const info=chordInfo(v,name);
+  sheet.innerHTML=`<div class="panel" role="dialog" aria-label="Схема ${esc(pretty(name))}">
+    <div class="panel-top"><h2>${esc(pretty(name))}</h2><button class="btn" data-act="close">Закрыть</button></div>
+    <div class="one">${diagram({...v})}<div class="info">Ноты: ${esc(info.notes)}<br>Лады: ${esc(info.frets)}</div></div>
+  </div>`;
+  sheet.hidden=false;
+}
+
+function renderList(){
+  stopScroll(); S.view='list'; tools.hidden=true; document.body.classList.remove('has-tools');
+  app.innerHTML=`
+  <header class="bar"><div class="bar-in">
+    <div class="brand">Мой песенник</div>
+    <button class="btn" data-act="import">С сайта</button>
+    <button class="btn primary" data-act="new">${ICON.plus}Песня</button>
+  </div></header>
+  <div class="wrap">
+    ${tabsHtml('list')}
+    <input id="search" class="search" type="search" placeholder="Поиск по названию или исполнителю" value="${esc(S.q)}" autocomplete="off">
+    <ul class="songs" id="songs"></ul>
+    <p class="note" id="note"></p>
+    <section class="backup">
+      <h3 class="sec-h">Резервная копия</h3>
+      <p class="sec-p">Один файл со всеми песнями и вашими схемами. Через него песни переносятся между облачной и офлайн-версией песенника или на новый телефон.</p>
+      <div class="actions" style="justify-content:flex-start">
+        <button class="btn" data-act="export">Сохранить копию</button>
+        <label class="btn" for="imp-file">Загрузить копию</label>
+        <input type="file" id="imp-file" class="vh" accept=".json,application/json">
+      </div>
+    </section>
+  </div>`;
+  fillList();
+}
+function fillList(){
+  const ul=document.getElementById('songs'); if(!ul)return;
+  const q=S.q.trim().toLowerCase();
+  let list=songsSorted();
+  const empty=S.loaded&&!list.length;
+  if(empty)list=[DEMO];
+  if(q)list=list.filter(s=>((s.title||'')+' '+(s.artist||'')).toLowerCase().includes(q));
+  ul.innerHTML=list.map(s=>{
+    const ch=songChords(s,s.transpose||0)[0]||'';
+    return `<li><button class="song-row" data-act="open" data-id="${esc(s.id)}">
+      <span class="t">${esc(s.title||'Без названия')}${s.demo?'<span class="tag">пример</span>':''}</span>
+      <span class="k">${esc(ch)||'–'}</span>
+      <span class="a">${esc(s.artist||'Исполнитель не указан')}</span></button></li>`}).join('');
+  let note='';
+  if(!S.loaded)note='Загружаю ваши песни…';
+  else if(empty&&!q)note='';
+  else if(q&&!list.length)note='Ничего не нашлось.';
+  if(S.loaded&&empty&&!q)ul.insertAdjacentHTML('beforebegin','');
+  const n=document.getElementById('note');
+  n.innerHTML=(note?esc(note)+'<br>':'')+(S.loaded&&empty&&!q?'<span class="empty">Библиотека пока пустая. Откройте пример, чтобы посмотреть, как выглядят аккорды, или нажмите <b>+ Песня</b> и вставьте свою.</span><br>':'')
+    +(S.loaded&&S.mode==='local'?(window.SONGBOOK_OFFLINE?'Песни хранятся в этом телефоне и доступны без интернета. Время от времени сохраняйте резервную копию.':'Песни сохраняются только в этом браузере.'):'')
+    +(S.loaded&&S.mode==='cloud'&&!empty?`${S.songs.length} ${plural(S.songs.length,'песня','песни','песен')} · видны только вам`:'');
+}
+function plural(n,a,b,c){const m=n%10,h=n%100;return m===1&&h!==11?a:m>=2&&m<=4&&(h<10||h>=20)?b:c}
+
+function renderSong(id,keepScroll){
+  const s=findSong(id); if(!s){renderList();return}
+  const y=keepScroll?scrollY:0;
+  if(S.cur!==id){S.cur=id;S.shift=s.transpose||0}
+  S.view='song';
+  app.innerHTML=`
+  <header class="bar"><div class="bar-in">
+    <button class="btn icon" data-act="home" aria-label="К списку песен">${ICON.back}</button>
+    <div class="bar-title">${esc(s.title||'Без названия')}</div>
+    <button class="btn icon" data-act="edit" aria-label="Изменить песню">${ICON.edit}</button>
+    ${s.demo?'':`<button class="btn icon danger" data-act="ask-del" aria-label="Удалить песню">${ICON.trash}</button>`}
+  </div></header>
+  <div class="wrap">
+    <div class="song-head">
+      <h1>${esc(s.title||'Без названия')}</h1>
+      <p class="by">${esc(s.artist||'Исполнитель не указан')}</p>
+      <div class="meta" id="meta"></div>
+    </div>
+    <div class="strip" id="strip"></div>
+    <div class="sheet-body" id="body" style="--fs:${S.fs}px"></div>
+  </div>`;
+  fillSong(); renderTools();
+  document.body.classList.add('has-tools');
+  scrollTo(0,y);
+}
+function fillSong(){
+  const s=findSong(S.cur); if(!s)return;
+  const flats=usesFlats(s.body),seen=[];
+  const html=parseSong(s.body).map(l=>
+    l.k==='gap'?'<div class="ln gap"></div>':
+    l.k==='head'?`<div class="ln head">${esc(l.t)}</div>`:
+    l.k==='ch'?`<div class="ln ch">${chordLineHtml(l.s,S.shift,flats,seen)}</div>`:
+    `<div class="ln ly">${esc(l.t)||' '}</div>`).join('');
+  document.getElementById('body').innerHTML=html||'<div class="ln ly">Текст песни пока пустой.</div>';
+  document.getElementById('strip').innerHTML=seen.map(n=>{
+    const v=getVoicings(n).list[0];
+    return `<button class="chip" data-act="chord" data-c="${esc(n)}"><span class="n">${esc(n)}</span>${v?diagram(v,true):'<span class="q">?</span>'}</button>`}).join('');
+  const meta=[];
+  if(seen[0])meta.push(`<span class="pill">Первый аккорд <b>${esc(seen[0])}</b></span>`);
+  if(+s.capo)meta.push(`<span class="pill">Каподастр: ${+s.capo} лад</span>`);
+  if(S.shift)meta.push(`<span class="pill">Тональность сдвинута на ${S.shift>0?'+':''}${S.shift}</span>`);
+  document.getElementById('meta').innerHTML=meta.join('');
+}
+function renderTools(){
+  const sp=S.scroll;
+  tools.innerHTML=`<div class="tools-in">
+    <div class="grp" aria-label="Тональность"><span class="cap">Тон</span>
+      <button data-act="tr" data-d="-1" aria-label="Ниже на полтона">−</button>
+      <span class="lbl">${S.shift>0?'+':''}${S.shift}</span>
+      <button data-act="tr" data-d="1" aria-label="Выше на полтона">+</button></div>
+    <div class="grp" aria-label="Размер текста">
+      <button data-act="fs" data-d="-1" aria-label="Мельче" style="font-size:13px">A</button>
+      <button data-act="fs" data-d="1" aria-label="Крупнее" style="font-size:18px">A</button></div>
+    <div class="grp" aria-label="Автопрокрутка">
+      <button data-act="scroll" class="${sp.on?'on':''}" aria-label="${sp.on?'Остановить':'Запустить'} автопрокрутку">${sp.on?ICON.pause:ICON.play}</button>
+      <button data-act="speed" aria-label="Скорость прокрутки"><span class="lbl">${sp.speed}×</span></button></div>
+  </div>`;
+  tools.hidden=false;
+}
+
+function renderEditor(id,draft){
+  stopScroll(); S.view='edit'; tools.hidden=true; document.body.classList.remove('has-tools');
+  if(draft)S.cur=null;
+  const s=draft||(id?findSong(id):null), isNew=draft||!s||s.demo;
+  const caps=[...Array(13).keys()].map(i=>`<option value="${i}" ${(+(s&&s.capo)||0)===i?'selected':''}>${i?i+' лад':'нет'}</option>`).join('');
+  app.innerHTML=`
+  <header class="bar"><div class="bar-in">
+    <button class="btn" data-act="cancel">Отмена</button>
+    <div class="bar-title" style="text-align:center">${isNew?'Новая песня':'Правка'}</div>
+    <button class="btn primary" data-act="save">Сохранить</button>
+  </div></header>
+  <div class="wrap"><form class="form" id="form" novalidate>
+    <div class="field"><label for="f-title">Название</label><input id="f-title" value="${esc(s?s.title:'')}" autocomplete="off"><div class="err" id="e-title"></div></div>
+    <div class="row2">
+      <div class="field"><label for="f-artist">Исполнитель</label><input id="f-artist" value="${esc(s&&!s.demo?s.artist||'':'')}" autocomplete="off"></div>
+      <div class="field"><label for="f-capo">Каподастр</label><select id="f-capo">${caps}</select></div>
+    </div>
+    <div class="field"><label for="f-body">Текст с аккордами</label>
+      <textarea id="f-body" spellcheck="false" placeholder="Am            F&#10;Утро тихо стелет туман,">${esc(s?s.body:'')}</textarea><div class="err" id="e-body"></div></div>
+    <div class="hint">Подойдут оба привычных формата:<br>
+      • аккорды строкой над текстом, как на Ultimate Guitar: скопируйте песню оттуда целиком;<br>
+      • аккорды в квадратных скобках внутри строки: <code>[Am]Утро [F]тихо</code>.<br>
+      Названия частей пишите в скобках отдельной строкой: <code>[Припев]</code>. Можно писать H вместо B.</div>
+  </form></div>`;
+  app.querySelector('#form').addEventListener('submit',e=>{e.preventDefault();doSave(isNew?null:s.id)});
+}
+async function doSave(id){
+  const title=document.getElementById('f-title').value.trim(),body=document.getElementById('f-body').value.replace(/\s+$/,'');
+  document.getElementById('e-title').textContent=title?'':'Введите название песни.';
+  document.getElementById('e-body').textContent=body?'':'Вставьте текст с аккордами.';
+  if(!title||!body)return;
+  saveSong(id,{title,artist:document.getElementById('f-artist').value.trim(),capo:+document.getElementById('f-capo').value,body});
+}
+async function saveSong(id,f){
+  const old=id?findSong(id):null;
+  const song={id:id||('s'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)),...f,
+    transpose:old?old.transpose||0:0,createdAt:old?old.createdAt||Date.now():Date.now(),updatedAt:Date.now()};
+  try{await store.save(song);S.cur=null;toast('Сохранено');renderSong(song.id)}catch(e){saveErr(e)}
+}
+
+/* ---------- backup file ---------- */
+async function exportBackup(){
+  const data=JSON.stringify({app:'songbook',version:1,exportedAt:new Date().toISOString(),songs:S.songs,shapes:S.shapes},null,1);
+  const d=new Date(),fn=`pesennik-${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}.json`;
+  if(!window.SONGBOOK_OFFLINE&&window.claude&&window.claude.use){
+    const dl=await claude.use('downloads');
+    if(dl){try{await dl.save({filename:fn,data});toast('Копия сохранена')}catch(e){if(!e||e.code!=='declined')toast('Не получилось сохранить файл.')}return}
+  }
+  try{
+    const file=new File([data],fn,{type:'application/json'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:fn});return}
+  }catch(e){if(e&&e.name==='AbortError')return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));a.download=fn;
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
+}
+async function importBackup(file){
+  let d; try{d=JSON.parse(await file.text())}catch{d=null}
+  if(!d||d.app!=='songbook'||!Array.isArray(d.songs)){toast('Это не файл копии песенника.');return}
+  let n=0;
+  try{
+    for(const s of d.songs){
+      if(!s||!s.id||String(s.id).startsWith('_')||!s.title||typeof s.body!=='string')continue;
+      await store.save({...s});n++;
+    }
+    if(d.shapes&&typeof d.shapes==='object'&&Object.keys(d.shapes).length){
+      const next={...S.shapes,...d.shapes};S.shapes=next;setShapes(next);
+      await store.save({id:'_shapes',shapes:next});
+    }
+    toast(`Загружено: ${n} ${plural(n,'песня','песни','песен')}`);
+  }catch(e){saveErr(e)}
+}
+
+/* ---------- import from a website ---------- */
+let IMP=null;
+function renderImport(){
+  stopScroll(); S.view='import'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools'); IMP=null;
+  app.innerHTML=`
+  <header class="bar"><div class="bar-in">
+    <button class="btn" data-act="cancel">Отмена</button>
+    <div class="bar-title" style="text-align:center">Вставить с сайта</div>
+    <span style="width:78px"></span>
+  </div></header>
+  <div class="wrap"><div class="form">
+    <ol class="steps">
+      <li>Откройте песню на сайте с аккордами: Ultimate Guitar, Amdm, MyChords и другие.</li>
+      <li>Выделите всю страницу и скопируйте. На айфоне: долгое нажатие на текст → «Выбрать все» → «Скопировать».</li>
+      <li>Вставьте сюда. Меню, рекламу и комментарии приложение уберёт само.</li>
+    </ol>
+    <div class="field"><label for="imp-src">Скопированная страница</label>
+      <textarea id="imp-src" class="imp-src" spellcheck="false" placeholder="Вставьте сюда текст страницы"></textarea></div>
+    <div id="imp-res"></div>
+  </div></div>`;
+}
+function fillImport(){
+  const res=document.getElementById('imp-res'); if(!res)return;
+  const src=document.getElementById('imp-src').value;
+  if(!src.trim()){res.innerHTML='';IMP=null;return}
+  IMP=importParse(src);
+  if(!IMP.body){res.innerHTML='<p class="verdict bad">Не нашёл строк с аккордами. Проверьте, что скопировалась сама песня, а не только заголовок страницы.</p>';return}
+  const flats=usesFlats(IMP.body);
+  const prev=parseSong(IMP.body).map(l=>l.k==='gap'?'<div class="ln gap"></div>':l.k==='head'?`<div class="ln head">${esc(l.t)}</div>`:
+    l.k==='ch'?`<div class="ln ch">${chordLineHtml(l.s,0,flats,null)}</div>`:`<div class="ln ly">${esc(l.t)||' '}</div>`).join('');
+  const caps=[...Array(13).keys()].map(i=>`<option value="${i}" ${IMP.capo===i?'selected':''}>${i?i+' лад':'нет'}</option>`).join('');
+  res.innerHTML=`
+    <p class="verdict ok">Нашёл ${IMP.chordLines} ${plural(IMP.chordLines,'строку','строки','строк')} с аккордами${IMP.parts?` и ${IMP.parts} ${plural(IMP.parts,'часть','части','частей')} песни`:''}. Проверьте название и текст ниже.</p>
+    <div class="field"><label for="i-title">Название</label><input id="i-title" value="${esc(IMP.title)}" autocomplete="off"><div class="err" id="ie-title"></div></div>
+    <div class="row2">
+      <div class="field"><label for="i-artist">Исполнитель</label><input id="i-artist" value="${esc(IMP.artist)}" autocomplete="off"></div>
+      <div class="field"><label for="i-capo">Каподастр</label><select id="i-capo">${caps}</select></div>
+    </div>
+    <div class="actions" style="justify-content:flex-start">
+      <button class="btn primary" data-act="imp-save">Сохранить песню</button>
+      <button class="btn" data-act="imp-edit">Поправить текст</button>
+    </div>
+    <div class="field"><label>Как песня будет выглядеть</label><div class="sheet-body imp-prev" style="--fs:14px">${prev}</div></div>`;
+}
+function impFields(){
+  return {title:document.getElementById('i-title').value.trim(),artist:document.getElementById('i-artist').value.trim(),
+    capo:+document.getElementById('i-capo').value,body:IMP.body};
+}
+
+/* ---------- own chord shapes ---------- */
+let SE=null;
+function renderShapeEditor(name){
+  stopScroll(); S.view='shape'; tools.hidden=true; document.body.classList.remove('has-tools'); closeSheet();
+  const s=name?S.shapes[name]:null;
+  const fr=s?[...s.frets]:[-1,-1,-1,-1,-1,-1], p=fr.filter(x=>x>0);
+  SE={orig:name||null,frets:fr,base:s&&s.base?s.base:(p.length&&Math.max(...p)>5?Math.min(...p):1)};
+  app.innerHTML=`
+  <header class="bar"><div class="bar-in">
+    <button class="btn" data-act="tab-chart">Отмена</button>
+    <div class="bar-title" style="text-align:center">${name?'Моя схема':'Новая схема'}</div>
+    <button class="btn primary" data-act="se-save">Сохранить</button>
+  </div></header>
+  <div class="wrap"><div class="form">
+    <div class="row2">
+      <div class="field"><label for="se-name">Аккорд</label><input id="se-name" value="${esc(name||'')}" placeholder="Например, F или Am7" autocomplete="off" autocapitalize="off"><div class="err" id="se-err"></div></div>
+      <div class="field"><label for="se-frets">Лады</label><input id="se-frets" class="mono" placeholder="x 3 2 0 1 0" autocomplete="off"></div>
+    </div>
+    <p class="hint">Нажимайте на гриф, чтобы поставить или убрать палец. Над грифом: ○ — открытая струна, × — не играть. Можно просто вписать лады от толстой струны к тонкой.</p>
+    <div class="se-wrap">
+      <div>
+        <div class="se-base"><button class="btn icon" data-act="se-base" data-d="-1" aria-label="Ниже по грифу">−</button><span id="se-base-l"></span><button class="btn icon" data-act="se-base" data-d="1" aria-label="Выше по грифу">+</button></div>
+        <div class="board" id="board"></div>
+      </div>
+      <div class="se-prev"><div id="se-prev"></div><div class="info" id="se-info"></div></div>
+    </div>
+    <div id="se-verdict"></div>
+  </div></div>`;
+  fillShapeEditor();
+}
+function fretsText(f){return f.map(x=>x<0?'x':x).join(' ')}
+function parseFretsText(t){
+  const s=t.trim().toLowerCase().replace(/[хx×]/g,'x');
+  const parts=/[\s,\-]/.test(s)?s.split(/[\s,\-]+/).filter(Boolean):[...s];
+  if(parts.length!==6)return null;
+  const f=parts.map(p=>p==='x'?-1:/^\d{1,2}$/.test(p)?+p:NaN);
+  return f.some(x=>Number.isNaN(x)||x>22)?null:f;
+}
+function fillShapeEditor(){
+  if(!SE)return;
+  const b=SE.base,f=SE.frets;
+  document.getElementById('se-base-l').textContent=b===1?'От порожка':`С ${b}-го лада`;
+  let h='';
+  for(let i=0;i<6;i++)h+=`<button class="top" data-act="se-top" data-s="${i}" aria-label="Струна ${6-i}: ${f[i]<0?'не играть':f[i]===0?'открытая':'зажата'}">${f[i]<0?'×':f[i]===0?'○':''}</button>`;
+  for(let r=0;r<5;r++)for(let i=0;i<6;i++){const fr=b+r;
+    h+=`<button class="fret${f[i]===fr?' on':''}${r===0&&b===1?' first':''}" data-act="se-fret" data-s="${i}" data-f="${fr}" aria-label="Струна ${6-i}, ${fr} лад"></button>`}
+  document.getElementById('board').innerHTML=h;
+  const ft=document.getElementById('se-frets'); if(document.activeElement!==ft)ft.value=fretsText(f);
+  const p=f.filter(x=>x>0),v={frets:f,base:b>1?b:(p.length&&Math.max(...p)>4?Math.min(...p):0),barre:autoBarre(f)};
+  document.getElementById('se-prev').innerHTML=diagram(v);
+  const name=document.getElementById('se-name').value.trim();
+  document.getElementById('se-info').innerHTML=`Ноты: ${esc(chordInfo(v,name).notes||'—')}<br>Лады: ${esc(fretsText(f))}`;
+  const c=name?parseChord(name):null,ck=c?checkShape(name,f):null;
+  document.getElementById('se-verdict').innerHTML=!name?'':!c?'<p class="verdict bad">Не понимаю название аккорда. Пишите латиницей, например Am, F#m7, Bbmaj7, D/F#.</p>'
+    :ck.unknown?'<p class="verdict">Для такого типа аккорда проверить ноты не могу, но схему сохранить можно.</p>'
+    :ck.ok?'<p class="verdict ok">Ноты совпадают с названием аккорда.</p>'
+    :`<p class="verdict bad">Схема не совпадает с названием.${ck.extra.length?` Лишние ноты: ${esc(ck.extra.join(', '))}.`:''}${ck.missing.length?` Не хватает: ${esc(ck.missing.join(', '))}.`:''} Сохранить всё равно можно.</p>`;
+}
+async function saveShape(){
+  const name=document.getElementById('se-name').value.trim(),err=document.getElementById('se-err');
+  if(!name||!parseChord(name)){err.textContent='Введите название аккорда латиницей, например Am7.';return}
+  if(SE.frets.every(x=>x<0)){err.textContent='Отметьте хотя бы одну струну.';return}
+  const next={...S.shapes};
+  if(SE.orig&&SE.orig!==name)delete next[SE.orig];
+  const p=SE.frets.filter(x=>x>0);
+  next[name]={frets:[...SE.frets],base:SE.base>1?SE.base:(p.length&&Math.max(...p)>4?Math.min(...p):0)};
+  S.shapes=next;setShapes(next);
+  try{await store.save({id:'_shapes',shapes:next});toast('Схема сохранена');renderChart()}catch(e){saveErr(e)}
+}
+function openMyShape(name){
+  const s=S.shapes[name]; if(!s)return;
+  const v={frets:s.frets,base:s.base||0,barre:autoBarre(s.frets)},info=chordInfo(v,name),ck=checkShape(name,s.frets);
+  sheet.innerHTML=`<div class="panel" role="dialog" aria-label="Моя схема ${esc(pretty(name))}">
+    <div class="panel-top"><h2>${esc(pretty(name))}</h2><button class="btn" data-act="close">Закрыть</button></div>
+    <div class="one">${diagram(v)}<div class="info">Ноты: ${esc(info.notes)}<br>Лады: ${esc(info.frets)}</div></div>
+    ${ck&&!ck.unknown?(ck.ok?'<p class="verdict ok">Ноты совпадают с названием аккорда.</p>':`<p class="verdict bad">Схема не совпадает с названием.${ck.extra.length?` Лишние ноты: ${esc(ck.extra.join(', '))}.`:''}${ck.missing.length?` Не хватает: ${esc(ck.missing.join(', '))}.`:''}</p>`):''}
+    <div class="actions"><button class="btn danger" data-act="del-shape" data-c="${esc(name)}">Удалить</button><button class="btn primary" data-act="edit-shape" data-c="${esc(name)}">Изменить</button></div>
+  </div>`;
+  sheet.hidden=false;
+}
+async function deleteShape(name,btn){
+  if(btn.dataset.sure!=='1'){btn.dataset.sure='1';btn.textContent='Точно удалить?';return}
+  const next={...S.shapes};delete next[name];S.shapes=next;setShapes(next);closeSheet();fillChart();
+  try{await store.save({id:'_shapes',shapes:next});toast('Схема удалена')}catch(e){saveErr(e)}
+}
+
+/* ---------- sheets ---------- */
+function openChord(name){
+  const {list,approx}=getVoicings(name);
+  sheet.innerHTML=`<div class="panel" role="dialog" aria-label="Аппликатура ${esc(name)}">
+    <div class="panel-top"><h2>${esc(name)}</h2><button class="btn" data-act="close">Закрыть</button></div>
+    ${approx&&list.length?'<p class="hint">Точной схемы нет, показан упрощённый вариант.</p>':''}
+    ${list.length?(v=>`<div class="one">${diagram(v)}<div class="info">Ноты: ${esc(chordInfo(v,name).notes)}<br>Лады: ${esc(chordInfo(v,name).frets)}</div></div>`)(list[0])
+      :'<p class="hint">Для этого аккорда схемы пока нет.</p>'}
+  </div>`;
+  sheet.hidden=false; sheet.querySelector('[data-act=close]').focus();
+}
+function askDelete(){
+  const s=findSong(S.cur);
+  sheet.innerHTML=`<div class="panel" role="dialog" aria-label="Удаление песни">
+    <p style="font-weight:600;font-size:17px">Удалить «${esc(s.title)}»?</p>
+    <p class="hint">Песня исчезнет из библиотеки навсегда.</p>
+    <div class="actions"><button class="btn" data-act="close">Оставить</button><button class="btn primary" data-act="del" style="background:var(--danger)">Удалить</button></div>
+  </div>`;
+  sheet.hidden=false;
+}
+function closeSheet(){sheet.hidden=true;sheet.innerHTML=''}
+
+/* ---------- autoscroll ---------- */
+const SPEEDS={1:12,2:20,3:30,4:42,5:58};
+let raf=0,lastT=null,acc=0,wake=null;
+function tick(t){
+  if(!S.scroll.on)return;
+  if(lastT!=null){acc+=SPEEDS[S.scroll.speed]*(t-lastT)/1000;if(acc>=1){const n=Math.floor(acc);acc-=n;scrollBy(0,n)}
+    const el=document.scrollingElement||document.documentElement;
+    if(innerHeight+scrollY>=el.scrollHeight-2){stopScroll();renderTools();return}}
+  lastT=t;raf=requestAnimationFrame(tick);
+}
+async function startScroll(){S.scroll.on=true;lastT=null;acc=0;raf=requestAnimationFrame(tick);
+  try{wake=await navigator.wakeLock.request('screen')}catch{wake=null}}
+function stopScroll(){S.scroll.on=false;cancelAnimationFrame(raf);if(wake){wake.release().catch(()=>{});wake=null}}
+
+/* ---------- events ---------- */
+let patchT;
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');
+  if(!b){if(e.target===sheet)closeSheet();return}
+  const a=b.dataset.act;
+  if(a==='new')renderEditor(null);
+  else if(a==='tab-list'){S.cur=null;renderList()}
+  else if(a==='tab-chart')renderChart();
+  else if(a==='import')renderImport();
+  else if(a==='export')exportBackup();
+  else if(a==='imp-save'){const f=impFields();if(!f.title){document.getElementById('ie-title').textContent='Введите название песни.';document.getElementById('i-title').focus();return}saveSong(null,f)}
+  else if(a==='imp-edit')renderEditor(null,impFields());
+  else if(a==='new-shape')renderShapeEditor(null);
+  else if(a==='mychord')openMyShape(b.dataset.c);
+  else if(a==='edit-shape')renderShapeEditor(b.dataset.c);
+  else if(a==='del-shape')deleteShape(b.dataset.c,b);
+  else if(a==='se-top'){const i=+b.dataset.s;SE.frets[i]=SE.frets[i]<0?0:-1;fillShapeEditor()}
+  else if(a==='se-fret'){const i=+b.dataset.s,f=+b.dataset.f;SE.frets[i]=SE.frets[i]===f?0:f;fillShapeEditor()}
+  else if(a==='se-base'){SE.base=Math.min(15,Math.max(1,SE.base+ +b.dataset.d));fillShapeEditor()}
+  else if(a==='se-save')saveShape();
+  else if(a==='cchord')openChartChord(b.dataset.c);  else if(a==='open')renderSong(b.dataset.id);
+  else if(a==='home'){S.cur=null;renderList()}
+  else if(a==='edit')renderEditor(S.cur);
+  else if(a==='cancel'){S.cur&&findSong(S.cur)?renderSong(S.cur):renderList()}
+  else if(a==='save')doSave(S.cur&&S.cur!=='demo'?S.cur:null);
+  else if(a==='chord')openChord(b.dataset.c);
+  else if(a==='close')closeSheet();
+  else if(a==='ask-del')askDelete();
+  else if(a==='del'){const id=S.cur;closeSheet();store.remove(id).then(()=>{toast('Песня удалена');S.cur=null;renderList()},saveErr)}
+  else if(a==='tr'){
+    S.shift=((S.shift+ +b.dataset.d)+18)%12-6; if(S.shift===-6)S.shift=6;
+    fillSong();renderTools();
+    const id=S.cur;
+    if(id!=='demo'){clearTimeout(patchT);patchT=setTimeout(()=>store.patch(id,{transpose:S.shift}).catch(()=>{}),900)}
+  }
+  else if(a==='fs'){S.fs=Math.min(26,Math.max(12,S.fs+ +b.dataset.d*2));lsSet('sb.fs',S.fs);document.getElementById('body').style.setProperty('--fs',S.fs+'px')}
+  else if(a==='scroll'){S.scroll.on?stopScroll():startScroll();renderTools()}
+  else if(a==='speed'){S.scroll.speed=S.scroll.speed%5+1;lsSet('sb.speed',S.scroll.speed);renderTools()}
+});
+document.addEventListener('change',e=>{
+  if(e.target.id==='imp-file'&&e.target.files&&e.target.files[0]){importBackup(e.target.files[0]);e.target.value=''}
+});
+let impT;
+document.addEventListener('input',e=>{
+  const id=e.target.id;
+  if(id==='search'){S.q=e.target.value;fillList()}
+  else if(id==='imp-src'){clearTimeout(impT);impT=setTimeout(fillImport,250)}
+  else if(id==='se-name'){document.getElementById('se-err').textContent='';fillShapeEditor()}
+  else if(id==='se-frets'){const f=parseFretsText(e.target.value);if(f){SE.frets=f;const p=f.filter(x=>x>0);if(p.length){const mx=Math.max(...p),mn=Math.min(...p);if(mx>SE.base+4||mn<SE.base)SE.base=mx>5?mn:1}fillShapeEditor()}}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden)closeSheet()});
+
+/* ---------- boot ---------- */
+renderList();
+initStore().then(st=>{
+  store=st;
+  st.subscribe(list=>{
+    const prev=S.cur?findSong(S.cur):null;
+    S.songs=list.filter(s=>!String(s.id).startsWith('_'));
+    S.checks=(list.find(s=>s.id==='_checks')||{}).checked||{};
+    const shapes=(list.find(s=>s.id==='_shapes')||{}).shapes||{};
+    const shapesChanged=JSON.stringify(shapes)!==JSON.stringify(S.shapes);
+    if(shapesChanged){S.shapes=shapes;setShapes(shapes)}
+    S.loaded=true;
+    if(S.view==='list')fillList();
+    else if(S.view==='chart')fillChart();
+    else if(S.view==='song'&&shapesChanged&&findSong(S.cur))fillSong();
+    else if(S.view==='song'){const now=findSong(S.cur);
+      if(!now){S.cur=null;renderList()}
+      else if(!prev||prev.body!==now.body||prev.title!==now.title||prev.artist!==now.artist||prev.capo!==now.capo)renderSong(S.cur,true)}
+  });
+});
+</script>
+
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))</script>
+</body>
+</html>
