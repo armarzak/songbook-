@@ -84,6 +84,18 @@
   --grid:#28402F; --string:#557060; --warn:#F7A26A; --warn-bg:#2E2216; --good:#8EE59B; --good-bg:#14301C; --shadow:rgba(0,0,0,.5);
   color-scheme:dark;
 }
+:root[data-skin="sakura"]{
+  --bg:#FFF2F6; --surface:#FFFFFF; --sunk:#FBE3EB; --fg:#2B1520; --muted:#7D5B69; --line:#F2D3DF;
+  --chord:#B8195A; --accent:#B8195A; --on-accent:#FFFFFF; --danger:#A3201A; --bar:rgba(255,242,246,.92); --scrim:rgba(40,8,22,.35);
+  --grid:#EDCBD8; --string:#BE97A7; --warn:#A8520A; --warn-bg:#FBEBDD; --good:#2D7A3E; --good-bg:#E2F1E5; --shadow:rgba(110,20,60,.12);
+  color-scheme:light;
+}
+:root[data-skin="graphite"]{
+  --bg:#17181B; --surface:#202226; --sunk:#2A2D32; --fg:#ECEDEF; --muted:#9A9EA6; --line:#33363C;
+  --chord:#FF8A3D; --accent:#FF8A3D; --on-accent:#261100; --danger:#FF8A80; --bar:rgba(23,24,27,.92); --scrim:rgba(0,0,0,.6);
+  --grid:#383C42; --string:#62666E; --warn:#FFB86B; --warn-bg:#2E2216; --good:#7DD08E; --good-bg:#15281B; --shadow:rgba(0,0,0,.5);
+  color-scheme:dark;
+}
 html,body{background:var(--bg);color:var(--fg)}
 body{font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
 *{box-sizing:border-box}
@@ -259,6 +271,12 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 .fb .dot.root text{fill:var(--on-accent)}
 .fb .dot.blue circle{fill:var(--sunk);stroke-dasharray:3 2}
 .fb .dot.dim{opacity:.18}
+.fb .dot{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.fb .dot:hover circle{stroke-width:3}
+.fb .dot.hit circle{animation:hit .35s ease-out}
+@keyframes hit{0%{stroke-width:7}100%{stroke-width:2}}
+.pos .btn svg{fill:currentColor;stroke:none;width:14px;height:14px}
+@media (prefers-reduced-motion:reduce){.fb .dot.hit circle{animation:none}}
 .cof-wrap{display:flex;flex-wrap:wrap;gap:8px 28px;align-items:flex-start;justify-content:center}
 #cof-svg{flex:0 1 380px;min-width:0;max-width:420px;width:100%}
 .cof{display:block;width:100%;height:auto;touch-action:manipulation}
@@ -1016,7 +1034,7 @@ function fretboardSvg(){
     const inBox=!box||box.cells.has(s+':'+f)||(semi===blueSemi&&f>=box.lo&&f<=box.hi+(s>=4?1:0));
     const cls=['dot',semi===0?'root':'',semi===blueSemi?'blue':'',inBox?'':'dim'].join(' ');
     const lab=scState.labels==='deg'?prettyDeg(nt.d):prettyNote(nt.n);
-    o+=`<g class="${cls}"><circle cx="${fx(f)}" cy="${sy(s)}" r="13"/><text x="${fx(f)}" y="${sy(s)+4.5}" text-anchor="middle">${lab}</text></g>`;
+    o+=`<g class="${cls}" data-act="note" data-m="${[40,45,50,55,59,64][s]+f}"><circle cx="${fx(f)}" cy="${sy(s)}" r="13"/><text x="${fx(f)}" y="${sy(s)+4.5}" text-anchor="middle">${lab}</text></g>`;
   }
   return o+'</svg>';
 }
@@ -1048,6 +1066,7 @@ function fillScales(){
       </div>
     </div>
     <div class="notes">${notes.map(x=>`<span class="${x.semi===0?'r':''}${sc.blue===x.d?' bl':''}"><b>${esc(prettyNote(x.n))}</b><i>${esc(prettyDeg(x.d))}</i></span>`).join('')}</div>
+    <div class="pos"><button class="btn" data-act="play-scale">${ICON.play}Сыграть гамму</button><span class="sec-p" style="margin:0">или нажимайте на ноты на грифе</span></div>
     ${boxes?`<div class="pos"><span class="sec-p" style="margin:0">Позиция:</span>
       <div class="seg">${['Весь гриф','1','2','3','4','5'].map((t,k)=>`<button data-act="sc-pos" data-v="${k}" aria-pressed="${scState.pos===k}">${t}</button>`).join('')}</div></div>`:''}
     <div class="fb-scroll" id="fb-scroll">${fretboardSvg()}</div>
@@ -1093,6 +1112,21 @@ function playFrets(frets,when){
     g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.32,t+0.004);g.gain.setTargetAtTime(0,t+2.2,0.25);
     src.connect(g);g.connect(acOut);src.start(t);src.stop(t+2.8);ringing.push(g);
   });
+}
+function playNote(midi,when){
+  const ctx=audioCtx(),t=Math.max(ctx.currentTime+0.01,when||0);
+  const src=ctx.createBufferSource(),g=ctx.createGain();
+  src.buffer=pluckBuffer(ctx,midi);
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.45,t+0.004);g.gain.setTargetAtTime(0,t+1.8,0.25);
+  src.connect(g);g.connect(acOut);src.start(t);src.stop(t+2.8);ringing.push(g);
+}
+/* one octave up from the lowest tonic on the low E string, then back to the tonic an octave up */
+function playScale(){
+  stopProg();
+  const ctx=audioCtx(); silence(ctx);
+  const {rpc,notes}=scaleData(),m0=40+((rpc-4)%12+12)%12;
+  const seq=[...notes.map(x=>m0+x.semi),m0+12],t0=ctx.currentTime+0.05;
+  seq.forEach((m,k)=>playNote(m,t0+k*0.32));
 }
 function playChord(name){const v=getVoicings(name).list[0];if(v)playFrets(v.frets);return !!v}
 function stopProg(){progTimers.forEach(clearTimeout);progTimers=[];document.querySelectorAll('.cchip.playing').forEach(e=>e.classList.remove('playing'))}
@@ -1310,7 +1344,9 @@ const SKINS=[
   {id:'mint',name:'Мята',hint:'свежий светлый',bg:'#EEF6F2',fg:'#14231D',ch:'#0E7A64'},
   {id:'coral',name:'Коралл',hint:'тёплый светлый',bg:'#FFF5F2',fg:'#2A1712',ch:'#C9401B'},
   {id:'neon',name:'Неон',hint:'яркий тёмный',bg:'#0F0B1A',fg:'#F1EAFF',ch:'#FF6AD5'},
-  {id:'forest',name:'Лес',hint:'глубокий тёмный',bg:'#0D1712',fg:'#E8F1EA',ch:'#F2C14E'}
+  {id:'forest',name:'Лес',hint:'глубокий тёмный',bg:'#0D1712',fg:'#E8F1EA',ch:'#F2C14E'},
+  {id:'sakura',name:'Сакура',hint:'нежный светлый',bg:'#FFF2F6',fg:'#2B1520',ch:'#B8195A'},
+  {id:'graphite',name:'Графит',hint:'строгий тёмный',bg:'#17181B',fg:'#ECEDEF',ch:'#FF8A3D'}
 ];
 const themeMetas=[...document.querySelectorAll('meta[name="theme-color"]')].map(m=>({m,c:m.getAttribute('content'),media:m.getAttribute('media')}));
 function applySkin(id){
@@ -1701,6 +1737,8 @@ document.addEventListener('click',e=>{
   else if(a==='sc-pos'){scState.pos=+b.dataset.v;scSave()}
   else if(a==='cof'){const i=+b.dataset.i,mi=b.dataset.m==='1';cofSelect(i,mi);if(b.tagName.toLowerCase()==='g')playChord(mi?COF_MIN[i]+'m':COF_MAJ[i])}
   else if(a==='play'){stopProg();playChord(b.dataset.c)}
+  else if(a==='note'){playNote(+b.dataset.m);b.classList.remove('hit');void b.getBBox();b.classList.add('hit')}
+  else if(a==='play-scale')playScale();
   else if(a==='play-frets'){playFrets(b.dataset.f.split(',').map(Number))}
   else if(a==='play-prog')playProg(b,b.dataset.c.split('|'));
   else if(a==='cof-mode')cofSelect(cofState.i,b.dataset.m==='1');
