@@ -41,8 +41,6 @@ body.dark .songs li{border-color:#2F3430}
 .row .t{font-weight:600;font-size:18px}
 .row .a{color:#636A61;font-size:15px}
 body.dark .row .a{color:#9BA298}
-.row .k{font-family:Menlo,monospace;font-weight:700;color:#1A57AE;background:#E5E8E1;border-radius:8px;padding:4px 10px;margin-left:12px}
-body.dark .row .k{color:#86B6FF;background:#232724}
 .note{color:#636A61;font-size:15px}
 body.dark .note{color:#9BA298}
 h1{font-size:28px;line-height:1.2;margin:6px 0 2px}
@@ -400,7 +398,7 @@ function fillList(){
   var q=S.q.toLowerCase(),list=sorted(),html='',n=0;
   for(var i=0;i<list.length;i++){
     var s=list[i]; if(q&&((s.title||'')+' '+(s.artist||'')).toLowerCase().indexOf(q)<0)continue; n++;
-    html+='<li><button class="row" data-act="open" data-id="'+esc(s.id)+'"><span class="grow"><span class="t">'+esc(s.title||'Без названия')+'</span><br><span class="a">'+esc(s.artist||'')+'</span></span><span class="k">'+esc(firstChord(s)||'–')+'</span></button></li>';
+    html+='<li><button class="row" data-act="open" data-id="'+esc(s.id)+'"><span class="grow"><span class="t">'+esc(s.title||'Без названия')+'</span><br><span class="a">'+esc(s.artist||'')+'</span></span></button></li>';
   }
   ul.innerHTML=html||'<li><p class="note">'+(S.songs.length?'Ничего не нашлось.':'Песен пока нет. Подключите GitHub ниже или вставьте резервную копию.')+'</p></li>';
 }
