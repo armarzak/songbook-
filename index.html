@@ -373,6 +373,7 @@ label.btn{cursor:pointer}
 .mine-grid .cell{width:76px}
 .steps{margin:0;padding-left:20px;color:var(--muted);font-size:14px;display:flex;flex-direction:column;gap:4px;max-width:65ch}
 .imp-src{min-height:28vh;font-size:14px}
+.imp-defs .btn{margin-top:8px}
 .imp-prev{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;max-height:60vh;overflow:auto}
 .verdict:empty{display:none}
 .verdict:not(.ok):not(.bad){background:var(--sunk);color:var(--muted)}
@@ -658,31 +659,56 @@ const SEC=/^(?:intro|verse|chorus|pre-?chorus|bridge|outro|solo|interlude|instru
 const JUNK=/^(?:x|×|[\d.,]+k?\s*(?:views|просмотр\p{L}*)|last update|rating|rate this|please rate|comments?|print|report bad tab|tabbed by|tab by|thanks to|transpose|autoscroll|font size|download pdf|add to (?:playlist|favorites)|share|chords? used|strumming|difficulty|tuning|key:|author|added|updated|video|видео|комментари\p{L}*|транспон\p{L}*|поделиться|добавить в|распечатать|скачать|автопрокрутка|подбор\p{L}*|оценк\p{L}*|исправить|аппликатуры аккордов|разбор|смотреть|реклама|advertisement|related|more versions|other versions|all versions|самоучитель|войти|регистрация|log in|sign up)(?![\p{L}\p{N}]).*$/iu;
 const SEC_INLINE=/^((?:intro|verse|chorus|pre-?chorus|bridge|outro|solo|interlude|instrumental|refrain|coda|куплет|припев|предприпев|проигрыш|вступление|бридж|кода|соло|концовка|окончание)(?:\s*\d+)?)\s*:\s*(\S.*)$/i;
 function expandTabs(l){let o='';for(const ch of l){if(ch==='\t')o+=' '.repeat(8-o.length%8);else o+=ch}return o}
+/* "Creep Chords", "Song (ver 2)", "Песня аккорды" → just the song name */
+const TYPE_WORD=/\s*[-–—:|(]?\s*(?:official\s+)?(?:chords?|tabs?|ukulele(?:\s+chords)?|bass(?:\s+tabs?)?|guitar\s+pro|аккорды(?:\s+и\s+текст)?|табы?|ver(?:sion)?\.?\s*\d+)\s*\)?\s*$/i;
+function cleanTitle(t){t=(t||'').trim();let prev;do{prev=t;t=t.replace(TYPE_WORD,'').trim()}while(t&&t!==prev);return t.replace(/^[«"]|[»"]$/g,'').trim()}
+function cleanArtist(a){return (a||'').trim().replace(/^by\s+/i,'').replace(/[\s\-–—:,|]+$/,'').trim()}
+const META_LINE=/^(?:tuning|key|capo|difficulty|author|strumming|tempo|bpm|строй|тональность|каподастр)\s*:/i;
+/* a chord-shape legend line such as "G  3-5-5-4-3-3" or "Am x02210" */
+function shapeDef(line){
+  const m=/^\s*(\S+)\s+((?:[xX\d]{1,2}[-\s]+){5}[xX\d]{1,2}|[xX\d]{6})\s*$/.exec(line);
+  if(!m||!chordTok(m[1]))return null;
+  const parts=/[-\s]/.test(m[2])?m[2].split(/[-\s]+/):[...m[2]];
+  const frets=parts.map(p=>/x/i.test(p)?-1:+p);
+  return frets.length===6&&frets.every(f=>f>=-1&&f<=22)?{name:m[1],frets}:null;
+}
 function importParse(raw){
   const text=raw.replace(/\r/g,'').replace(/ /g,' ').replace(/\[\/?(?:ch|tab)\]/gi,'');
   const lines=[];
-  for(const raw of text.split('\n')){
+  // "…EKey: GCapo: …" arrives glued together when a page is copied
+  const unglued=text.replace(/([^\n])(?=(?:Tuning|Key|Capo|Difficulty|Author|Strumming|Tempo|BPM)\s*:)/g,'$1\n');
+  for(const raw of unglued.split('\n')){
     const l=expandTabs(raw).replace(/\s+$/,''),m=l.trim().match(SEC_INLINE);
     if(m&&isChordLine(m[2])){lines.push(m[1]+':',m[2])}else lines.push(l);
   }
   let title='',artist='',m;
-  for(const l of lines.slice(0,120)){
-    const t=l.trim(); if(!t||title)continue;
+  const top=lines.slice(0,120);
+  for(let i=0;i<top.length&&!title;i++){
+    const t=top[i].trim(); if(!t)continue;
     if((m=t.match(/^(.+?)\s+(?:chords|tabs?|ukulele chords)\s+by\s+(.+)$/i))){title=m[1];artist=m[2]}
     else if((m=t.match(/^аккорды(?: и текст)?(?: песни)?\s+[«"]?(.+?)[»"]?\s+[-–—]\s+(.+)$/i))){title=m[1];artist=m[2]}
     else if((m=t.match(/^(.+?)\s+[-–—]\s+(.+?)[,.]?\s+(?:аккорды|chords)(?![\p{L}])/iu))){artist=m[1];title=m[2]}
+    else if((m=t.match(/^(.{1,80}?)\s+(?:chords|tabs?|ukulele chords)$/i))&&!chordTok(m[1])){
+      // newer page layout: "Song Chords" on one line, the artist (sometimes "by Artist") on the next
+      title=m[1];
+      for(let j=i+1;j<Math.min(top.length,i+4);j++){const n=top[j].trim();if(!n)continue;
+        if(n.length<=60&&!JUNK.test(n)&&!META_LINE.test(n)&&!isChordLine(n))artist=n;break}
+    }
   }
+  title=cleanTitle(title); artist=cleanArtist(artist);
   const cm=text.match(/capo[:\s]*(?:on\s*)?(\d{1,2})|каподастр\w*[^\d\n]{0,20}(\d{1,2})/i);
   const capo=cm?Math.min(12,+(cm[1]||cm[2])):0;
   const isHead=t=>SEC.test(t)||(/^\[[^\]]+\]$/.test(t)&&!chordTok(t.slice(1,-1).trim()));
+  const defs=[];
   const kind=lines.map(l=>{const t=l.trim();
-    if(!t)return 'blank'; if(isHead(t))return 'head'; if(JUNK.test(t))return 'junk';
+    if(!t)return 'blank'; if(isHead(t))return 'head'; if(JUNK.test(t)||META_LINE.test(t))return 'junk';
+    const d=shapeDef(l); if(d){if(!defs.some(x=>x.name===d.name))defs.push(d);return 'junk'}
     if(isChordLine(l)||(l.includes('[')&&inlineToPair(l)))return 'chord'; return 'text'});
   const nextText=i=>{let seen=0;for(let j=i+1;j<lines.length&&seen<3;j++){if(kind[j]==='blank')continue;seen++;if(kind[j]==='text')return true;if(kind[j]==='junk')return false}return false};
   let start=kind.indexOf('head');
   const firstChord=kind.findIndex((k,i)=>k==='chord'&&nextText(i));
   if(start<0||(firstChord>=0&&firstChord<start&&kind.slice(firstChord,start).every(k=>k!=='junk')))start=firstChord;
-  if(start<0)return {title,artist,capo,body:'',chordLines:0,parts:0};
+  if(start<0)return {title,artist,capo,defs,body:'',chordLines:0,parts:0};
   let end=start; kind.forEach((k,i)=>{if(i>=start&&(k==='chord'||k==='head'))end=i});
   for(let j=end+1,blank=0,n=0;j<lines.length&&n<14;j++,n++){
     if(kind[j]==='junk'||kind[j]==='chord')break;
@@ -698,7 +724,7 @@ function importParse(raw){
     out.push(lines[i]);
   }
   while(out.length&&out[out.length-1]==='')out.pop();
-  return {title:title.trim(),artist:artist.trim(),capo,body:out.join('\n'),
+  return {title,artist,capo,defs,body:out.join('\n'),
     chordLines:kind.filter((k,i)=>k==='chord'&&i>=start&&i<=end).length,parts:kind.filter((k,i)=>k==='head'&&i>=start&&i<=end).length};
 }
 /* ---------- reading a PDF with chords (pdf.js is loaded only when a PDF is picked) ---------- */
@@ -755,7 +781,7 @@ async function pdfToText(lib,buf){
 function nameFromFile(fn){
   const parts=fn.replace(/\.pdf$/i,'').replace(/_/g,' ').split(/\s+[-–—]\s+/).map(s=>s.trim()).filter(Boolean);
   while(parts.length>1&&/^(chords?|tabs?|аккорды|ukulele.*)$/i.test(parts[parts.length-1]))parts.pop();
-  return parts.length>=2?{artist:parts[0],title:parts.slice(1).join(' - ')}:{artist:'',title:parts[0]||''};
+  return parts.length>=2?{artist:cleanArtist(parts[0]),title:cleanTitle(parts.slice(1).join(' - '))}:{artist:'',title:cleanTitle(parts[0]||'')};
 }
 const usesFlats=body=>/(^|[\s\[(\/])[A-H]b(?![a-zа-я])/m.test(body||'');
 function chordLineHtml(s,shift,flats,seen){
@@ -1635,6 +1661,8 @@ function fillImport(){
   const caps=[...Array(13).keys()].map(i=>`<option value="${i}" ${IMP.capo===i?'selected':''}>${i?i+' лад':'нет'}</option>`).join('');
   res.innerHTML=`
     <p class="verdict ok">Нашёл ${IMP.chordLines} ${plural(IMP.chordLines,'строку','строки','строк')} с аккордами${IMP.parts?` и ${IMP.parts} ${plural(IMP.parts,'часть','части','частей')} песни`:''}. Проверьте название и текст ниже.</p>
+    ${IMP.defs&&IMP.defs.length?`<p class="verdict imp-defs">На странице есть свои аппликатуры: <b>${esc(IMP.defs.map(d=>pretty(d.name)+' ('+fretsText(d.frets)+')').join(', '))}</b>. В текст песни они не попадут.
+      <button class="btn" data-act="imp-defs">Добавить в «Мои схемы»</button></p>`:''}
     <div class="field"><label for="i-title">Название</label><input id="i-title" value="${esc(IMP.title)}" autocomplete="off"><div class="err" id="ie-title"></div></div>
     <div class="row2">
       <div class="field"><label for="i-artist">Исполнитель</label><input id="i-artist" value="${esc(IMP.artist)}" autocomplete="off"></div>
@@ -1814,6 +1842,11 @@ document.addEventListener('click',e=>{
   else if(a==='skin'){applySkin(b.dataset.s);lsSet('sb.skin',S.skin);fillSkins()}
   else if(a==='imp-save'){const f=impFields();if(!f.title){document.getElementById('ie-title').textContent='Введите название песни.';document.getElementById('i-title').focus();return}saveSong(null,f)}
   else if(a==='imp-edit')renderEditor(null,impFields());
+  else if(a==='imp-defs'&&IMP&&IMP.defs){
+    const next={...S.shapes};IMP.defs.forEach(d=>{const p=d.frets.filter(x=>x>0);next[d.name]={frets:d.frets,base:p.length&&Math.max(...p)>4?Math.min(...p):0}});
+    S.shapes=next;setShapes(next);b.disabled=true;b.textContent='Добавлено';
+    store.save({id:'_shapes',shapes:next}).then(()=>toast('Схемы добавлены в «Мои схемы»'),saveErr);
+  }
   else if(a==='new-shape')renderShapeEditor(null);
   else if(a==='mychord')openMyShape(b.dataset.c);
   else if(a==='edit-shape')renderShapeEditor(b.dataset.c);
