@@ -539,6 +539,62 @@ function importParse(raw){
   return {title:title.trim(),artist:artist.trim(),capo,body:out.join('\n'),
     chordLines:kind.filter((k,i)=>k==='chord'&&i>=start&&i<=end).length,parts:kind.filter((k,i)=>k==='head'&&i>=start&&i<=end).length};
 }
+/* ---------- reading a PDF with chords (pdf.js is loaded only when a PDF is picked) ---------- */
+const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+let pdfReady=null;
+function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=()=>no(new Error('load'));document.head.appendChild(s)})}
+function loadPdfJs(){
+  if(!pdfReady)pdfReady=(async()=>{
+    await loadScript(PDFJS+'pdf.worker.min.js'); // runs on the page itself: the frame cannot start a worker from another site
+    await loadScript(PDFJS+'pdf.min.js');
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js';
+    return window.pdfjsLib;
+  })().catch(e=>{pdfReady=null;throw e});
+  return pdfReady;
+}
+const PDF_NOISE=/^\s*(?:(?:page|стр\.?|страница)\s*)?\d+\s*(?:\/|of|из)\s*\d+\s*$|https?:\/\/|www\.|ultimate-guitar|\.(?:com|ru|net|org)\b/i;
+async function pdfToText(lib,buf){
+  const doc=await lib.getDocument({data:new Uint8Array(buf),isEvalSupported:false}).promise;
+  const pages=[],widths=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const tc=await (await doc.getPage(p)).getTextContent();
+    const items=tc.items.filter(it=>typeof it.str==='string'&&it.str.trim()).map(it=>({s:it.str.replace(/\s+$/,''),x:it.transform[4],y:it.transform[5],w:it.width,h:Math.hypot(it.transform[2],it.transform[3])||it.height||10}));
+    for(const it of items){const n=it.s.length;if(n&&it.w>0)widths.push(it.w/n)}
+    pages.push(items);
+  }
+  const all=pages.flat(); if(!all.length)return '';
+  widths.sort((a,b)=>a-b);
+  const cw=widths[Math.floor(widths.length/2)]||6, minX=Math.min(...all.map(i=>i.x));
+  const out=[];
+  for(const items of pages){
+    const rows=[];
+    for(const it of items.sort((a,b)=>b.y-a.y||a.x-b.x)){
+      let r=rows.find(r=>Math.abs(r.y-it.y)<Math.max(2,it.h*.3));
+      if(!r){r={y:it.y,its:[]};rows.push(r)}
+      r.its.push(it);
+    }
+    rows.sort((a,b)=>b.y-a.y);
+    const steps=rows.slice(1).map((r,i)=>rows[i].y-r.y).sort((a,b)=>a-b);
+    const lh=steps.length?steps[Math.floor(steps.length*.25)]:14;
+    rows.forEach((r,i)=>{
+      if(i>0){const extra=Math.min(2,Math.round((rows[i-1].y-r.y)/lh)-1);for(let k=0;k<extra;k++)out.push('')}
+      let line='';
+      for(const it of r.its.sort((a,b)=>a.x-b.x)){
+        const col=Math.max(0,Math.round((it.x-minX)/cw));
+        const at=!line.length?col:col>=line.length?col:line.length+1;
+        line=line.padEnd(at,' ')+it.s;
+      }
+      if(!PDF_NOISE.test(line))out.push(line.replace(/\s+$/,''));
+    });
+    out.push('');
+  }
+  return out.join('\n');
+}
+function nameFromFile(fn){
+  const parts=fn.replace(/\.pdf$/i,'').replace(/_/g,' ').split(/\s+[-–—]\s+/).map(s=>s.trim()).filter(Boolean);
+  while(parts.length>1&&/^(chords?|tabs?|аккорды|ukulele.*)$/i.test(parts[parts.length-1]))parts.pop();
+  return parts.length>=2?{artist:parts[0],title:parts.slice(1).join(' - ')}:{artist:'',title:parts[0]||''};
+}
 const usesFlats=body=>/(^|[\s\[(\/])[A-H]b(?![a-zа-я])/m.test(body||'');
 function chordLineHtml(s,shift,flats,seen){
   let out='',html=''; const re=/\S+/g; let m;
@@ -687,7 +743,7 @@ function renderList(){
   app.innerHTML=`
   <header class="bar"><div class="bar-in">
     <div class="brand">Мой песенник</div>
-    <button class="btn" data-act="import">С сайта</button>
+    <button class="btn" data-act="import">Импорт</button>
     <button class="btn primary" data-act="new">${ICON.plus}Песня</button>
   </div></header>
   <div class="wrap">
@@ -898,14 +954,24 @@ async function importBackup(file){
 /* ---------- import from a website ---------- */
 let IMP=null;
 function renderImport(){
-  stopScroll(); S.view='import'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools'); IMP=null;
+  stopScroll(); S.view='import'; S.cur=null; S.impName=null; tools.hidden=true; document.body.classList.remove('has-tools'); IMP=null;
   app.innerHTML=`
   <header class="bar"><div class="bar-in">
     <button class="btn" data-act="cancel">Отмена</button>
-    <div class="bar-title" style="text-align:center">Вставить с сайта</div>
+    <div class="bar-title" style="text-align:center">Импорт песни</div>
     <span style="width:78px"></span>
   </div></header>
   <div class="wrap"><div class="form">
+    <section class="imp-pdf">
+      <h3 class="sec-h">Из PDF-файла</h3>
+      <p class="sec-p">PDF с аккордами над текстом, например сохранённый с Ultimate Guitar. Аккорды встанут над теми же слогами.</p>
+      <div class="actions" style="justify-content:flex-start;margin-top:0">
+        <label class="btn primary" for="imp-pdf">Выбрать PDF</label>
+        <input type="file" id="imp-pdf" class="vh" accept="application/pdf,.pdf">
+        <span class="hint" id="pdf-status" role="status"></span>
+      </div>
+    </section>
+    <h3 class="sec-h">Или вставьте текст со страницы</h3>
     <ol class="steps">
       <li>Откройте песню на сайте с аккордами: Ultimate Guitar, Amdm, MyChords и другие.</li>
       <li>Выделите всю страницу и скопируйте. На айфоне: долгое нажатие на текст → «Выбрать все» → «Скопировать».</li>
@@ -921,6 +987,7 @@ function fillImport(){
   const src=document.getElementById('imp-src').value;
   if(!src.trim()){res.innerHTML='';IMP=null;return}
   IMP=importParse(src);
+  if(S.impName&&(!IMP.title||!IMP.artist)){const f=nameFromFile(S.impName);IMP.title=IMP.title||f.title;IMP.artist=IMP.artist||f.artist}
   if(!IMP.body){res.innerHTML='<p class="verdict bad">Не нашёл строк с аккордами. Проверьте, что скопировалась сама песня, а не только заголовок страницы.</p>';return}
   const flats=usesFlats(IMP.body);
   const prev=parseSong(IMP.body).map(l=>l.k==='gap'?'<div class="ln gap"></div>':l.k==='head'?`<div class="ln head">${esc(l.t)}</div>`:
@@ -938,6 +1005,20 @@ function fillImport(){
       <button class="btn" data-act="imp-edit">Поправить текст</button>
     </div>
     <div class="field"><label>Как песня будет выглядеть</label><div class="sheet-body imp-prev" style="--fs:14px">${prev}</div></div>`;
+}
+async function importPdf(file){
+  const st=document.getElementById('pdf-status'),say=t=>{if(st)st.textContent=t};
+  say('Читаю PDF…');
+  let lib;
+  try{lib=await loadPdfJs()}catch{say('Не удалось загрузить модуль чтения PDF. Нужен интернет при первом использовании.');return}
+  let text;
+  try{text=await pdfToText(lib,await file.arrayBuffer())}catch{say('Не получилось открыть этот PDF. Возможно, он повреждён или защищён паролем.');return}
+  if(!text.trim()){say('В этом PDF нет текста: похоже, это скан или картинка. Такие файлы прочитать не получится.');return}
+  S.impName=file.name;
+  const ta=document.getElementById('imp-src'); if(!ta)return;
+  ta.value=text; say('Готово: '+file.name);
+  fillImport();
+  document.getElementById('imp-res').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function impFields(){
   return {title:document.getElementById('i-title').value.trim(),artist:document.getElementById('i-artist').value.trim(),
@@ -1109,6 +1190,7 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('change',e=>{
   if(e.target.id==='imp-file'&&e.target.files&&e.target.files[0]){importBackup(e.target.files[0]);e.target.value=''}
+  if(e.target.id==='imp-pdf'&&e.target.files&&e.target.files[0]){importPdf(e.target.files[0]);e.target.value=''}
 });
 let impT;
 document.addEventListener('input',e=>{
