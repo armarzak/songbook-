@@ -374,6 +374,11 @@ label.btn{cursor:pointer}
 .steps{margin:0;padding-left:20px;color:var(--muted);font-size:14px;display:flex;flex-direction:column;gap:4px;max-width:65ch}
 .imp-src{min-height:28vh;font-size:14px}
 .imp-defs .btn{margin-top:8px}
+.gh-form{max-width:420px;margin-top:10px;gap:10px}
+.gh-msg{font-size:14px;color:var(--muted);margin:8px 0 0;min-height:0}
+.gh-msg:empty{display:none}
+.gh-msg.bad{color:var(--warn)}
+#sync a,.steps a{color:var(--accent)}
 .imp-prev{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;max-height:60vh;overflow:auto}
 .verdict:empty{display:none}
 .verdict:not(.ok):not(.bad){background:var(--sunk);color:var(--muted)}
@@ -1413,6 +1418,7 @@ function renderList(){
       <h3 class="sec-h">Оформление</h3>
       <div class="skins" id="skins"></div>
     </section>
+    <section class="backup" id="sync"></section>
     <section class="backup">
       <h3 class="sec-h">Резервная копия</h3>
       <p class="sec-p">Один файл со всеми песнями и вашими схемами. Через него песни переносятся между облачной и офлайн-версией песенника или на новый телефон.</p>
@@ -1423,7 +1429,7 @@ function renderList(){
       </div>
     </section>
   </div>`;
-  fillList(); fillSkins();
+  fillList(); fillSkins(); fillSync();
 }
 
 /* ---------- themes ---------- */
@@ -1758,7 +1764,7 @@ async function saveShape(){
   const next={...S.shapes};
   if(SE.orig&&SE.orig!==name)delete next[SE.orig];
   const p=SE.frets.filter(x=>x>0);
-  next[name]={frets:[...SE.frets],base:SE.base>1?SE.base:(p.length&&Math.max(...p)>4?Math.min(...p):0)};
+  next[name]={frets:[...SE.frets],base:SE.base>1?SE.base:(p.length&&Math.max(...p)>4?Math.min(...p):0),t:Date.now()};delete DEL['shape:'+name];saveDel();
   S.shapes=next;setShapes(next);
   try{await store.save({id:'_shapes',shapes:next});toast('Схема сохранена');renderChart()}catch(e){saveErr(e)}
 }
@@ -1775,7 +1781,7 @@ function openMyShape(name){
 }
 async function deleteShape(name,btn){
   if(btn.dataset.sure!=='1'){btn.dataset.sure='1';btn.textContent='Точно удалить?';return}
-  const next={...S.shapes};delete next[name];S.shapes=next;setShapes(next);closeSheet();fillChart();
+  const next={...S.shapes};delete next[name];DEL['shape:'+name]=Date.now();saveDel();S.shapes=next;setShapes(next);closeSheet();fillChart();
   try{await store.save({id:'_shapes',shapes:next});toast('Схема удалена')}catch(e){saveErr(e)}
 }
 
@@ -1839,11 +1845,14 @@ document.addEventListener('click',e=>{
   else if(a==='tuner-toggle'){TU.on?tunerStop():tunerStart()}
   else if(a==='import')renderImport();
   else if(a==='export')exportBackup();
+  else if(a==='gh-connect')ghConnect();
+  else if(a==='gh-sync')ghSync();
+  else if(a==='gh-off')ghOff(b);
   else if(a==='skin'){applySkin(b.dataset.s);lsSet('sb.skin',S.skin);fillSkins()}
   else if(a==='imp-save'){const f=impFields();if(!f.title){document.getElementById('ie-title').textContent='Введите название песни.';document.getElementById('i-title').focus();return}saveSong(null,f)}
   else if(a==='imp-edit')renderEditor(null,impFields());
   else if(a==='imp-defs'&&IMP&&IMP.defs){
-    const next={...S.shapes};IMP.defs.forEach(d=>{const p=d.frets.filter(x=>x>0);next[d.name]={frets:d.frets,base:p.length&&Math.max(...p)>4?Math.min(...p):0}});
+    const next={...S.shapes};IMP.defs.forEach(d=>{const p=d.frets.filter(x=>x>0);next[d.name]={frets:d.frets,base:p.length&&Math.max(...p)>4?Math.min(...p):0,t:Date.now()}});
     S.shapes=next;setShapes(next);b.disabled=true;b.textContent='Добавлено';
     store.save({id:'_shapes',shapes:next}).then(()=>toast('Схемы добавлены в «Мои схемы»'),saveErr);
   }
@@ -1868,7 +1877,7 @@ document.addEventListener('click',e=>{
     S.shift=((S.shift+ +b.dataset.d)+18)%12-6; if(S.shift===-6)S.shift=6;
     fillSong();renderTools();
     const id=S.cur;
-    if(id!=='demo'){clearTimeout(patchT);patchT=setTimeout(()=>store.patch(id,{transpose:S.shift}).catch(()=>{}),900)}
+    if(id!=='demo'){clearTimeout(patchT);patchT=setTimeout(()=>store.patch(id,{transpose:S.shift,updatedAt:Date.now()}).catch(()=>{}),900)}
   }
   else if(a==='fs'){S.fs=Math.min(26,Math.max(12,S.fs+ +b.dataset.d*2));lsSet('sb.fs',S.fs);document.getElementById('body').style.setProperty('--fs',S.fs+'px')}
   else if(a==='scroll'){S.scroll.on?stopScroll():startScroll();renderTools()}});
@@ -1892,11 +1901,135 @@ document.addEventListener('keydown',e=>{
   if(g&&(e.key==='Enter'||e.key===' ')){e.preventDefault();const i=+g.dataset.i,mi=g.dataset.m==='1';unlockAudio(3);playChord(mi?COF_MIN[i]+'m':COF_MAJ[i]);cofSelect(i,mi)}
 });
 
+/* ---------- sync with a GitHub repository (home-screen app only: claude.ai pages cannot reach other sites) ---------- */
+let RAW=null;
+const GH={cfg:(()=>{try{return JSON.parse(lsGet('sb.gh')||'null')}catch{return null}})(),busy:false,timer:0,msg:'',err:false,pub:false,sureOff:false};
+const DEL=(()=>{try{return JSON.parse(lsGet('sb.deleted')||'{}')||{}}catch{return {}}})(); // id or "shape:Name" → when it was deleted
+function saveDel(){lsSet('sb.deleted',JSON.stringify(DEL))}
+const ghCan=()=>!!window.SONGBOOK_OFFLINE;
+const ghOn=()=>ghCan()&&!!(GH.cfg&&GH.cfg.repo&&GH.cfg.token);
+function wrapStore(st){
+  return {
+    subscribe:st.subscribe,
+    async save(s){await st.save(s);ghSoon()},
+    async patch(id,p){await st.patch(id,p);ghSoon()},
+    async remove(id){DEL[id]=Date.now();saveDel();await st.remove(id);ghSoon()}
+  };
+}
+function ghSoon(){if(!ghOn())return;clearTimeout(GH.timer);GH.timer=setTimeout(()=>ghSync(),3500)}
+function b64encUtf8(str){const b=new TextEncoder().encode(str);let s='';for(let i=0;i<b.length;i+=0x8000)s+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(s)}
+function b64decUtf8(b64){const bin=atob(b64.replace(/\s/g,'')),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new TextDecoder().decode(u)}
+async function ghFetch(path,opt={}){
+  const r=await fetch('https://api.github.com/repos/'+GH.cfg.repo+path,{cache:'no-store',...opt,
+    headers:{Authorization:'Bearer '+GH.cfg.token,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28',...(opt.body?{'Content-Type':'application/json'}:{})}});
+  if(!r.ok){const e=new Error('github '+r.status);e.status=r.status;throw e}
+  return r.json();
+}
+async function ghGetFile(){try{return await ghFetch('/contents/songbook.json?ts='+Date.now())}catch(e){if(e.status===404)return null;throw e}}
+/* Newest edit of each song wins; a deletion wins over any edit made before it */
+function mergeData(local,remote){
+  const del={...((remote&&remote.deleted)||{})};
+  for(const [k,v] of Object.entries(DEL))if(!(del[k]>=v))del[k]=v;
+  const map=new Map();
+  for(const s of (remote&&remote.songs)||[])if(s&&s.id)map.set(s.id,s);
+  for(const s of local.songs){const o=map.get(s.id);if(!o||(s.updatedAt||0)>=(o.updatedAt||0))map.set(s.id,s)}
+  const songs=[...map.values()].filter(s=>!(del[s.id]>=(s.updatedAt||0))).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  const shapes={};
+  for(const src of [(remote&&remote.shapes)||{},local.shapes])for(const [n,v] of Object.entries(src))
+    if(!shapes[n]||(v.t||0)>=(shapes[n].t||0))shapes[n]=v;
+  for(const n of Object.keys(shapes))if(del['shape:'+n]>=(shapes[n].t||0))delete shapes[n];
+  return {app:'songbook',version:1,songs,shapes,deleted:del};
+}
+async function applyMerged(m){
+  Object.assign(DEL,m.deleted); saveDel();
+  const local=new Map(S.songs.map(s=>[s.id,s]));
+  for(const s of m.songs){const o=local.get(s.id);if(!o||JSON.stringify(o)!==JSON.stringify(s))await RAW.save({...s})}
+  const keep=new Set(m.songs.map(s=>s.id));
+  for(const s of S.songs.slice())if(!keep.has(s.id))await RAW.remove(s.id);
+  if(JSON.stringify(m.shapes)!==JSON.stringify(S.shapes))await RAW.save({id:'_shapes',shapes:m.shapes});
+}
+const canon=d=>JSON.stringify({songs:d.songs,shapes:d.shapes,deleted:d.deleted});
+async function ghSync(){
+  if(!ghOn()||GH.busy)return;
+  if(!navigator.onLine){ghStatus('Нет интернета. Синхронизирую, когда он появится.',false);return}
+  GH.busy=true; ghStatus('Синхронизирую…',false);
+  try{
+    for(let attempt=0;attempt<3;attempt++){
+      const file=await ghGetFile();
+      const remote=file?JSON.parse(b64decUtf8(file.content)):null;
+      const merged=mergeData({songs:S.songs,shapes:S.shapes},remote);
+      await applyMerged(merged);
+      if(remote&&canon(remote)===canon(merged))break;
+      const out={...merged,exportedAt:new Date().toISOString()};
+      try{await ghFetch('/contents/songbook.json',{method:'PUT',body:JSON.stringify({message:'Песенник: синхронизация',content:b64encUtf8(JSON.stringify(out,null,1)),...(file?{sha:file.sha}:{})})});break}
+      catch(e){if((e.status===409||e.status===422)&&attempt<2)continue;throw e}  // changed on another device meanwhile: merge again
+    }
+    GH.cfg.last=Date.now(); lsSet('sb.gh',JSON.stringify(GH.cfg)); ghStatus('',false);
+  }catch(e){ghStatus(ghErrText(e),true)}
+  finally{GH.busy=false;fillSync()}
+}
+function ghErrText(e){
+  if(e.status===401)return 'GitHub не принял токен: он неверный или истёк. Отключите синхронизацию и подключите заново с новым токеном.';
+  if(e.status===403)return 'У токена нет права записи. При создании токена выберите для этого репозитория Contents: Read and write.';
+  if(e.status===404)return 'Репозиторий не найден. Проверьте название (имя/репозиторий) и что токену дан доступ к нему.';
+  return 'Не удалось связаться с GitHub. Попробую ещё раз позже.';
+}
+function ghStatus(t,err){GH.msg=t;GH.err=!!err;const el=document.getElementById('gh-msg');if(el){el.textContent=t;el.className='gh-msg'+(err?' bad':'')}}
+async function ghConnect(){
+  const repo=(document.getElementById('gh-repo').value||'').trim().replace(/^https?:\/\/github\.com\//,'').replace(/\.git$/,'').replace(/\/+$/,'');
+  const token=(document.getElementById('gh-token').value||'').trim();
+  if(!/^[\w.-]+\/[\w.-]+$/.test(repo)){ghStatus('Введите репозиторий в виде имя/репозиторий, например armarzak/songbook-data.',true);return}
+  if(!token){ghStatus('Вставьте токен GitHub.',true);return}
+  GH.cfg={repo,token}; ghStatus('Проверяю доступ…',false);
+  try{const info=await ghFetch('');GH.pub=!info.private}
+  catch(e){GH.cfg=null;ghStatus(ghErrText(e),true);return}
+  lsSet('sb.gh',JSON.stringify(GH.cfg)); fillSync(); ghSync();
+}
+function ghOff(btn){
+  if(btn.dataset.sure!=='1'){btn.dataset.sure='1';btn.textContent='Точно отключить?';return}
+  GH.cfg=null; lsSet('sb.gh','null'); ghStatus('',false); fillSync();
+}
+function fillSync(){
+  const el=document.getElementById('sync'); if(!el)return;
+  const h='<h3 class="sec-h">Синхронизация с GitHub</h3>';
+  if(!ghCan()){el.innerHTML=h+`<p class="sec-p">Работает в приложении с экрана «Домой» (<a href="${OFFLINE_URL}" target="_blank" rel="noopener">${OFFLINE_URL.replace('https://','')}</a>): там песни сами сохраняются в ваш репозиторий на GitHub.</p>`;return}
+  if(!ghOn()){
+    el.innerHTML=h+`<p class="sec-p">Песни будут сами сохраняться в файл songbook.json в вашем репозитории и подтягиваться оттуда на других устройствах.</p>
+      <ol class="steps">
+        <li>На github.com создайте <b>приватный</b> репозиторий, например <b>songbook-data</b>.</li>
+        <li>Создайте токен: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Settings → Developer settings → Fine-grained tokens</a>. В «Repository access» выберите только этот репозиторий, в «Permissions» → <b>Contents: Read and write</b>.</li>
+        <li>Вставьте название репозитория и токен ниже. Токен хранится только в этом телефоне.</li>
+      </ol>
+      <div class="form gh-form">
+        <div class="field"><label for="gh-repo">Репозиторий</label><input id="gh-repo" placeholder="armarzak/songbook-data" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+        <div class="field"><label for="gh-token">Токен</label><input id="gh-token" type="password" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+        <div class="actions" style="justify-content:flex-start;margin-top:0"><button class="btn primary" data-act="gh-connect">Подключить</button></div>
+      </div>
+      <p id="gh-msg" class="gh-msg${GH.err?' bad':''}">${esc(GH.msg)}</p>`;
+    return;
+  }
+  const last=GH.cfg.last?new Date(GH.cfg.last):null;
+  el.innerHTML=h+`<p class="sec-p">Подключено к <b>${esc(GH.cfg.repo)}</b>, файл songbook.json.
+      ${last?`Последняя синхронизация: ${last.toLocaleDateString('ru-RU',{day:'numeric',month:'short'})}, ${last.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}.`:''}</p>
+    ${GH.pub?'<p class="gh-msg bad">Репозиторий открытый: ваши песни сможет прочитать кто угодно. Лучше сделать его приватным в настройках репозитория на GitHub.</p>':''}
+    <div class="actions" style="justify-content:flex-start;margin-top:0">
+      <button class="btn primary" data-act="gh-sync"${GH.busy?' disabled':''}>Синхронизировать сейчас</button>
+      <button class="btn danger" data-act="gh-off">Отключить</button>
+    </div>
+    <p id="gh-msg" class="gh-msg${GH.err?' bad':''}">${esc(GH.msg)}</p>`;
+}
+function ghStart(){
+  if(!ghOn())return;
+  ghSync();
+  addEventListener('online',()=>ghSync());
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-(GH.cfg&&GH.cfg.last||0)>60000)ghSync()});
+}
+
 /* ---------- boot ---------- */
 applySkin(lsGet('sb.skin')||'auto');
 renderList();
 initStore().then(st=>{
-  store=st;
+  RAW=st; store=wrapStore(st);
   st.subscribe(list=>{
     const prev=S.cur?findSong(S.cur):null;
     S.songs=list.filter(s=>!String(s.id).startsWith('_'));
@@ -1912,6 +2045,7 @@ initStore().then(st=>{
       if(!now){S.cur=null;renderList()}
       else if(!prev||prev.body!==now.body||prev.title!==now.title||prev.artist!==now.artist||prev.capo!==now.capo)renderSong(S.cur,true)}
   });
+  ghStart();
 });
 </script>
 
