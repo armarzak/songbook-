@@ -144,6 +144,10 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 .grp button{background:transparent;border:0;min-width:36px;height:36px;border-radius:9px;color:var(--fg);font:600 15px var(--f-body);display:inline-flex;align-items:center;justify-content:center}
 .grp button.on{background:var(--accent);color:var(--on-accent)}
 .grp button svg{width:16px;height:16px;fill:currentColor}
+.grp.scroll{flex:1 1 220px}
+.speed{display:flex;align-items:center;gap:4px;flex:1;min-width:0;padding-inline-end:6px}
+.speed .cap{padding:0;font-size:10px}
+.speed input{flex:1;min-width:80px;width:auto;padding:0;border:0;background:transparent;accent-color:var(--accent);height:36px}
 
 /* Editor */
 .form{display:flex;flex-direction:column;gap:14px}
@@ -246,6 +250,7 @@ input.mono{font-family:var(--f-mono)}
 
 <script>
 /* ---------- music theory ---------- */
+const SPEED_MIN=3,SPEED_MAX=70; // autoscroll, pixels per second (the old slowest step was 12)
 const NS=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const NFL=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
 const BASE={C:0,D:2,E:4,F:5,G:7,A:9,B:11,H:11};
@@ -649,7 +654,14 @@ C            G           E
 
 /* ---------- storage ---------- */
 const S={songs:[],checks:{},shapes:{},loaded:false,mode:'local',view:'list',cur:null,shift:0,q:'',
-  fs:Math.min(26,Math.max(12,+lsGet('sb.fs')||16)),scroll:{on:false,speed:+lsGet('sb.speed')||2}};
+  fs:Math.min(26,Math.max(12,+lsGet('sb.fs')||16)),scroll:{on:false,speed:loadSpeed()}};
+/* Scroll speed in pixels per second; old saves stored a 1–5 step instead. */
+function loadSpeed(){
+  const v=+lsGet('sb.speed');
+  if(!v)return 20;
+  if(v<=5)return {1:12,2:20,3:30,4:42,5:58}[Math.round(v)]||20;
+  return Math.min(SPEED_MAX,Math.max(SPEED_MIN,v));
+}
 let store=null;
 function localStore(){
   const read=()=>{try{return JSON.parse(lsGet('sb.songs')||'[]')}catch{return []}};
@@ -872,9 +884,11 @@ function renderTools(){
     <div class="grp" aria-label="Размер текста">
       <button data-act="fs" data-d="-1" aria-label="Мельче" style="font-size:13px">A</button>
       <button data-act="fs" data-d="1" aria-label="Крупнее" style="font-size:18px">A</button></div>
-    <div class="grp" aria-label="Автопрокрутка">
+    <div class="grp scroll" aria-label="Автопрокрутка">
       <button data-act="scroll" class="${sp.on?'on':''}" aria-label="${sp.on?'Остановить':'Запустить'} автопрокрутку">${sp.on?ICON.pause:ICON.play}</button>
-      <button data-act="speed" aria-label="Скорость прокрутки"><span class="lbl">${sp.speed}×</span></button></div>
+      <label class="speed" for="speed"><span class="cap">Медл.</span>
+        <input type="range" id="speed" min="${SPEED_MIN}" max="${SPEED_MAX}" step="1" value="${sp.speed}" aria-label="Скорость прокрутки">
+        <span class="cap">Быстр.</span></label></div>
   </div>`;
   tools.hidden=false;
 }
@@ -1134,11 +1148,10 @@ function askDelete(){
 function closeSheet(){sheet.hidden=true;sheet.innerHTML=''}
 
 /* ---------- autoscroll ---------- */
-const SPEEDS={1:12,2:20,3:30,4:42,5:58};
 let raf=0,lastT=null,acc=0,wake=null;
 function tick(t){
   if(!S.scroll.on)return;
-  if(lastT!=null){acc+=SPEEDS[S.scroll.speed]*(t-lastT)/1000;if(acc>=1){const n=Math.floor(acc);acc-=n;scrollBy(0,n)}
+  if(lastT!=null){acc+=S.scroll.speed*(t-lastT)/1000;if(acc>=1){const n=Math.floor(acc);acc-=n;scrollBy(0,n)}
     const el=document.scrollingElement||document.documentElement;
     if(innerHeight+scrollY>=el.scrollHeight-2){stopScroll();renderTools();return}}
   lastT=t;raf=requestAnimationFrame(tick);
@@ -1185,9 +1198,7 @@ document.addEventListener('click',e=>{
     if(id!=='demo'){clearTimeout(patchT);patchT=setTimeout(()=>store.patch(id,{transpose:S.shift}).catch(()=>{}),900)}
   }
   else if(a==='fs'){S.fs=Math.min(26,Math.max(12,S.fs+ +b.dataset.d*2));lsSet('sb.fs',S.fs);document.getElementById('body').style.setProperty('--fs',S.fs+'px')}
-  else if(a==='scroll'){S.scroll.on?stopScroll():startScroll();renderTools()}
-  else if(a==='speed'){S.scroll.speed=S.scroll.speed%5+1;lsSet('sb.speed',S.scroll.speed);renderTools()}
-});
+  else if(a==='scroll'){S.scroll.on?stopScroll():startScroll();renderTools()}});
 document.addEventListener('change',e=>{
   if(e.target.id==='imp-file'&&e.target.files&&e.target.files[0]){importBackup(e.target.files[0]);e.target.value=''}
   if(e.target.id==='imp-pdf'&&e.target.files&&e.target.files[0]){importPdf(e.target.files[0]);e.target.value=''}
@@ -1196,6 +1207,7 @@ let impT;
 document.addEventListener('input',e=>{
   const id=e.target.id;
   if(id==='search'){S.q=e.target.value;fillList()}
+  else if(id==='speed'){S.scroll.speed=+e.target.value;lsSet('sb.speed',S.scroll.speed)}
   else if(id==='imp-src'){clearTimeout(impT);impT=setTimeout(fillImport,250)}
   else if(id==='se-name'){document.getElementById('se-err').textContent='';fillShapeEditor()}
   else if(id==='se-frets'){const f=parseFretsText(e.target.value);if(f){SE.frets=f;const p=f.filter(x=>x>0);if(p.length){const mx=Math.max(...p),mn=Math.min(...p);if(mx>SE.base+4||mn<SE.base)SE.base=mx>5?mn:1}fillShapeEditor()}}
