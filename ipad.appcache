@@ -1,0 +1,9 @@
+CACHE MANIFEST
+# ipad v1
+
+CACHE:
+ipad.html
+icon-180.png
+
+NETWORK:
+*

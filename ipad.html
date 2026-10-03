@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ru" manifest="ipad.appcache">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Песенник">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Песенник для iPad</title>
+<!--
+  A lightweight songbook for old iPads (iOS 9, Safari 9): plain ES5, flexbox without gap,
+  no service worker (AppCache keeps it offline), data pulled read-only from the GitHub sync file.
+-->
+<style>
+html,body{margin:0;padding:0}
+body{font-family:-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif;font-size:17px;line-height:1.45;background:#F1F2EE;color:#191B19;-webkit-text-size-adjust:100%}
+body.dark{background:#141615;color:#ECEEE9}
+a{color:#1A57AE}
+body.dark a{color:#86B6FF}
+button{font-family:inherit;font-size:16px;cursor:pointer}
+.bar{position:-webkit-sticky;position:sticky;top:0;z-index:5;background:rgba(241,242,238,.96);border-bottom:1px solid #D3D8CD}
+body.dark .bar{background:rgba(20,22,21,.96);border-color:#2F3430}
+.bar-in{max-width:960px;margin:0 auto;padding:10px 20px;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center}
+.bar-in>*{margin-right:10px}
+.bar-in>*:last-child{margin-right:0}
+.grow{-webkit-flex:1;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand{font-weight:700;font-size:21px}
+.btn{border:1px solid #D3D8CD;background:#fff;color:#191B19;border-radius:10px;padding:8px 14px;min-height:42px}
+.btn.primary{background:#1A57AE;border-color:#1A57AE;color:#fff;font-weight:600}
+body.dark .btn{background:#1F2321;border-color:#2F3430;color:#ECEEE9}
+body.dark .btn.primary{background:#86B6FF;border-color:#86B6FF;color:#0A1424}
+.wrap{max-width:960px;margin:0 auto;padding:14px 20px 120px}
+input,textarea{font-family:inherit;font-size:16px;border:1px solid #D3D8CD;border-radius:10px;padding:10px 12px;width:100%;-webkit-box-sizing:border-box;box-sizing:border-box;background:#fff;color:#191B19}
+body.dark input,body.dark textarea{background:#1F2321;border-color:#2F3430;color:#ECEEE9}
+textarea{font-family:Menlo,monospace;min-height:160px}
+.songs{list-style:none;margin:10px 0 0;padding:0}
+.songs li{border-top:1px solid #D3D8CD}
+body.dark .songs li{border-color:#2F3430}
+.row{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;padding:14px 4px;width:100%;background:none;border:0;text-align:left;color:inherit}
+.row .t{font-weight:600;font-size:18px}
+.row .a{color:#636A61;font-size:15px}
+body.dark .row .a{color:#9BA298}
+.row .k{font-family:Menlo,monospace;font-weight:700;color:#1A57AE;background:#E5E8E1;border-radius:8px;padding:4px 10px;margin-left:12px}
+body.dark .row .k{color:#86B6FF;background:#232724}
+.note{color:#636A61;font-size:15px}
+body.dark .note{color:#9BA298}
+h1{font-size:28px;line-height:1.2;margin:6px 0 2px}
+.by{color:#636A61;margin:0 0 6px}
+body.dark .by{color:#9BA298}
+.strip{white-space:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:10px 0}
+.chip{display:inline-block;vertical-align:top;width:90px;margin-right:8px;background:#fff;border:1px solid #D3D8CD;border-radius:12px;padding:6px 4px 4px;text-align:center;color:inherit}
+body.dark .chip{background:#1F2321;border-color:#2F3430}
+.chip .n{display:block;font-family:Menlo,monospace;font-weight:700;color:#1A57AE;font-size:15px}
+body.dark .chip .n{color:#86B6FF}
+.sheet{font-family:Menlo,monospace;white-space:pre;overflow-x:auto;-webkit-overflow-scrolling:touch;line-height:1.4;padding:6px 0 20px}
+.ch{color:#1A57AE;font-weight:700}
+body.dark .ch{color:#86B6FF}
+.ch span{cursor:pointer}
+.head{font-family:-apple-system,"Helvetica Neue",Helvetica,sans-serif;font-weight:600;color:#636A61;font-size:.85em;margin-top:.5em}
+body.dark .head{color:#9BA298}
+.gap{height:.8em}
+.tools{position:fixed;left:0;right:0;bottom:0;z-index:6;background:rgba(241,242,238,.97);border-top:1px solid #D3D8CD}
+body.dark .tools{background:rgba(20,22,21,.97);border-color:#2F3430}
+.tools-in{max-width:960px;margin:0 auto;padding:8px 20px;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-flex-wrap:wrap;flex-wrap:wrap}
+.grp{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;background:#E5E8E1;border-radius:12px;padding:3px;margin:3px 10px 3px 0}
+body.dark .grp{background:#232724}
+.grp button{background:none;border:0;min-width:44px;height:40px;border-radius:9px;color:inherit;font-weight:600}
+.grp button.on{background:#1A57AE;color:#fff}
+body.dark .grp button.on{background:#86B6FF;color:#0A1424}
+.grp .lbl{font-family:Menlo,monospace;font-weight:700;min-width:36px;text-align:center;font-size:14px}
+.grp .cap{font-size:12px;color:#636A61;padding:0 6px}
+.grp input[type=range]{width:180px;border:0;padding:0;background:none}
+.overlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:20;background:rgba(0,0,0,.45);display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
+.panel{background:#fff;border-radius:18px;padding:18px 22px;width:320px;text-align:center}
+body.dark .panel{background:#1F2321}
+.panel h2{font-family:Menlo,monospace;color:#1A57AE;margin:0 0 6px;font-size:30px}
+body.dark .panel h2{color:#86B6FF}
+.panel .info{font-family:Menlo,monospace;font-size:14px;color:#636A61;margin-top:8px}
+.set{margin-top:28px;padding-top:8px;border-top:1px solid #D3D8CD}
+body.dark .set{border-color:#2F3430}
+.set h3{font-size:17px;margin:12px 0 6px}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:14px;font-weight:600;color:#636A61;margin-bottom:4px}
+.msg{font-size:15px;margin:8px 0}
+.msg.bad{color:#A8520A}
+body.dark .msg.bad{color:#F2A35E}
+.hidden{display:none!important}
+svg.dia{display:block;width:100%;height:auto}
+.dia .fr{stroke:#CDD2C8;stroke-width:1.2}
+.dia .st{stroke:#9AA196;stroke-width:1.4}
+.dia .nut,.dia .dot{fill:#191B19}
+.dia .open{fill:none;stroke:#191B19;stroke-width:1.8}
+.dia .fg{fill:#fff;font:bold 12px Menlo,monospace}
+.dia .mute{fill:#636A61;font:16px Menlo,monospace}
+.dia .pos{fill:#636A61;font:bold 13px Menlo,monospace}
+body.dark .dia .fr{stroke:#343A35}
+body.dark .dia .st{stroke:#5E665F}
+body.dark .dia .nut,body.dark .dia .dot{fill:#ECEEE9}
+body.dark .dia .open{stroke:#ECEEE9}
+body.dark .dia .fg{fill:#141615}
+.chip .dia .fg{display:none}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="tools" class="tools hidden"></div>
+<div id="ov" class="overlay hidden"></div>
+<script>
+(function(){
+'use strict';
+
+/* ---------- small helpers (Safari 9 lacks padEnd, closest, Object.entries) ---------- */
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function rep(ch,n){var s='';for(var i=0;i<n;i++)s+=ch;return s}
+function padTo(s,n){return s.length>=n?s:s+rep(' ',n-s.length)}
+function closestAct(el){while(el&&el!==document){if(el.getAttribute&&el.getAttribute('data-act'))return el;el=el.parentNode}return null}
+function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function plural(n,a,b,c){var m=n%10,h=n%100;return m===1&&h!==11?a:(m>=2&&m<=4&&(h<10||h>=20)?b:c)}
+
+/* ---------- chords ---------- */
+var NS=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+var NFL=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+var BASE={C:0,D:2,E:4,F:5,G:7,A:9,B:11,H:11};
+function noteIndex(n){var i=BASE[n.charAt(0)];if(n.charAt(1)==='#')i++;else if(n.charAt(1)==='b')i--;return (i+12)%12}
+var CHORD_RE=/^([A-H])([#b]?)([^\/\s]*)(?:\/([A-H][#b]?))?$/;
+var QUAL_OK=/^(?:maj|min|m|M|dim|aug|sus|add|no|[0-9]|b|#|\+|°|ø|Δ|\(|\)|-|o)*$/;
+function parseChord(t){
+  var m=CHORD_RE.exec(t); if(!m||!QUAL_OK.test(m[3]))return null;
+  return {txt:t,root:noteIndex(m[1]+m[2]),q:m[3],bass:m[4]?noteIndex(m[4]):null};
+}
+function chordTok(t){
+  var c=parseChord(t); if(c)return {pre:'',c:c,post:''};
+  var m=/^([(\[{*\/|<~.-]*)(.*?)([)\]}*\/|>~.,-]*)$/.exec(t);
+  if(m&&(m[1]||m[3])&&m[2]){c=parseChord(m[2]);if(c)return {pre:m[1],c:c,post:m[3]}}
+  return null;
+}
+function chordName(c,shift,flats){
+  if(!shift)return c.txt;
+  var N=flats?NFL:NS;
+  return N[(c.root+shift+120)%12]+c.q+(c.bass!==null?'/'+N[(c.bass+shift+120)%12]:'');
+}
+var QMAP={'':'maj','M':'maj','maj':'maj','m':'m','min':'m','-':'m','7':'7','m7':'m7','min7':'m7','-7':'m7','maj7':'maj7','M7':'maj7','Δ':'maj7','Δ7':'maj7',
+  'sus2':'sus2','2':'sus2','sus4':'sus4','sus':'sus4','4':'sus4','dim':'dim','°':'dim','o':'dim','dim7':'dim7','°7':'dim7','o7':'dim7','aug':'aug','+':'aug',
+  '6':'6','m6':'m6','9':'9','add9':'add9','5':'5','7sus4':'7sus4','7sus':'7sus4','m7b5':'m7b5','ø':'m7b5','m7-5':'m7b5','ø7':'m7b5'};
+function normQ(q){
+  q=q.replace(/[()]/g,'');
+  if(QMAP.hasOwnProperty(q))return {q:QMAP[q],approx:false};
+  var r='maj';
+  if(/^(maj|M|Δ)/.test(q))r='maj7';
+  else if(/^(m|min|-)/.test(q))r=/\d/.test(q)?'m7':'m';
+  else if(/^sus/.test(q))r='sus4';
+  else if(/^(dim|°|o)/.test(q))r='dim';
+  else if(/^(aug|\+)/.test(q))r='aug';
+  else if(/^(7|9|11|13)/.test(q))r='7';
+  return {q:r,approx:true};
+}
+
+/* ---------- shapes: the user's chart first, then common open chords, then movable shapes ---------- */
+var OPEN_STR=[4,9,2,7,11,4];
+function fretsOf(s){var p=s.indexOf(' ')>=0?s.split(' '):s.split('');var out=[];for(var i=0;i<p.length;i++)out.push(p[i]==='x'?-1:+p[i]);return out}
+var CHART_ROWS=[
+ 'Ab=4 6 6 5 4 4@4|G#m=4 6 6 4 4 4@4|Ab6=4 3 1 1 1 1|Ab7=x x 1 1 1 2|Ab9=x x 1 3 1 2|G#m7=x x 1 1 0 2|Abmaj7=x x 1 1 1 3|G#dim=x x 0 1 0 1|Ab+=x x 2 1 1 0|Absus=x x 1 1 2 4',
+ 'A=x 0 2 2 2 0|Am=x 0 2 2 1 0|A6=x 0 2 2 2 2|A7=x 0 2 2 2 3|A9=x 0 2 4 2 3|Am6=x 0 2 2 1 2|Am7=x 0 2 2 1 3|Amaj7=x 0 2 1 2 0|Adim=x x 1 2 1 2|A+=x 0 3 2 2 1|Asus=x 0 2 2 3 0',
+ 'Bb=x 1 3 3 3 1|Bbm=x 1 3 3 2 1|Bb6=1 1 3 3 3 3|Bb7=x x 3 3 3 4@3|Bbm6=x x 3 3 2 3|Bbm7=x x 3 3 2 4|Bbmaj7=x 1 3 2 3 x|Bbdim=x x 2 3 2 3|Bb+=x x 0 3 3 2|Bbsus=x x 3 3 4 1',
+ 'B=x 2 4 4 4 2|Bm=x 2 4 4 3 2|B6=2 2 4 4 4 4|B7=x 2 1 2 0 2|B9=x 2 1 2 2 2|Bm6=x x 4 4 3 4|Bm7=x 2 4 2 3 2@2|Bmaj7=x 2 4 3 4 x|Bdim=x x 0 1 0 1|B+=x x 5 4 4 3@3|Bsus=x x 4 4 5 2@2',
+ 'C=x 3 2 0 1 0|Cm=x 3 5 5 4 3@3|C6=x x 2 2 1 3|C7=x 3 2 3 1 0|C9=x 3 2 3 3 3|Cm6=x x 1 2 1 3|Cm7=x x 1 3 1 3|Cmaj7=x 3 2 0 0 0|Cdim=x x 1 2 1 2|C+=x x 2 1 1 0|Csus=x x 3 0 1 3',
+ 'Db=x x 3 1 2 1|C#m=x x 2 1 2 0|Db6=x x 3 3 2 4|Db7=x x 3 4 2 4|Db9=x 4 3 4 4 4|C#m6=x x 2 3 2 4|C#m7=x x 2 4 2 4|Dbmaj7=x 4 3 1 1 1|C#dim=x x 2 3 2 3|Db+=x x 3 2 2 1',
+ 'D=x x 0 2 3 2|Dm=x x 0 2 3 1|D6=x 0 0 2 0 2|D7=x x 0 2 1 2|D9=2 0 0 2 1 0|Dm6=x x 0 2 0 1|Dm7=x x 0 2 1 1|Dmaj7=x x 0 2 2 2|Ddim=x x 0 1 0 1|D+=x x 0 3 3 2|Dsus=x x 0 2 3 3',
+ 'Eb=x x 5 3 4 3@3|Ebm=x x 4 3 4 2|Eb6=x x 1 3 1 3|Eb7=x x 1 3 2 3|Eb9=1 1 1 3 2 1|Ebm6=x x 1 3 1 2|Ebm7=x x 1 3 2 2|Ebmaj7=x x 1 3 3 3|Ebdim=x x 1 2 1 2|Eb+=x x 1 0 0 3|Ebsus=x x 1 3 4 4',
+ 'E=0 2 2 1 0 0|Em=0 2 2 0 0 0|E6=0 2 2 1 2 0|E7=0 2 2 1 3 0|E9=0 2 0 1 0 2|Em6=0 2 2 0 2 0|Em7=0 2 0 0 0 0|Emaj7=0 2 1 1 0 0|Edim=x x 2 3 2 3|E+=x x 2 1 1 0|Esus=0 2 2 2 0 0',
+ 'F=1 3 3 2 1 1|Fm=1 3 3 1 1 1|F6=x x 0 2 1 1|F7=1 3 1 2 1 1|F9=x x 3 2 4 3|Fm6=x x 0 1 1 1|Fm7=1 3 1 1 1 1|Fmaj7=x x 3 2 1 0|Fdim=x x 0 1 0 1|F+=x x 3 2 2 1|Fsus=x x 3 3 1 1',
+ 'F#=2 4 4 3 2 2|F#m=2 4 4 2 2 2|Gb6=x 4 4 3 4 x|F#7=x x 4 3 2 0|F#9=x x 4 3 5 4@3|F#m6=x x 1 2 2 2|F#m7=x x 2 2 2 2|Gbmaj7=x x 4 3 2 1|F#dim=x x 1 2 1 2|Gb+=x x 4 3 3 2|Gbsus=x x 4 4 2 2',
+ 'G=3 2 0 0 0 3|Gm=3 5 5 3 3 3@3|G6=3 2 0 0 0 0|G7=3 2 0 0 0 1|G9=3 0 0 2 0 1|Gm6=x x 2 3 3 3|Gm7=3 5 3 3 3 3@3|Gmaj7=x x 5 4 3 2@2|Gdim=x x 2 3 2 3|G+=x x 1 0 0 3|Gsus=x x 0 0 1 3'
+];
+var CQ={'':'maj','m':'m','6':'6','7':'7','9':'9','m6':'m6','m7':'m7','maj7':'maj7','dim':'dim','+':'aug','sus':'sus4'};
+var CHART={};
+(function(){
+  for(var r=0;r<CHART_ROWS.length;r++){
+    var cells=CHART_ROWS[r].split('|');
+    for(var i=0;i<cells.length;i++){
+      var kv=cells[i].split('='),name=kv[0],rest=kv[1].split('@');
+      var m=/^([A-G][#b]?)(.*)$/.exec(name),root=noteIndex(m[1]),q=CQ[m[2]];
+      var v={frets:fretsOf(rest[0]),base:rest[1]?+rest[1]:0};
+      CHART[root+':'+q]=v; if(q==='dim')CHART[root+':dim7']=v;
+    }
+  }
+})();
+var OPEN_RAW={C7:'x32310',Cmaj7:'x32000',Cadd9:'x32030',Csus2:'x30013',Dsus2:'xx0230',Esus2:'024400',E7sus4:'020200',Eadd9:'024100',
+  Fsus2:'xx3011',Gsus2:'300033',Gadd9:'320203',Asus2:'x02200',A5:'x022xx',E5:'022xxx',A7sus4:'x02030',Bm7:'x20202'};
+var SLASH_RAW={'D/F#':'200232','C/G':'332010','G/B':'x20003','C/E':'032010','Am/G':'3x2210','G/F#':'2x0003','D/A':'x00232','C/B':'x22010','F/C':'x33211','Am/E':'002210'};
+var OPEN={},SLASH={};
+(function(){
+  var k,c;
+  for(k in OPEN_RAW){c=parseChord(k);OPEN[c.root+':'+normQ(c.q).q]=fretsOf(OPEN_RAW[k])}
+  for(k in SLASH_RAW){c=parseChord(k);SLASH[c.root+':'+normQ(c.q).q+'/'+c.bass]=fretsOf(SLASH_RAW[k])}
+})();
+var N_=null;
+var SHAPES={
+  E:{note:4,s:{maj:[0,2,2,1,0,0],m:[0,2,2,0,0,0],'7':[0,2,0,1,0,0],m7:[0,2,0,0,0,0],maj7:[0,N_,1,1,0,N_],sus2:[0,2,4,4,0,0],sus4:[0,2,2,2,0,0],'7sus4':[0,2,0,2,0,0],
+    '5':[0,2,2,N_,N_,N_],dim:[0,1,2,0,N_,N_],m7b5:[0,1,0,0,N_,N_],m6:[0,2,2,0,2,0],'6':[0,2,2,1,2,0],'9':[0,2,0,1,0,2],add9:[0,2,4,1,0,0],dim7:[0,1,2,0,2,0],aug:[0,3,2,1,1,0]}},
+  A:{note:9,s:{maj:[N_,0,2,2,2,0],m:[N_,0,2,2,1,0],'7':[N_,0,2,0,2,0],m7:[N_,0,2,0,1,0],maj7:[N_,0,2,1,2,0],sus2:[N_,0,2,2,0,0],sus4:[N_,0,2,2,3,0],'6':[N_,0,2,2,2,2],
+    m6:[N_,0,2,2,1,2],'9':[N_,0,-1,0,0,0],add9:[N_,0,2,4,2,0],'7sus4':[N_,0,2,0,3,0],m7b5:[N_,0,1,0,1,N_],dim:[N_,0,1,2,1,N_],'5':[N_,0,2,2,N_,N_],aug:[N_,0,3,2,2,N_],dim7:[N_,0,1,-1,1,N_]}},
+  D:{note:2,s:{maj:[N_,N_,0,2,3,2],m:[N_,N_,0,2,3,1],'7':[N_,N_,0,2,1,2],m7:[N_,N_,0,2,1,1],maj7:[N_,N_,0,2,2,2],dim7:[N_,N_,0,1,0,1],aug:[N_,N_,0,3,3,2]}}
+};
+function shapeVoicing(root,q,key){
+  var sh=SHAPES[key],off=sh.s[q]; if(!off)return null;
+  var r=(root-sh.note+12)%12,f=[],i,neg=false;
+  for(i=0;i<6;i++){f.push(off[i]===null?-1:r+off[i]);if(off[i]!==null&&r+off[i]<0)neg=true}
+  if(neg){r+=12;f=[];for(i=0;i<6;i++)f.push(off[i]===null?-1:r+off[i])}
+  if(Math.max.apply(null,f)>16)return null;
+  return {frets:f,base:0,barre:key!=='D'&&r>0};
+}
+var CUSTOM={};
+function setCustom(shapes){
+  CUSTOM={};
+  for(var name in (shapes||{})){if(!shapes.hasOwnProperty(name))continue;
+    var c=parseChord(name),s=shapes[name]; if(!c||!s||!s.frets)continue;
+    CUSTOM[c.root+':'+normQ(c.q).q+(c.bass!==null&&c.bass!==c.root?'/'+c.bass:'')]={frets:s.frets,base:s.base||0};
+  }
+}
+function voicing(name){
+  var c=parseChord(name); if(!c)return null;
+  var q=normQ(c.q).q,key=c.root+':'+q;
+  if(CUSTOM[key+(c.bass!==null&&c.bass!==c.root?'/'+c.bass:'')])return CUSTOM[key+(c.bass!==null&&c.bass!==c.root?'/'+c.bass:'')];
+  if(c.bass!==null&&c.bass!==c.root&&SLASH[key+'/'+c.bass])return {frets:SLASH[key+'/'+c.bass],base:0};
+  if(CHART[key])return CHART[key];
+  if(OPEN[key])return {frets:OPEN[key],base:0};
+  var best=null,list=['E','A','D'];
+  for(var i=0;i<list.length;i++){var v=shapeVoicing(c.root,q,list[i]);if(v&&(!best||Math.max.apply(null,v.frets)<Math.max.apply(null,best.frets)))best=v}
+  return best;
+}
+function autoBarre(f){
+  var p=[],i;for(i=0;i<6;i++)if(f[i]>0)p.push(f[i]); if(!p.length)return null;
+  var min=Math.min.apply(null,p),idx=[];for(i=0;i<6;i++)if(f[i]===min)idx.push(i);
+  if(idx.length<2||idx[idx.length-1]-idx[0]<3)return null;
+  for(i=idx[0];i<=idx[idx.length-1];i++)if(f[i]<min)return null;
+  return {a:idx[0],b:idx[idx.length-1],fret:min};
+}
+function fingers(f,bar){
+  var fin=[0,0,0,0,0,0],next=1,i,rest=[];
+  if(bar){for(i=bar.a;i<=bar.b;i++)if(f[i]===bar.fret)fin[i]=1;next=2}
+  for(i=0;i<6;i++)if(f[i]>0&&!fin[i])rest.push({x:f[i],i:i});
+  rest.sort(function(p,q){return p.x-q.x||p.i-q.i});
+  for(i=0;i<rest.length;i++)fin[rest[i].i]=next<=4?next++:4;
+  return fin;
+}
+function diagram(v,mini){
+  var f=v.frets,p=[],i;for(i=0;i<6;i++)if(f[i]>0)p.push(f[i]);
+  var max=p.length?Math.max.apply(null,p):0,min=p.length?Math.min.apply(null,p):0;
+  var base=v.base||(max<=4?1:min),NF=Math.max(4,max-base+1),Y0=38,FH=32,H=Y0+FH*NF+8;
+  function X(k){return 34+k*28}
+  function cy(fr){return Y0+(fr-base+0.5)*FH}
+  var bar=mini?null:autoBarre(f),fin=fingers(f,bar);
+  var s='<svg class="dia" viewBox="0 0 194 '+H+'">';
+  if(base===1)s+='<rect class="nut" x="'+(X(0)-1)+'" y="'+(Y0-5)+'" width="'+(X(5)-X(0)+2)+'" height="5"/>';
+  for(i=base===1?1:0;i<=NF;i++)s+='<line class="fr" x1="'+X(0)+'" x2="'+X(5)+'" y1="'+(Y0+i*FH)+'" y2="'+(Y0+i*FH)+'"/>';
+  for(i=0;i<6;i++)s+='<line class="st" x1="'+X(i)+'" x2="'+X(i)+'" y1="'+Y0+'" y2="'+(Y0+FH*NF)+'"/>';
+  if(base>1)s+='<text class="pos" x="'+(X(0)-14)+'" y="'+(cy(base)+5)+'" text-anchor="end">'+base+'</text>';
+  if(bar)s+='<rect class="dot" x="'+(X(bar.a)-10)+'" y="'+(cy(bar.fret)-9)+'" width="'+(X(bar.b)-X(bar.a)+20)+'" height="18" rx="9"/>';
+  for(i=0;i<6;i++){
+    var x=f[i];
+    if(x<0)s+='<text class="mute" x="'+X(i)+'" y="'+(Y0-12)+'" text-anchor="middle">×</text>';
+    else if(x===0)s+='<circle class="open" cx="'+X(i)+'" cy="'+(Y0-17)+'" r="5.5"/>';
+    else{
+      var onBar=bar&&x===bar.fret&&i>=bar.a&&i<=bar.b;
+      if(onBar&&i!==bar.a&&i!==bar.b)continue;
+      s+='<circle class="dot" cx="'+X(i)+'" cy="'+cy(x)+'" r="11"/>';
+      if(fin[i])s+='<text class="fg" x="'+X(i)+'" y="'+(cy(x)+4.5)+'" text-anchor="middle">'+fin[i]+'</text>';
+    }
+  }
+  return s+'</svg>';
+}
+
+/* ---------- song text ---------- */
+var IGNORE=/^(\|+|-+|\/|%|\.{2,}|[xх×]\d+|\([xх×]?\d+[xх×]?\)|\d+[xх×]|:?\|\|?:?|N\.C\.?)$/i;
+var SEC=/^(?:intro|verse|chorus|pre-?chorus|bridge|outro|solo|interlude|instrumental|refrain|hook|coda|куплет|припев|предприпев|проигрыш|вступление|бридж|кода|соло|концовка|окончание)(?:\s*\d+)?\s*:?$/i;
+function isChordLine(line){
+  var toks=line.match(/\S+/g),n=0; if(!toks)return false;
+  for(var i=0;i<toks.length;i++){if(IGNORE.test(toks[i]))continue;if(chordTok(toks[i]))n++;else return false}
+  return n>0;
+}
+function inlineToPair(line){
+  var ch='',ly='',last=0,m,found=false,re=/\[([^\]]*)\]/g;
+  while((m=re.exec(line))){
+    ly+=line.slice(last,m.index); last=re.lastIndex;
+    var tok=m[1].replace(/^\s+|\s+$/g,'');
+    if(!chordTok(tok)){ly+=m[0];continue}
+    found=true; var pos=ly.length; if(ch.length&&pos<ch.length+1)pos=ch.length+1;
+    ch=padTo(ch,pos)+tok;
+  }
+  ly+=line.slice(last);
+  return found?{ch:ch,ly:ly}:null;
+}
+function parseSong(body){
+  var out=[],lines=(body||'').replace(/\r/g,'').split('\n');
+  for(var i=0;i<lines.length;i++){
+    var raw=lines[i],t=raw.replace(/^\s+|\s+$/g,''),m;
+    if(!t){out.push({k:'gap'});continue}
+    if((m=t.match(/^\[([^\]]+)\]$/))&&!chordTok(m[1])){out.push({k:'head',t:m[1]});continue}
+    if(SEC.test(t)){out.push({k:'head',t:t.replace(/:$/,'')});continue}
+    if(/^\{.*\}$/.test(t))continue;
+    if(isChordLine(raw)){out.push({k:'ch',s:raw.replace(/\s+$/,'')});continue}
+    if(raw.indexOf('[')>=0){var p=inlineToPair(raw);if(p){if(p.ch)out.push({k:'ch',s:p.ch});if(p.ly.replace(/\s/g,''))out.push({k:'ly',t:p.ly});continue}}
+    out.push({k:'ly',t:raw.replace(/\s+$/,'')});
+  }
+  return out;
+}
+function usesFlats(body){return /(^|[\s\[(\/])[A-H]b(?![a-zа-я])/m.test(body||'')}
+function chordLineHtml(s,shift,flats,seen){
+  var out='',html='',re=/\S+/g,m;
+  while((m=re.exec(s))){
+    var tk=chordTok(m[0]),disp=m[0],name=null;
+    if(tk){name=chordName(tk.c,shift,flats);disp=tk.pre+name+tk.post;if(seen&&seen.indexOf(name)<0)seen.push(name)}
+    var target=out.length?Math.max(m.index,out.length+1):m.index,pad=rep(' ',Math.max(0,target-out.length));
+    html+=pad+(name?'<span data-act="chord" data-c="'+esc(name)+'">'+esc(disp)+'</span>':esc(disp));
+    out+=pad+disp;
+  }
+  return html;
+}
+
+/* ---------- data: cached on the iPad, refreshed from the GitHub sync file ---------- */
+var S={songs:[],q:'',cur:null,shift:0,fs:+lsGet('ip.fs')||17,dark:lsGet('ip.dark')==='1',scroll:false,speed:+lsGet('ip.speed')||20,tr:{}};
+try{S.tr=JSON.parse(lsGet('ip.tr')||'{}')||{}}catch(e){S.tr={}}
+function loadCache(){
+  try{var d=JSON.parse(lsGet('ip.data')||'null');if(d&&d.songs){S.songs=d.songs;setCustom(d.shapes)}}catch(e){}
+}
+function useData(d,raw){
+  if(!d||!d.songs||!d.songs.length&&!d.shapes)throw new Error('format');
+  S.songs=d.songs; setCustom(d.shapes); lsSet('ip.data',raw);
+}
+function b64Utf8(b64){return decodeURIComponent(escape(atob(b64.replace(/\s/g,''))))}
+function ghCfg(){try{return JSON.parse(lsGet('ip.gh')||'null')}catch(e){return null}}
+function pull(done){
+  var c=ghCfg(); if(!c){done&&done('');return}
+  var x=new XMLHttpRequest();
+  x.open('GET','https://api.github.com/repos/'+c.repo+'/contents/songbook.json?ts='+Date.now());
+  x.setRequestHeader('Authorization','token '+c.token);
+  x.setRequestHeader('Accept','application/vnd.github.v3+json');
+  x.onload=function(){
+    if(x.status===200){
+      try{var j=JSON.parse(x.responseText),raw=b64Utf8(j.content);useData(JSON.parse(raw),raw);c.last=Date.now();lsSet('ip.gh',JSON.stringify(c));done&&done('')}
+      catch(e){done&&done('Файл songbook.json в репозитории повреждён или пустой.')}
+    }
+    else if(x.status===401)done&&done('GitHub не принял токен: он неверный или истёк.');
+    else if(x.status===404)done&&done('Не нашёл songbook.json. Проверьте название репозитория и что на айфоне синхронизация уже прошла хотя бы раз.');
+    else done&&done('GitHub ответил ошибкой '+x.status+'.');
+  };
+  x.onerror=function(){done&&done('Нет связи с GitHub. Показываю песни, сохранённые на iPad.')};
+  x.send();
+}
+
+/* ---------- views ---------- */
+var app=$('app'),tools=$('tools'),ov=$('ov');
+function applyDark(){document.body.className=S.dark?'dark':''}
+function sorted(){return S.songs.slice().sort(function(a,b){return (a.title||'').localeCompare(b.title||'')})}
+function firstChord(s){
+  var lines=parseSong(s.body);
+  for(var i=0;i<lines.length;i++)if(lines[i].k==='ch'){var seen=[];chordLineHtml(lines[i].s,S.tr[s.id]||s.transpose||0,usesFlats(s.body),seen);if(seen.length)return seen[0]}
+  return '';
+}
+function renderList(msg){
+  stopScroll(); S.cur=null; tools.className='tools hidden';
+  var c=ghCfg(),last=c&&c.last?new Date(c.last):null;
+  app.innerHTML='<div class="bar"><div class="bar-in"><div class="brand grow">Мой песенник</div>'+
+    (c?'<button class="btn" data-act="pull">Обновить</button>':'')+
+    '<button class="btn" data-act="dark">'+(S.dark?'Светлая':'Тёмная')+'</button></div></div>'+
+    '<div class="wrap"><input id="q" type="search" placeholder="Поиск по названию или исполнителю" value="'+esc(S.q)+'">'+
+    '<p class="msg'+(msg?' bad':'')+'" id="msg">'+esc(msg||'')+'</p>'+
+    '<ul class="songs" id="songs"></ul>'+
+    '<div class="set"><h3>Песни с айфона</h3>'+
+    (c?'<p class="note">Подключено к '+esc(c.repo)+'.'+(last?' Обновлено: '+last.toLocaleString('ru-RU')+'.':'')+' Песни сохранены на iPad и открываются без интернета.</p>'+
+       '<button class="btn" data-act="gh-off">Отключить</button>'
+      :'<p class="note">Подключите тот же репозиторий GitHub, что и на айфоне: песни будут загружаться отсюда и храниться на iPad. Изменять песни удобнее на айфоне.</p>'+
+       '<div class="field"><label for="gh-repo">Репозиторий</label><input id="gh-repo" placeholder="имя/репозиторий" autocapitalize="off" autocorrect="off"></div>'+
+       '<div class="field"><label for="gh-token">Токен</label><input id="gh-token" type="password" autocapitalize="off" autocorrect="off"></div>'+
+       '<button class="btn primary" data-act="gh-on">Подключить</button>')+
+    '<h3>Или вставьте резервную копию</h3><p class="note">На айфоне: «Сохранить копию», откройте файл, выделите весь текст и скопируйте. Здесь вставьте его в поле.</p>'+
+    '<textarea id="paste" placeholder="{&quot;app&quot;:&quot;songbook&quot;, …}"></textarea><p><button class="btn" data-act="paste">Загрузить из текста</button></p></div></div>';
+  fillList();
+}
+function fillList(){
+  var ul=$('songs'); if(!ul)return;
+  var q=S.q.toLowerCase(),list=sorted(),html='',n=0;
+  for(var i=0;i<list.length;i++){
+    var s=list[i]; if(q&&((s.title||'')+' '+(s.artist||'')).toLowerCase().indexOf(q)<0)continue; n++;
+    html+='<li><button class="row" data-act="open" data-id="'+esc(s.id)+'"><span class="grow"><span class="t">'+esc(s.title||'Без названия')+'</span><br><span class="a">'+esc(s.artist||'')+'</span></span><span class="k">'+esc(firstChord(s)||'–')+'</span></button></li>';
+  }
+  ul.innerHTML=html||'<li><p class="note">'+(S.songs.length?'Ничего не нашлось.':'Песен пока нет. Подключите GitHub ниже или вставьте резервную копию.')+'</p></li>';
+}
+function find(id){for(var i=0;i<S.songs.length;i++)if(S.songs[i].id===id)return S.songs[i];return null}
+function renderSong(id){
+  var s=find(id); if(!s){renderList();return}
+  S.cur=id; S.shift=S.tr.hasOwnProperty(id)?S.tr[id]:(s.transpose||0);
+  app.innerHTML='<div class="bar"><div class="bar-in"><button class="btn" data-act="home">‹ Песни</button><div class="grow" style="font-weight:600">'+esc(s.title||'')+'</div></div></div>'+
+    '<div class="wrap"><h1>'+esc(s.title||'Без названия')+'</h1><p class="by">'+esc(s.artist||'')+(+s.capo?' · каподастр: '+(+s.capo)+' лад':'')+'</p>'+
+    '<div class="strip" id="strip"></div><div class="sheet" id="sheet"></div></div>';
+  fillSong(); renderTools(); window.scrollTo(0,0);
+}
+function fillSong(){
+  var s=find(S.cur); if(!s)return;
+  var flats=usesFlats(s.body),seen=[],lines=parseSong(s.body),html='',i;
+  for(i=0;i<lines.length;i++){
+    var l=lines[i];
+    if(l.k==='gap')html+='<div class="gap"></div>';
+    else if(l.k==='head')html+='<div class="head">'+esc(l.t)+'</div>';
+    else if(l.k==='ch')html+='<div class="ch">'+chordLineHtml(l.s,S.shift,flats,seen)+'</div>';
+    else html+='<div>'+(esc(l.t)||' ')+'</div>';
+  }
+  var sh=$('sheet'); sh.innerHTML=html; sh.style.fontSize=S.fs+'px';
+  var st='';
+  for(i=0;i<seen.length;i++){var v=voicing(seen[i]);st+='<button class="chip" data-act="chord" data-c="'+esc(seen[i])+'"><span class="n">'+esc(seen[i])+'</span>'+(v?diagram(v,true):'')+'</button>'}
+  $('strip').innerHTML=st;
+}
+function renderTools(){
+  tools.className='tools';
+  tools.innerHTML='<div class="tools-in">'+
+    '<div class="grp"><span class="cap">Тон</span><button data-act="tr" data-d="-1">−</button><span class="lbl">'+(S.shift>0?'+':'')+S.shift+'</span><button data-act="tr" data-d="1">+</button></div>'+
+    '<div class="grp"><button data-act="fs" data-d="-1" style="font-size:14px">A</button><button data-act="fs" data-d="1" style="font-size:20px">A</button></div>'+
+    '<div class="grp"><button data-act="scroll" class="'+(S.scroll?'on':'')+'">'+(S.scroll?'❚❚':'▶')+'</button><span class="cap">медл.</span><input type="range" id="speed" min="3" max="70" value="'+S.speed+'"><span class="cap">быстр.</span></div>'+
+    '</div>';
+}
+function openChord(name){
+  var v=voicing(name),notes=[],i;
+  if(v)for(i=0;i<6;i++)if(v.frets[i]>=0){var n=(usesFlats(name)?NFL:NS)[(OPEN_STR[i]+v.frets[i])%12];if(notes.indexOf(n)<0)notes.push(n)}
+  ov.innerHTML='<div class="panel"><h2>'+esc(name)+'</h2>'+(v?diagram(v,false)+'<div class="info">Ноты: '+notes.join(' · ')+'<br>Лады: '+v.frets.map(function(x){return x<0?'×':x}).join(' ')+'</div>':'<p>Схемы нет</p>')+
+    '<p><button class="btn" data-act="close">Закрыть</button></p></div>';
+  ov.className='overlay';
+}
+
+/* ---------- autoscroll ---------- */
+var raf=0,lastT=0,acc=0;
+function tick(t){
+  if(!S.scroll)return;
+  if(lastT){acc+=S.speed*(t-lastT)/1000;if(acc>=1){var n=Math.floor(acc);acc-=n;window.scrollBy(0,n)}
+    if(window.innerHeight+window.pageYOffset>=document.body.scrollHeight-2){stopScroll();renderTools();return}}
+  lastT=t; raf=requestAnimationFrame(tick);
+}
+function stopScroll(){S.scroll=false;cancelAnimationFrame(raf)}
+
+/* ---------- events ---------- */
+document.addEventListener('click',function(e){
+  if(e.target===ov){ov.className='overlay hidden';return}
+  var b=closestAct(e.target); if(!b)return;
+  var a=b.getAttribute('data-act');
+  if(a==='open')renderSong(b.getAttribute('data-id'));
+  else if(a==='home')renderList();
+  else if(a==='chord')openChord(b.getAttribute('data-c'));
+  else if(a==='close')ov.className='overlay hidden';
+  else if(a==='dark'){S.dark=!S.dark;lsSet('ip.dark',S.dark?'1':'0');applyDark();renderList()}
+  else if(a==='tr'){S.shift=((S.shift+(+b.getAttribute('data-d')))+18)%12-6;if(S.shift===-6)S.shift=6;S.tr[S.cur]=S.shift;lsSet('ip.tr',JSON.stringify(S.tr));fillSong();renderTools()}
+  else if(a==='fs'){S.fs=Math.min(30,Math.max(12,S.fs+2*(+b.getAttribute('data-d'))));lsSet('ip.fs',S.fs);$('sheet').style.fontSize=S.fs+'px'}
+  else if(a==='scroll'){if(S.scroll)stopScroll();else{S.scroll=true;lastT=0;acc=0;raf=requestAnimationFrame(tick)}renderTools()}
+  else if(a==='pull'){$('msg').className='msg';$('msg').textContent='Обновляю…';pull(function(err){renderList(err)})}
+  else if(a==='gh-on'){
+    var repo=$('gh-repo').value.replace(/^\s+|\s+$/g,'').replace(/^https?:\/\/github\.com\//,'').replace(/\.git$/,'').replace(/\/+$/,''),token=$('gh-token').value.replace(/\s/g,'');
+    if(!/^[\w.-]+\/[\w.-]+$/.test(repo)||!token){$('msg').className='msg bad';$('msg').textContent='Впишите репозиторий в виде имя/репозиторий и вставьте токен.';window.scrollTo(0,0);return}
+    lsSet('ip.gh',JSON.stringify({repo:repo,token:token}));
+    pull(function(err){if(err)lsSet('ip.gh','null');renderList(err);window.scrollTo(0,0)});
+  }
+  else if(a==='gh-off'){lsSet('ip.gh','null');renderList()}
+  else if(a==='paste'){
+    var raw=$('paste').value;
+    try{useData(JSON.parse(raw),raw);renderList();window.scrollTo(0,0)}
+    catch(err){$('msg').className='msg bad';$('msg').textContent='Это не похоже на резервную копию песенника. Скопируйте файл целиком.';window.scrollTo(0,0)}
+  }
+});
+document.addEventListener('input',function(e){
+  if(e.target.id==='q'){S.q=e.target.value;fillList()}
+  else if(e.target.id==='speed'){S.speed=+e.target.value;lsSet('ip.speed',S.speed)}
+});
+/* AppCache: switch to a freshly downloaded version on the next launch without asking */
+try{if(window.applicationCache)window.applicationCache.addEventListener('updateready',function(){try{window.applicationCache.swapCache()}catch(e){}})}catch(e){}
+
+applyDark();
+loadCache();
+renderList();
+if(ghCfg()&&navigator.onLine!==false)pull(function(err){if(!S.cur)renderList(err&&S.songs.length?'':err)});
+})();
+</script>
+</body>
+</html>
