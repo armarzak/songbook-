@@ -207,6 +207,33 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 .skin .sw i{font-style:normal;font-size:11px;opacity:.8;font-family:var(--f-body)}
 .skin .nm{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;font-size:13px;font-weight:600}
 .skin .nm span{color:var(--accent);font-size:15px}
+.tuner{display:flex;flex-direction:column;align-items:center;gap:6px;padding-block:8px 20px;--t-col:var(--muted)}
+.tuner[data-state="ok"]{--t-col:var(--good)}
+.tuner[data-state="near"]{--t-col:var(--accent)}
+.tuner[data-state="off"]{--t-col:var(--warn)}
+.t-note{font-family:var(--f-display);font-weight:700;font-size:76px;line-height:1;color:var(--t-col);min-height:76px;transition:color .2s}
+.t-note sub{font-size:22px;font-weight:500;vertical-align:baseline;margin-left:2px;color:var(--muted)}
+.gauge{width:100%;max-width:400px;height:auto;display:block}
+.gauge .zone{fill:var(--good-bg)}
+.gauge .tm{stroke:var(--grid);stroke-width:2}
+.gauge .tM{stroke:var(--string);stroke-width:2.5}
+.gauge .t0{stroke:var(--good);stroke-width:3.5}
+.gauge text{fill:var(--muted);font:600 11px var(--f-mono)}
+.gauge .fs{font:400 22px var(--f-body)}
+.gauge .needle{stroke:var(--t-col);stroke-width:4;stroke-linecap:round;transition:stroke .2s}
+.gauge .hub{fill:var(--t-col);transition:fill .2s}
+.t-read{display:flex;gap:18px;font:600 16px var(--f-mono);font-variant-numeric:tabular-nums;color:var(--fg)}
+.t-read #t-hz{color:var(--muted)}
+.t-status{font-weight:600;min-height:1.5em;color:var(--t-col);text-align:center}
+.t-strings{display:flex;gap:8px;margin-top:4px}
+.t-strings span{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font:700 16px var(--f-body);background:var(--sunk);color:var(--muted);position:relative;transition:background .2s,color .2s}
+.t-strings span sub{position:absolute;bottom:3px;right:7px;font-size:9px;font-weight:600}
+.t-strings span.on{background:var(--t-col);color:var(--surface)}
+.t-ref{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);margin-top:6px}
+.t-ref b{color:var(--fg);font-family:var(--f-mono);min-width:64px;text-align:center}
+.tuner .verdict{max-width:60ch;text-align:center}
+.tuner .verdict a{color:var(--accent)}
+@media (prefers-reduced-motion:reduce){.gauge .needle,.gauge .hub,.t-note{transition:none}}
 .backup{margin-top:28px;padding-top:6px;border-top:1px solid var(--line)}
 label.btn{cursor:pointer}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
@@ -709,8 +736,134 @@ function findSong(id){return id==='demo'?DEMO:S.songs.find(s=>s.id===id)}
 function tabsHtml(cur){
   return `<div class="tabs" role="tablist">
     <button role="tab" aria-selected="${cur==='list'}" data-act="tab-list">Песни</button>
-    <button role="tab" aria-selected="${cur==='chart'}" data-act="tab-chart">Схемы аккордов</button></div>`;
+    <button role="tab" aria-selected="${cur==='chart'}" data-act="tab-chart">Схемы</button>
+    <button role="tab" aria-selected="${cur==='tuner'}" data-act="tab-tuner">Тюнер</button></div>`;
 }
+
+/* ---------- tuner ---------- */
+const OFFLINE_URL='https://armarzak.github.io/songbook-/';
+const GUITAR=[{n:'E',m:40},{n:'A',m:45},{n:'D',m:50},{n:'G',m:55},{n:'B',m:59},{n:'E',m:64}];
+const TU={on:false,ctx:null,stream:null,an:null,buf:null,raf:0,frame:0,hist:[],shown:0,target:0,a4:Math.min(445,Math.max(435,+lsGet('sb.a4')||440)),last:null,lastAt:0};
+const GA=60; // the needle swings ±60° for ±50 cents
+function gaugeSvg(){
+  const cx=160,cy=170,R=140,pt=(c,r)=>{const a=(c/50*GA-90)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]};
+  let s=`<svg class="gauge" viewBox="0 0 320 190" aria-hidden="true">`;
+  const [zx1,zy1]=pt(-3,R),[zx2,zy2]=pt(3,R);
+  s+=`<path class="zone" d="M${cx} ${cy} L${zx1.toFixed(1)} ${zy1.toFixed(1)} A${R} ${R} 0 0 1 ${zx2.toFixed(1)} ${zy2.toFixed(1)} Z"/>`;
+  for(let c=-50;c<=50;c+=5){
+    const major=c%25===0,[x1,y1]=pt(c,R),[x2,y2]=pt(c,R-(c===0?26:major?18:10));
+    s+=`<line class="${c===0?'t0':major?'tM':'tm'}" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`;
+    if(major&&c!==0){const [tx,ty]=pt(c,R+14);s+=`<text x="${tx.toFixed(1)}" y="${(ty+4).toFixed(1)}" text-anchor="middle">${c>0?'+':''}${c}</text>`}
+  }
+  const [fx,fy]=pt(-50,R+2),[sx,sy]=pt(50,R+2);
+  s+=`<text class="fs" x="${(fx-6).toFixed(1)}" y="${(fy+30).toFixed(1)}" text-anchor="middle">♭</text><text class="fs" x="${(sx+6).toFixed(1)}" y="${(sy+30).toFixed(1)}" text-anchor="middle">♯</text>`;
+  s+=`<g id="needle" style="transform-origin:${cx}px ${cy}px"><line class="needle" x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy-R+6}"/></g><circle class="hub" cx="${cx}" cy="${cy}" r="7"/></svg>`;
+  return s;
+}
+function renderTuner(){
+  stopScroll(); S.view='tuner'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
+  const inClaude=!window.SONGBOOK_OFFLINE&&window.claude;
+  app.innerHTML=`
+  <header class="bar"><div class="bar-in"><div class="brand">Мой песенник</div></div></header>
+  <div class="wrap">
+    ${tabsHtml('tuner')}
+    <div class="tuner" id="tuner" data-state="idle">
+      <div class="t-note"><span id="t-name">–</span><sub id="t-oct"></sub></div>
+      ${gaugeSvg()}
+      <div class="t-read"><span id="t-cents">0 ¢</span><span id="t-hz">— Гц</span></div>
+      <div class="t-status" id="t-status">${inClaude?'':'Нажмите «Включить» и сыграйте одну струну'}</div>
+      <div class="t-strings" id="t-strings">${GUITAR.map((g,i)=>`<span data-i="${i}">${g.n}<sub>${6-i}</sub></span>`).join('')}</div>
+      <div class="actions" style="justify-content:center">
+        <button class="btn primary" id="t-btn" data-act="tuner-toggle">Включить</button>
+      </div>
+      <div class="t-ref"><span>Эталон A4</span>
+        <button class="btn icon" data-act="a4" data-d="-1" aria-label="Ниже">−</button>
+        <b id="t-a4">${TU.a4} Гц</b>
+        <button class="btn icon" data-act="a4" data-d="1" aria-label="Выше">+</button></div>
+      ${inClaude?`<p class="verdict">На claude.ai страницам не дают доступ к микрофону, поэтому здесь тюнер не услышит гитару. Он работает в приложении на экране «Домой»: <a href="${OFFLINE_URL}" target="_blank" rel="noopener">${OFFLINE_URL.replace('https://','')}</a></p>`:''}
+    </div>
+  </div>`;
+}
+function tunerMsg(t){const el=document.getElementById('t-status');if(el)el.textContent=t}
+async function tunerStart(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){tunerMsg('Этот браузер не даёт доступ к микрофону. Откройте песенник в Safari.');return}
+  let stream;
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}})}
+  catch(e){
+    tunerMsg(!window.SONGBOOK_OFFLINE&&window.claude?'Здесь микрофон недоступен. Откройте приложение с экрана «Домой».'
+      :'Нет доступа к микрофону. Разрешите его: Настройки → Safari → Микрофон, затем нажмите «Включить» ещё раз.');
+    return;
+  }
+  const ctx=new (window.AudioContext||window.webkitAudioContext)();
+  try{await ctx.resume()}catch{}
+  const an=ctx.createAnalyser(); an.fftSize=4096;
+  ctx.createMediaStreamSource(stream).connect(an);
+  Object.assign(TU,{on:true,ctx,stream,an,buf:new Float32Array(an.fftSize),hist:[],frame:0,last:null});
+  document.getElementById('t-btn').textContent='Выключить';
+  tunerMsg('Сыграйте одну струну');
+  TU.raf=requestAnimationFrame(tunerLoop);
+}
+function tunerStop(){
+  if(!TU.on)return;
+  TU.on=false; cancelAnimationFrame(TU.raf);
+  try{TU.stream.getTracks().forEach(t=>t.stop())}catch{}
+  try{TU.ctx.close()}catch{}
+  TU.ctx=TU.stream=TU.an=null;
+  const b=document.getElementById('t-btn'); if(b)b.textContent='Включить';
+  const el=document.getElementById('tuner'); if(el)el.dataset.state='idle';
+  tunerMsg('Тюнер выключен');
+}
+/* YIN pitch detection on one frame of samples */
+function detectPitch(buf,sr){
+  let rms=0; for(let i=0;i<buf.length;i++)rms+=buf[i]*buf[i];
+  if(Math.sqrt(rms/buf.length)<0.008)return null;
+  const W=buf.length>>1,maxLag=Math.min(W-1,Math.floor(sr/60)),minLag=Math.floor(sr/1200);
+  const d=new Float32Array(maxLag+1);
+  for(let tau=1;tau<=maxLag;tau++){let s=0;for(let i=0;i<W;i++){const x=buf[i]-buf[i+tau];s+=x*x}d[tau]=s}
+  let run=0,tau=-1; const cm=new Float32Array(maxLag+1); cm[0]=1;
+  for(let t=1;t<=maxLag;t++){run+=d[t];cm[t]=run?d[t]*t/run:1}
+  for(let t=minLag;t<=maxLag;t++){if(cm[t]<0.12){while(t+1<=maxLag&&cm[t+1]<cm[t])t++;tau=t;break}}
+  if(tau<0){let best=minLag;for(let t=minLag;t<=maxLag;t++)if(cm[t]<cm[best])best=t;if(cm[best]>0.3)return null;tau=best}
+  const a=cm[tau-1]??cm[tau],b=cm[tau],c=cm[tau+1]??cm[tau],den=a-2*b+c;
+  const t=den?tau+(a-c)/(2*den):tau;
+  return sr/t;
+}
+function tunerLoop(){
+  if(!TU.on)return;
+  TU.raf=requestAnimationFrame(tunerLoop);
+  if(TU.frame++%3===0){
+    TU.an.getFloatTimeDomainData(TU.buf);
+    const f=detectPitch(TU.buf,TU.ctx.sampleRate);
+    if(f&&f>60&&f<1200){TU.hist.push(f);if(TU.hist.length>5)TU.hist.shift();TU.lastAt=performance.now()}
+    else if(performance.now()-TU.lastAt>600)TU.hist=[];
+    if(TU.hist.length>=2){
+      const fm=[...TU.hist].sort((a,b)=>a-b)[TU.hist.length>>1];
+      const midi=69+12*Math.log2(fm/TU.a4),n=Math.round(midi);
+      TU.last={f:fm,n,cents:(midi-n)*100};
+      TU.target=Math.max(-50,Math.min(50,TU.last.cents));
+      showPitch(TU.last);
+    }else if(TU.last&&!TU.hist.length){TU.last=null;showPitch(null)}
+  }
+  TU.shown+=(TU.target-TU.shown)*0.25;
+  const nd=document.getElementById('needle'); if(nd)nd.style.transform=`rotate(${(TU.shown/50*GA).toFixed(2)}deg)`;
+}
+function showPitch(p){
+  const box=document.getElementById('tuner'); if(!box)return;
+  const $=id=>document.getElementById(id);
+  if(!p){box.dataset.state='listen';$('t-name').textContent='–';$('t-oct').textContent='';$('t-cents').textContent='0 ¢';$('t-hz').textContent='— Гц';TU.target=0;tunerMsg('Сыграйте одну струну');
+    document.querySelectorAll('#t-strings span').forEach(s=>s.classList.remove('on'));return}
+  const c=Math.round(p.cents),ok=Math.abs(p.cents)<=3;
+  box.dataset.state=ok?'ok':Math.abs(p.cents)<=12?'near':'off';
+  $('t-name').textContent=NS[((p.n%12)+12)%12];
+  $('t-oct').textContent=Math.floor(p.n/12)-1;
+  $('t-cents').textContent=(c>0?'+':c<0?'−':'')+Math.abs(c)+' ¢';
+  $('t-hz').textContent=p.f.toFixed(1)+' Гц';
+  tunerMsg(ok?'В строю':p.cents<0?'Ниже — подтяните':'Выше — ослабьте');
+  let best=0;GUITAR.forEach((g,i)=>{if(Math.abs(g.m-p.n)<Math.abs(GUITAR[best].m-p.n))best=i});
+  const near=Math.abs(GUITAR[best].m-p.n)<=2;
+  document.querySelectorAll('#t-strings span').forEach(s=>s.classList.toggle('on',near&&+s.dataset.i===best));
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)tunerStop()});
 function renderChart(){
   stopScroll(); S.view='chart'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
@@ -1158,7 +1311,7 @@ function tick(t){
 }
 async function startScroll(){S.scroll.on=true;lastT=null;acc=0;raf=requestAnimationFrame(tick);
   try{wake=await navigator.wakeLock.request('screen')}catch{wake=null}}
-function stopScroll(){S.scroll.on=false;cancelAnimationFrame(raf);if(wake){wake.release().catch(()=>{});wake=null}}
+function stopScroll(){tunerStop();S.scroll.on=false;cancelAnimationFrame(raf);if(wake){wake.release().catch(()=>{});wake=null}}
 
 /* ---------- events ---------- */
 let patchT;
@@ -1169,6 +1322,9 @@ document.addEventListener('click',e=>{
   if(a==='new')renderEditor(null);
   else if(a==='tab-list'){S.cur=null;renderList()}
   else if(a==='tab-chart')renderChart();
+  else if(a==='tab-tuner')renderTuner();
+  else if(a==='tuner-toggle'){TU.on?tunerStop():tunerStart()}
+  else if(a==='a4'){TU.a4=Math.min(445,Math.max(435,TU.a4+ +b.dataset.d));lsSet('sb.a4',TU.a4);document.getElementById('t-a4').textContent=TU.a4+' Гц';if(TU.last)TU.hist=[]}
   else if(a==='import')renderImport();
   else if(a==='export')exportBackup();
   else if(a==='skin'){applySkin(b.dataset.s);lsSet('sb.skin',S.skin);fillSkins()}
