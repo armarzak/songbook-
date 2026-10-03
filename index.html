@@ -363,6 +363,26 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 .t-help .t-alt{color:var(--muted);font-size:13px}
 .tuner .verdict a{color:var(--accent)}
 @media (prefers-reduced-motion:reduce){.gauge .needle{transition:none}}
+.tagbar{display:flex;flex-wrap:wrap;gap:6px;margin-block:2px 6px}
+.tagbar:empty{display:none}
+.tchip{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:6px 12px;font:500 14px var(--f-body);display:inline-flex;align-items:center;gap:6px}
+.tchip b{font:600 11px var(--f-mono);color:var(--muted)}
+.tchip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.tchip[aria-pressed="true"] b{color:var(--on-accent)}
+.tagpick{display:flex;flex-wrap:wrap;gap:6px}
+.tagadd{display:flex;gap:8px;margin-top:8px;max-width:420px}
+.tagadd input{flex:1;min-width:0}
+.song-row .tg{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+.song-row .tg i{font-style:normal;font-size:12px;color:var(--accent);background:var(--sunk);border-radius:999px;padding:1px 8px}
+.tagpill{border:0;cursor:pointer;color:var(--accent);font:600 13px var(--f-body)}
+.sheet-body.plain{font-family:var(--f-body);white-space:pre-wrap;line-height:1.55}
+body.stage .bar,body.stage .song-head,body.stage .strip{display:none}
+body.stage .wrap{max-width:none;padding-block:calc(14px + env(safe-area-inset-top,0px)) 60vh}
+body.stage .sheet-body{padding-top:0}
+body.stage .tools{background:transparent;border-top:0;backdrop-filter:none;-webkit-backdrop-filter:none;opacity:.55;transition:opacity .2s}
+body.stage .tools:hover,body.stage .tools:focus-within{opacity:1}
+.stage-tools{justify-content:center}
+.stage-tools .grp{box-shadow:0 2px 10px var(--shadow)}
 .backup{margin-top:28px;padding-top:6px;border-top:1px solid var(--line)}
 label.btn{cursor:pointer}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
@@ -818,6 +838,7 @@ const ICON={
   trash:'<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
   plus:'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
   play:'<svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>',
+  stage:'<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
   dia:'<svg viewBox="0 0 24 24"><path d="M6 3h12v18H6zM6 8h12M6 13h12M10 3v18M14 3v18"/></svg>',
   pause:'<svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>'
 };
@@ -841,7 +862,7 @@ C            G           E
 [Dm]Пока мы и[E7]дём по до[Am]роге одной.`};
 
 /* ---------- storage ---------- */
-const S={songs:[],checks:{},shapes:{},loaded:false,mode:'local',view:'list',cur:null,shift:0,q:'',
+const S={songs:[],checks:{},shapes:{},tag:null,stage:false,textOnly:lsGet('sb.textonly')==='1',sfs:+lsGet('sb.sfs')||24,loaded:false,mode:'local',view:'list',cur:null,shift:0,q:'',
   fs:Math.min(26,Math.max(12,+lsGet('sb.fs')||16)),scroll:{on:false,speed:loadSpeed()}};
 /* Scroll speed in pixels per second; old saves stored a 1–5 step instead. */
 function loadSpeed(){
@@ -1400,6 +1421,54 @@ function openChartChord(name){
   sheet.hidden=false;
 }
 
+/* ---------- tags ---------- */
+const DEFAULT_TAGS=['костёр','медленные','разучиваю'];
+const ED={tags:[]};
+function tagCounts(){const m=new Map();S.songs.forEach(s=>(s.tags||[]).forEach(t=>m.set(t,(m.get(t)||0)+1)));return m}
+function fillTagbar(){
+  const el=document.getElementById('tagbar'); if(!el)return;
+  const m=tagCounts(); if(S.tag&&!m.has(S.tag))S.tag=null;
+  if(!m.size){el.innerHTML='';return}
+  const tags=[...m.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'ru'));
+  el.innerHTML=`<button class="tchip" data-act="tag" data-t="" aria-pressed="${!S.tag}">Все</button>`+
+    tags.map(([t,n])=>`<button class="tchip" data-act="tag" data-t="${esc(t)}" aria-pressed="${S.tag===t}">${esc(t)}<b>${n}</b></button>`).join('');
+}
+function fillTagpick(){
+  const el=document.getElementById('tagpick'); if(!el)return;
+  const all=[...new Set([...DEFAULT_TAGS,...tagCounts().keys(),...ED.tags])];
+  el.innerHTML=all.map(t=>`<button type="button" class="tchip" data-act="tag-toggle" data-t="${esc(t)}" aria-pressed="${ED.tags.includes(t)}">${esc(t)}</button>`).join('');
+}
+function addTag(){
+  const inp=document.getElementById('f-tag'),t=(inp.value||'').trim().toLowerCase().replace(/\s+/g,' ');
+  if(!t)return; if(!ED.tags.includes(t))ED.tags.push(t); inp.value=''; fillTagpick();
+}
+const TAB_LINE=/^\s*[A-Ga-g]?#?\s*\|?[-0-9|hpbrxX\/\\~()\s]{6,}\|?\s*$/;
+
+/* ---------- stage mode ---------- */
+let stageWake=null;
+async function enterStage(){
+  if(S.view!=='song')return;
+  S.stage=true; document.body.classList.add('stage');
+  document.getElementById('body').style.setProperty('--fs',S.sfs+'px');
+  renderTools(); scrollTo(0,0);
+  try{const el=document.documentElement;if(el.requestFullscreen)await el.requestFullscreen({navigationUI:'hide'})}catch{}
+  try{stageWake=await navigator.wakeLock.request('screen')}catch{stageWake=null}
+}
+function exitStage(){
+  if(!S.stage)return;
+  S.stage=false; document.body.classList.remove('stage');
+  if(stageWake){stageWake.release().catch(()=>{});stageWake=null}
+  try{if(document.fullscreenElement)document.exitFullscreen()}catch{}
+  const b=document.getElementById('body'); if(b)b.style.setProperty('--fs',S.fs+'px');
+  if(S.view==='song')renderTools();
+}
+/* In stage mode a tap on the lower part of the page turns forward, on the upper part back */
+function stageTap(e){
+  const down=e.clientY>innerHeight*0.35, step=Math.round(innerHeight*0.8);
+  scrollBy({top:down?step:-step,behavior:'smooth'});
+}
+document.addEventListener('visibilitychange',async()=>{if(!document.hidden&&S.stage&&!stageWake){try{stageWake=await navigator.wakeLock.request('screen')}catch{}}});
+
 function renderList(){
   stopScroll(); S.view='list'; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
@@ -1411,6 +1480,7 @@ function renderList(){
   <div class="wrap">
     ${tabsHtml('list')}
     <input id="search" class="search" type="search" placeholder="Поиск по названию или исполнителю" value="${esc(S.q)}" autocomplete="off">
+    <div class="tagbar" id="tagbar"></div>
     <ul class="songs" id="songs"></ul>
     <p class="note" id="note"></p>
     <section class="backup">
@@ -1469,15 +1539,17 @@ function fillList(){
   let list=songsSorted();
   const empty=S.loaded&&!list.length;
   if(empty)list=[DEMO];
-  if(q)list=list.filter(s=>((s.title||'')+' '+(s.artist||'')).toLowerCase().includes(q));
+  if(S.tag&&!empty)list=list.filter(s=>(s.tags||[]).includes(S.tag));
+  if(q)list=list.filter(s=>((s.title||'')+' '+(s.artist||'')+' '+(s.tags||[]).join(' ')).toLowerCase().includes(q));
+  fillTagbar();
   ul.innerHTML=list.map(s=>{
     return `<li><button class="song-row" data-act="open" data-id="${esc(s.id)}">
       <span class="t">${esc(s.title||'Без названия')}${s.demo?'<span class="tag">пример</span>':''}</span>
-      <span class="a">${esc(s.artist||'Исполнитель не указан')}</span></button></li>`}).join('');
+      <span class="a">${esc(s.artist||'Исполнитель не указан')}</span>${(s.tags||[]).length?`<span class="tg">${s.tags.map(t=>`<i>${esc(t)}</i>`).join('')}</span>`:''}</button></li>`}).join('');
   let note='';
   if(!S.loaded)note='Загружаю ваши песни…';
   else if(empty&&!q)note='';
-  else if(q&&!list.length)note='Ничего не нашлось.';
+  else if((q||S.tag)&&!list.length)note='Ничего не нашлось.';
   if(S.loaded&&empty&&!q)ul.insertAdjacentHTML('beforebegin','');
   const n=document.getElementById('note');
   n.innerHTML=(note?esc(note)+'<br>':'')+(S.loaded&&empty&&!q?'<span class="empty">Библиотека пока пустая. Откройте пример, чтобы посмотреть, как выглядят аккорды, или нажмите <b>+ Песня</b> и вставьте свою.</span><br>':'')
@@ -1495,6 +1567,7 @@ function renderSong(id,keepScroll){
   <header class="bar"><div class="bar-in">
     <button class="btn icon" data-act="home" aria-label="К списку песен">${ICON.back}</button>
     <div class="bar-title">${esc(s.title||'Без названия')}</div>
+    <button class="btn icon" data-act="stage" aria-label="Режим сцены">${ICON.stage}</button>
     <button class="btn icon" data-act="edit" aria-label="Изменить песню">${ICON.edit}</button>
     ${s.demo?'':`<button class="btn icon danger" data-act="ask-del" aria-label="Удалить песню">${ICON.trash}</button>`}
   </div></header>
@@ -1505,7 +1578,7 @@ function renderSong(id,keepScroll){
       <div class="meta" id="meta"></div>
     </div>
     <div class="strip" id="strip"></div>
-    <div class="sheet-body" id="body" style="--fs:${S.fs}px"></div>
+    <div class="sheet-body" id="body" style="--fs:${S.stage?S.sfs:S.fs}px"></div>
   </div>`;
   fillSong(); renderTools();
   document.body.classList.add('has-tools');
@@ -1514,25 +1587,50 @@ function renderSong(id,keepScroll){
 function fillSong(){
   const s=findSong(S.cur); if(!s)return;
   const flats=usesFlats(s.body),seen=[];
-  const html=parseSong(s.body).map(l=>
+  const plain=S.textOnly;
+  let lines=parseSong(s.body);
+  if(plain){
+    // text only: drop chord lines and tab staves, then squeeze the blank lines that leaves behind
+    lines=lines.filter(l=>l.k!=='ch'&&!(l.k==='ly'&&TAB_LINE.test(l.t)));
+    lines=lines.filter((l,i)=>!(l.k==='gap'&&(i===0||lines[i-1].k==='gap')));
+  }
+  const html=lines.map(l=>
     l.k==='gap'?'<div class="ln gap"></div>':
     l.k==='head'?`<div class="ln head">${esc(l.t)}</div>`:
     l.k==='ch'?`<div class="ln ch">${chordLineHtml(l.s,S.shift,flats,seen)}</div>`:
     `<div class="ln ly">${esc(l.t)||' '}</div>`).join('');
-  document.getElementById('body').innerHTML=html||'<div class="ln ly">Текст песни пока пустой.</div>';
+  const bodyEl=document.getElementById('body');
+  bodyEl.innerHTML=html||'<div class="ln ly">Текст песни пока пустой.</div>';
+  bodyEl.classList.toggle('plain',plain);
+  document.getElementById('strip').hidden=plain;
   document.getElementById('strip').innerHTML=seen.map(n=>{
     const v=getVoicings(n).list[0];
     return `<button class="chip" data-act="chord" data-c="${esc(n)}"><span class="n">${esc(n)}</span>${v?diagram(v,true):'<span class="q">?</span>'}</button>`}).join('');
   const meta=[];
-  if(seen[0])meta.push(`<span class="pill">Первый аккорд <b>${esc(seen[0])}</b></span>`);
+  (s.tags||[]).forEach(t=>meta.push(`<button class="pill tagpill" data-act="tagfilter" data-t="${esc(t)}">${esc(t)}</button>`));
   if(+s.capo)meta.push(`<span class="pill">Каподастр: ${+s.capo} лад</span>`);
   if(S.shift)meta.push(`<span class="pill">Тональность сдвинута на ${S.shift>0?'+':''}${S.shift}</span>`);
   document.getElementById('meta').innerHTML=meta.join('');
 }
 function renderTools(){
   const sp=S.scroll;
+  if(S.stage){
+    tools.innerHTML=`<div class="tools-in stage-tools">
+      <div class="grp scroll" aria-label="Автопрокрутка">
+        <button data-act="scroll" class="${sp.on?'on':''}" aria-label="${sp.on?'Остановить':'Запустить'} автопрокрутку">${sp.on?ICON.pause:ICON.play}</button>
+        <label class="speed" for="speed"><input type="range" id="speed" min="${SPEED_MIN}" max="${SPEED_MAX}" step="1" value="${sp.speed}" aria-label="Скорость прокрутки"></label></div>
+      <div class="grp" aria-label="Размер текста">
+        <button data-act="fs" data-d="-1" aria-label="Мельче" style="font-size:13px">A</button>
+        <button data-act="fs" data-d="1" aria-label="Крупнее" style="font-size:18px">A</button></div>
+      <div class="grp"><button data-act="stage-exit" aria-label="Выйти из режима сцены">Выйти</button></div>
+    </div>`;
+    tools.hidden=false; return;
+  }
   tools.innerHTML=`<div class="tools-in">
-    <div class="grp" aria-label="Тональность"><span class="cap">Тон</span>
+    <div class="grp" role="group" aria-label="Что показывать">
+      <button data-act="viewmode" data-v="0" class="${S.textOnly?'':'on'}">Аккорды</button>
+      <button data-act="viewmode" data-v="1" class="${S.textOnly?'on':''}">Текст</button></div>
+    <div class="grp" aria-label="Тональность"${S.textOnly?' hidden':''}><span class="cap">Тон</span>
       <button data-act="tr" data-d="-1" aria-label="Ниже на полтона">−</button>
       <span class="lbl">${S.shift>0?'+':''}${S.shift}</span>
       <button data-act="tr" data-d="1" aria-label="Выше на полтона">+</button></div>
@@ -1565,6 +1663,8 @@ function renderEditor(id,draft){
       <div class="field"><label for="f-artist">Исполнитель</label><input id="f-artist" value="${esc(s&&!s.demo?s.artist||'':'')}" autocomplete="off"></div>
       <div class="field"><label for="f-capo">Каподастр</label><select id="f-capo">${caps}</select></div>
     </div>
+    <div class="field"><label>Метки</label><div class="tagpick" id="tagpick"></div>
+      <div class="tagadd"><input id="f-tag" placeholder="Новая метка" autocomplete="off" maxlength="24"><button class="btn" type="button" data-act="tag-add">Добавить</button></div></div>
     <div class="field"><label for="f-body">Текст с аккордами</label>
       <textarea id="f-body" spellcheck="false" placeholder="Am            F&#10;Утро тихо стелет туман,">${esc(s?s.body:'')}</textarea><div class="err" id="e-body"></div></div>
     <div class="hint">Подойдут оба привычных формата:<br>
@@ -1572,6 +1672,7 @@ function renderEditor(id,draft){
       • аккорды в квадратных скобках внутри строки: <code>[Am]Утро [F]тихо</code>.<br>
       Названия частей пишите в скобках отдельной строкой: <code>[Припев]</code>. Можно писать H вместо B.</div>
   </form></div>`;
+  ED.tags=[...((s&&s.tags)||[])]; fillTagpick();
   app.querySelector('#form').addEventListener('submit',e=>{e.preventDefault();doSave(isNew?null:s.id)});
 }
 async function doSave(id){
@@ -1579,10 +1680,11 @@ async function doSave(id){
   document.getElementById('e-title').textContent=title?'':'Введите название песни.';
   document.getElementById('e-body').textContent=body?'':'Вставьте текст с аккордами.';
   if(!title||!body)return;
-  saveSong(id,{title,artist:document.getElementById('f-artist').value.trim(),capo:+document.getElementById('f-capo').value,body});
+  saveSong(id,{title,artist:document.getElementById('f-artist').value.trim(),capo:+document.getElementById('f-capo').value,body,tags:[...ED.tags]});
 }
 async function saveSong(id,f){
   const old=id?findSong(id):null;
+  if(f.tags===undefined)f={...f,tags:(old&&old.tags)||[]};
   const song={id:id||('s'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)),...f,
     transpose:old?old.transpose||0:0,createdAt:old?old.createdAt||Date.now():Date.now(),updatedAt:Date.now()};
   try{await store.save(song);S.cur=null;toast('Сохранено');renderSong(song.id)}catch(e){saveErr(e)}
@@ -1821,6 +1923,11 @@ function stopScroll(){tunerStop();S.scroll.on=false;cancelAnimationFrame(raf);if
 let patchT;
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');
+  if(S.stage){
+    const act=b&&b.dataset.act;
+    if(!b||act==='chord'){if(!e.target.closest('#tools'))stageTap(e);return}
+    if(!['scroll','fs','stage-exit'].includes(act))exitStage();
+  }
   if(!b){if(e.target===sheet)closeSheet();return}
   const a=b.dataset.act;
   if(a==='new')renderEditor(null);
@@ -1841,6 +1948,13 @@ document.addEventListener('click',e=>{
   else if(a==='cof-mode')cofSelect(cofState.i,b.dataset.m==='1');
   else if(a==='tuner-toggle'){TU.on?tunerStop():tunerStart()}
   else if(a==='import')renderImport();
+  else if(a==='stage')enterStage();
+  else if(a==='stage-exit')exitStage();
+  else if(a==='viewmode'){S.textOnly=b.dataset.v==='1';lsSet('sb.textonly',S.textOnly?'1':'0');fillSong();renderTools()}
+  else if(a==='tag'){S.tag=b.dataset.t||null;fillList()}
+  else if(a==='tagfilter'){S.tag=b.dataset.t;S.q='';S.cur=null;renderList()}
+  else if(a==='tag-toggle'){const t=b.dataset.t;ED.tags=ED.tags.includes(t)?ED.tags.filter(x=>x!==t):[...ED.tags,t];fillTagpick()}
+  else if(a==='tag-add')addTag();
   else if(a==='export')exportBackup();
   else if(a==='gh-connect')ghConnect();
   else if(a==='gh-sync')ghSync();
@@ -1876,7 +1990,10 @@ document.addEventListener('click',e=>{
     const id=S.cur;
     if(id!=='demo'){clearTimeout(patchT);patchT=setTimeout(()=>store.patch(id,{transpose:S.shift,updatedAt:Date.now()}).catch(()=>{}),900)}
   }
-  else if(a==='fs'){S.fs=Math.min(26,Math.max(12,S.fs+ +b.dataset.d*2));lsSet('sb.fs',S.fs);document.getElementById('body').style.setProperty('--fs',S.fs+'px')}
+  else if(a==='fs'){
+    if(S.stage){S.sfs=Math.min(44,Math.max(14,S.sfs+ +b.dataset.d*2));lsSet('sb.sfs',S.sfs);document.getElementById('body').style.setProperty('--fs',S.sfs+'px')}
+    else{S.fs=Math.min(26,Math.max(12,S.fs+ +b.dataset.d*2));lsSet('sb.fs',S.fs);document.getElementById('body').style.setProperty('--fs',S.fs+'px')}
+  }
   else if(a==='scroll'){S.scroll.on?stopScroll():startScroll();renderTools()}});
 document.addEventListener('change',e=>{
   if(e.target.id==='sc-type'){scState.type=e.target.value;scState.pos=0;scSave()}
