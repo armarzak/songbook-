@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сертификаты для iPad</title>
+<style>
+body{margin:0;font-family:-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif;font-size:18px;line-height:1.5;background:#F1F2EE;color:#191B19}
+.wrap{max-width:720px;margin:0 auto;padding:24px 22px 60px}
+h1{font-size:28px;line-height:1.2;margin:0 0 10px}
+h2{font-size:20px;margin:28px 0 8px}
+p,li{max-width:62ch}
+ol{padding-left:24px}
+li{margin-bottom:8px}
+.btn{display:inline-block;background:#1A57AE;color:#fff;text-decoration:none;font-weight:600;border-radius:12px;padding:14px 22px;margin:8px 0}
+.note{color:#636A61;font-size:15px}
+code{font-family:Menlo,monospace;font-size:13px;word-break:break-all;background:#E5E8E1;border-radius:4px;padding:1px 4px}
+a{color:#1A57AE}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Сертификаты для старого iPad</h1>
+<p>На iOS 9 нет двух корневых сертификатов, которым сейчас доверяют все устройства. Без них iPad не может безопасно соединиться с GitHub, и песенник пишет «Нет связи с GitHub». Профиль ниже добавляет эти два официальных сертификата. Больше он ничего не меняет.</p>
+
+<h2>Как установить</h2>
+<ol>
+<li>Нажмите кнопку ниже в Safari на iPad.<br><a class="btn" href="ipad-roots.mobileconfig">Установить сертификаты</a></li>
+<li>Откроются <b>Настройки</b> с окном «Установка профиля». Нажмите <b>«Установить»</b> вверху справа и введите код-пароль iPad, если он есть.</li>
+<li>Появится предупреждение, что профиль не подписан. Это нормально для такого профиля. Нажмите <b>«Установить»</b> ещё раз, затем <b>«Готово»</b>.</li>
+<li>Закройте песенник полностью (двойное нажатие кнопки «Домой» → смахнуть вверх) и откройте снова. Нажмите <b>«Обновить»</b>.</li>
+</ol>
+
+<h2>Что внутри</h2>
+<p>Два публичных корневых сертификата. Они взяты из стандартного хранилища Windows, такие же стоят на всех современных iPhone, Mac и компьютерах:</p>
+<ul>
+<li><b>ISRG Root X1</b> (Let's Encrypt), действует до 2035 года.<br><span class="note">SHA-256: <code>96BCEC06264976F37460779ACF28C5A7CFE8A3C0AAE11A8FFCEE05C0BDDF08C6</code></span></li>
+<li><b>USERTrust ECC Certification Authority</b> (Sectigo), действует до 2038 года.<br><span class="note">SHA-256: <code>4FF460D54B9C86DABFBCFC5712E0400D2BED3FBC4D4FBDAA86E06ADCD2A9AD7A</code></span></li>
+</ul>
+
+<h2>Как удалить</h2>
+<p><b>Настройки → Основные → Профили</b> → «Сертификаты для песенника» → <b>«Удалить профиль»</b>.</p>
+
+<p><a href="ipad.html">← Вернуться в песенник</a></p>
+</div>
+</body>
+</html>

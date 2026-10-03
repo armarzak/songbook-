@@ -348,8 +348,21 @@ function pull(done){
     else if(x.status===404)done&&done('Не нашёл songbook.json. Проверьте название репозитория и что на айфоне синхронизация уже прошла хотя бы раз.');
     else done&&done('GitHub ответил ошибкой '+x.status+'.');
   };
-  x.onerror=function(){done&&done('Нет связи с GitHub. Показываю песни, сохранённые на iPad.')};
+  x.onerror=function(){diagnose(done)};
+  x.timeout=20000; x.ontimeout=function(){done&&done('GitHub не ответил за 20 секунд. Проверьте интернет и нажмите «Обновить».')};
   x.send();
+}
+/* Tell a missing root certificate (common on iOS 9) apart from no internet at all */
+function diagnose(done){
+  var t=new XMLHttpRequest(),self=new XMLHttpRequest(),api=null,own=null;
+  function finish(){
+    if(api===null||own===null)return;
+    if(!own)done&&done('Нет интернета. Показываю песни, сохранённые на iPad.');
+    else if(!api)done&&done('CERT');
+    else done&&done('GitHub не пустил запрос с токеном. Отключите синхронизацию и подключите заново.');
+  }
+  t.open('GET','https://api.github.com/zen?ts='+Date.now()); t.onload=function(){api=true;finish()}; t.onerror=function(){api=false;finish()}; t.send();
+  self.open('GET','ipad.appcache?ts='+Date.now()); self.onload=function(){own=true;finish()}; self.onerror=function(){own=false;finish()}; self.send();
 }
 
 /* ---------- views ---------- */
@@ -368,7 +381,8 @@ function renderList(msg){
     (c?'<button class="btn" data-act="pull">Обновить</button>':'')+
     '<button class="btn" data-act="dark">'+(S.dark?'Светлая':'Тёмная')+'</button></div></div>'+
     '<div class="wrap"><input id="q" type="search" placeholder="Поиск по названию или исполнителю" value="'+esc(S.q)+'">'+
-    '<p class="msg'+(msg?' bad':'')+'" id="msg">'+esc(msg||'')+'</p>'+
+    (msg==='CERT'?'<div class="msg bad" id="msg"><b>iPad не доверяет сертификату GitHub.</b> На iOS 9 не хватает двух корневых сертификатов. <a href="ipad-certs.html">Установите их по инструкции</a> (одна минута), затем нажмите «Обновить».</div>'
+      :'<p class="msg'+(msg?' bad':'')+'" id="msg">'+esc(msg||'')+'</p>')+
     '<ul class="songs" id="songs"></ul>'+
     '<div class="set"><h3>Песни с айфона</h3>'+
     (c?'<p class="note">Подключено к '+esc(c.repo)+'.'+(last?' Обновлено: '+last.toLocaleString('ru-RU')+'.':'')+' Песни сохранены на iPad и открываются без интернета.</p>'+
@@ -477,7 +491,7 @@ try{if(window.applicationCache)window.applicationCache.addEventListener('updater
 applyDark();
 loadCache();
 renderList();
-if(ghCfg()&&navigator.onLine!==false)pull(function(err){if(!S.cur)renderList(err&&S.songs.length?'':err)});
+if(ghCfg()&&navigator.onLine!==false)pull(function(err){if(!S.cur)renderList(err==='CERT'||!S.songs.length?err:'')});
 })();
 </script>
 </body>
