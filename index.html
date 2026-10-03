@@ -1978,7 +1978,7 @@ function ghStatus(t,err){GH.msg=t;GH.err=!!err;const el=document.getElementById(
 async function ghConnect(){
   const repo=(document.getElementById('gh-repo').value||'').trim().replace(/^https?:\/\/github\.com\//,'').replace(/\.git$/,'').replace(/\/+$/,'');
   const token=(document.getElementById('gh-token').value||'').trim();
-  if(!/^[\w.-]+\/[\w.-]+$/.test(repo)){ghStatus('Введите репозиторий в виде имя/репозиторий, например armarzak/songbook-data.',true);return}
+  if(!/^[\w.-]+\/[\w.-]+$/.test(repo)){ghStatus('Введите репозиторий в виде имя/репозиторий, например ivan/my-songs.',true);return}
   if(!token){ghStatus('Вставьте токен GitHub.',true);return}
   GH.cfg={repo,token}; ghStatus('Проверяю доступ…',false);
   try{const info=await ghFetch('');GH.pub=!info.private}
@@ -1998,10 +1998,10 @@ function fillSync(){
       <ol class="steps">
         <li>На github.com создайте <b>приватный</b> репозиторий, например <b>songbook-data</b>.</li>
         <li>Создайте токен: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Settings → Developer settings → Fine-grained tokens</a>. В «Repository access» выберите только этот репозиторий, в «Permissions» → <b>Contents: Read and write</b>.</li>
-        <li>Вставьте токен ниже и нажмите «Подключить». Это нужно сделать один раз на каждом устройстве: подключение запоминается, токен хранится только в этом телефоне.</li>
+        <li>Впишите репозиторий в виде <b>имя/репозиторий</b>, вставьте токен и нажмите «Подключить». Это нужно сделать один раз на каждом устройстве: подключение запоминается, токен хранится только в этом телефоне.</li>
       </ol>
       <div class="form gh-form">
-        <div class="field"><label for="gh-repo">Репозиторий</label><input id="gh-repo" value="armarzak/bookdata" placeholder="armarzak/bookdata" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+        <div class="field"><label for="gh-repo">Репозиторий</label><input id="gh-repo" placeholder="имя/репозиторий" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
         <div class="field"><label for="gh-token">Токен</label><input id="gh-token" type="password" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
         <div class="actions" style="justify-content:flex-start;margin-top:0"><button class="btn primary" data-act="gh-connect">Подключить</button></div>
       </div>
