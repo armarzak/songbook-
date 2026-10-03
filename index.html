@@ -207,6 +207,47 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 .skin .sw i{font-style:normal;font-size:11px;opacity:.8;font-family:var(--f-body)}
 .skin .nm{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;font-size:13px;font-weight:600}
 .skin .nm span{color:var(--accent);font-size:15px}
+.cof-wrap{display:flex;flex-wrap:wrap;gap:8px 28px;align-items:flex-start;justify-content:center}
+#cof-svg{flex:0 1 380px;min-width:0;max-width:420px;width:100%}
+.cof{display:block;width:100%;height:auto;touch-action:manipulation}
+.cof .key{cursor:pointer;outline:none}
+.cof .w{fill:var(--surface);stroke:var(--line);stroke-width:1.5;transition:fill .2s}
+.cof .w.dia{fill:var(--sunk)}
+.cof .w.dia{fill:color-mix(in srgb,var(--accent) 16%,var(--surface))}
+.cof .w.tonic{fill:var(--accent)}
+.cof .key:hover .w:not(.tonic){fill:var(--sunk)}
+.cof .key:focus-visible .w{stroke:var(--accent);stroke-width:3}
+.cof text{pointer-events:none;fill:var(--fg)}
+.cof .maj{font:700 18px var(--f-body)}
+.cof .min{font:600 13px var(--f-body)}
+.cof .alt{font:500 10px var(--f-body);fill:var(--muted)}
+.cof .sig{font:600 9px var(--f-mono);fill:var(--muted)}
+.cof .key:has(.tonic) text{fill:var(--on-accent)}
+.cof .hubc{fill:var(--sunk)}
+.cof .hub1{font:700 26px var(--f-display);fill:var(--accent)}
+.cof .hub2{font:500 12px var(--f-body);fill:var(--muted)}
+.cof-info{flex:1 1 300px;min-width:0;max-width:520px}
+.cof-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.cof-head h2{font-family:var(--f-display);font-size:22px;margin:0}
+.seg{display:flex;background:var(--sunk);border-radius:10px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;border-radius:8px;padding:6px 12px;font:600 13px var(--f-body);color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px var(--shadow)}
+.cof-meta{color:var(--muted);font-size:14px;margin:6px 0 0}
+.link2{all:unset;cursor:pointer;color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:2px}
+.notes{display:flex;flex-wrap:wrap;gap:6px}
+.notes span{display:flex;flex-direction:column;align-items:center;min-width:40px;padding:6px 4px;border-radius:10px;background:var(--surface);border:1px solid var(--line)}
+.notes b{font:700 16px var(--f-mono)}
+.notes i{font-style:normal;font-size:11px;color:var(--muted)}
+.cchips{display:flex;flex-wrap:wrap;gap:6px}
+.cchip{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;align-items:center;min-width:52px;padding:6px 8px;border-radius:10px;background:var(--surface);border:1px solid var(--line)}
+.cchip:hover{background:var(--sunk)}
+.cchip:focus-visible{outline:2px solid var(--accent)}
+.cchip .rn{font:600 11px var(--f-body);color:var(--muted)}
+.cchip .cn{font:700 15px var(--f-mono);color:var(--chord)}
+.cchip.harm{border-style:dashed}
+.progs{display:flex;flex-direction:column;gap:8px}
+.prog{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.prog .arr{color:var(--muted);font-size:13px}
 .tuner{display:flex;flex-direction:column;align-items:center;gap:6px;padding-block:8px 20px;--t-col:var(--muted)}
 .tuner[data-state="ok"]{--t-col:var(--good)}
 .tuner[data-state="near"]{--t-col:var(--accent)}
@@ -737,8 +778,108 @@ function tabsHtml(cur){
   return `<div class="tabs" role="tablist">
     <button role="tab" aria-selected="${cur==='list'}" data-act="tab-list">Песни</button>
     <button role="tab" aria-selected="${cur==='chart'}" data-act="tab-chart">Схемы</button>
+    <button role="tab" aria-selected="${cur==='circle'}" data-act="tab-circle">Круг</button>
     <button role="tab" aria-selected="${cur==='tuner'}" data-act="tab-tuner">Тюнер</button></div>`;
 }
+
+/* ---------- circle of fifths ---------- */
+const COF_MAJ=['C','G','D','A','E','B','F#','Db','Ab','Eb','Bb','F'];
+const COF_MAJ_ALT={5:'Cb',6:'Gb',7:'C#'};
+const COF_MIN=['A','E','B','F#','C#','G#','D#','Bb','F','C','G','D'];
+const COF_MIN_ALT={6:'Eb',7:'A#'};
+const LET=['C','D','E','F','G','A','B'],LPC=[0,2,4,5,7,9,11];
+function spellScale(root,steps){
+  const li=LET.indexOf(root[0]),rpc=noteIndex(root);
+  return steps.map((st,k)=>{
+    const L=LET[(li+k)%7]; let diff=(((rpc+st)%12-LPC[LET.indexOf(L)])%12+12)%12; if(diff>6)diff-=12;
+    return L+(diff>0?'#'.repeat(diff):'b'.repeat(-diff));
+  });
+}
+const MODES={
+  major:{steps:[0,2,4,5,7,9,11],q:['','m','m','','','m','dim'],rn:['I','ii','iii','IV','V','vi','vii°'],
+    prog:[['I','V','vi','IV'],['I','vi','IV','V'],['ii','V','I'],['I','IV','V','I'],['vi','IV','I','V']]},
+  minor:{steps:[0,2,3,5,7,8,10],q:['m','dim','','m','m','',''],rn:['i','ii°','III','iv','v','VI','VII'],
+    prog:[['i','iv','v','i'],['i','VI','III','VII'],['i','VII','VI','VII'],['ii°','V7','i'],['i','iv','V7','i']]}
+};
+const cofState=(()=>{try{const v=JSON.parse(lsGet('sb.cof')||'{}');return {i:(v.i>=0&&v.i<12)?v.i:0,minor:!!v.minor}}catch{return {i:0,minor:false}}})();
+function cofKey(){
+  const {i,minor}=cofState,m=minor?MODES.minor:MODES.major,root=minor?COF_MIN[i]:COF_MAJ[i];
+  const notes=spellScale(root,m.steps);
+  const chords=notes.map((n,k)=>({rn:m.rn[k],name:n+m.q[k]}));
+  // harmonic-minor dominant: same root as v, major third, plus the seventh
+  if(minor)chords.push({rn:'V7',name:notes[4]+'7',harm:true});
+  const byRn=Object.fromEntries(chords.map(c=>[c.rn,c.name]));
+  return {root,notes,chords,byRn,prog:m.prog.map(p=>p.map(rn=>({rn,name:byRn[rn],harm:rn==='V7'})))};
+}
+function sigText(i){
+  if(i===0)return 'без знаков';
+  const sharps=['F#','C#','G#','D#','A#','E#'],flats=['Bb','Eb','Ab','Db','Gb','Cb'];
+  if(i<=6){const n=i;return `${n} ${plural(n,'диез','диеза','диезов')}: ${sharps.slice(0,n).map(pretty2).join(' ')}`}
+  const n=12-i;return `${n} ${plural(n,'бемоль','бемоля','бемолей')}: ${flats.slice(0,n).map(pretty2).join(' ')}`;
+}
+const pretty2=n=>n.replace(/^([A-G])b/,'$1♭').replace(/#/g,'♯');
+const prettyChord=n=>n.replace(/^([A-H])#/,'$1♯').replace(/^([A-H])b/,'$1♭').replace(/dim$/,'°');
+function sigShort(i){return i===0?'':i<=6?i+'♯':(12-i)+'♭'}
+function cofSvg(){
+  const C=170,R1=166,R2=118,R3=74,{i:sel,minor}=cofState;
+  const pt=(r,a)=>{const t=(a-90)*Math.PI/180;return [C+r*Math.cos(t),C+r*Math.sin(t)]};
+  const wedge=(r1,r2,a1,a2)=>{const [x1,y1]=pt(r1,a1),[x2,y2]=pt(r1,a2),[x3,y3]=pt(r2,a2),[x4,y4]=pt(r2,a1);
+    return `M${x1.toFixed(1)} ${y1.toFixed(1)}A${r1} ${r1} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}L${x3.toFixed(1)} ${y3.toFixed(1)}A${r2} ${r2} 0 0 0 ${x4.toFixed(1)} ${y4.toFixed(1)}Z`};
+  const near=k=>{const d=((k-sel)%12+12)%12;return d===0||d===1||d===11};
+  let s=`<svg class="cof" viewBox="0 0 340 340" role="group" aria-label="Кварто-квинтовый круг">`;
+  for(let k=0;k<12;k++){
+    const a1=k*30-15,a2=k*30+15;
+    const outerCls=!minor&&k===sel?'w tonic':near(k)?'w dia':'w';
+    const innerCls=minor&&k===sel?'w tonic':near(k)?'w dia':'w';
+    const [tx,ty]=pt((R1+R2)/2+2,k*30),[sx,sy]=pt(R1-9,k*30),[mx,my]=pt((R2+R3)/2,k*30);
+    s+=`<g class="key" data-act="cof" data-i="${k}" data-m="0" role="button" tabindex="0" aria-label="${pretty2(COF_MAJ[k])} мажор">
+      <path class="${outerCls}" d="${wedge(R1,R2,a1,a2)}"/>
+      <text class="maj" x="${tx.toFixed(1)}" y="${(ty+6).toFixed(1)}" text-anchor="middle">${pretty2(COF_MAJ[k])}</text>
+      ${COF_MAJ_ALT[k]?`<text class="alt" x="${tx.toFixed(1)}" y="${(ty+19).toFixed(1)}" text-anchor="middle">${pretty2(COF_MAJ_ALT[k])}</text>`:''}
+      <text class="sig" x="${sx.toFixed(1)}" y="${(sy+3).toFixed(1)}" text-anchor="middle">${sigShort(k)}</text></g>
+      <g class="key" data-act="cof" data-i="${k}" data-m="1" role="button" tabindex="0" aria-label="${pretty2(COF_MIN[k])} минор">
+      <path class="${innerCls}" d="${wedge(R2,R3,a1,a2)}"/>
+      <text class="min" x="${mx.toFixed(1)}" y="${(my+5).toFixed(1)}" text-anchor="middle">${pretty2(COF_MIN[k])}m</text></g>`;
+  }
+  const key=cofKey();
+  s+=`<circle class="hubc" cx="${C}" cy="${C}" r="${R3-4}"/>
+    <text class="hub1" x="${C}" y="${C-4}" text-anchor="middle">${pretty2(key.root)}${minor?'m':''}</text>
+    <text class="hub2" x="${C}" y="${C+16}" text-anchor="middle">${minor?'минор':'мажор'}</text></svg>`;
+  return s;
+}
+function renderCircle(){
+  stopScroll(); S.view='circle'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
+  app.innerHTML=`
+  <header class="bar"><div class="bar-in"><div class="brand">Мой песенник</div></div></header>
+  <div class="wrap">
+    ${tabsHtml('circle')}
+    <div class="cof-wrap"><div id="cof-svg"></div><div id="cof-info" class="cof-info"></div></div>
+  </div>`;
+  fillCircle();
+}
+function fillCircle(){
+  const box=document.getElementById('cof-svg'); if(!box)return;
+  box.innerHTML=cofSvg();
+  const {i,minor}=cofState,key=cofKey(),rel=minor?COF_MAJ[i]:COF_MIN[i]+'m';
+  const chip=c=>`<button class="cchip${c.harm?' harm':''}" data-act="chord" data-c="${esc(c.name)}"><span class="rn">${esc(c.rn)}</span><span class="cn">${esc(prettyChord(c.name))}</span></button>`;
+  document.getElementById('cof-info').innerHTML=`
+    <div class="cof-head">
+      <h2>${esc(pretty2(key.root))} ${minor?'минор':'мажор'}</h2>
+      <div class="seg" role="group" aria-label="Лад">
+        <button data-act="cof-mode" data-m="0" aria-pressed="${!minor}">Мажор</button>
+        <button data-act="cof-mode" data-m="1" aria-pressed="${minor}">Минор</button>
+      </div>
+    </div>
+    <p class="cof-meta">${esc(sigText(i))} · параллельная тональность <button class="link2" data-act="cof" data-i="${i}" data-m="${minor?0:1}">${esc(pretty2(rel))}</button></p>
+    <h3 class="sec-h">Гамма</h3>
+    <div class="notes">${key.notes.map((n,k)=>`<span><b>${esc(pretty2(n))}</b><i>${k+1}</i></span>`).join('')}</div>
+    <h3 class="sec-h">Аккорды тональности</h3>
+    <p class="sec-p">Нажмите на аккорд, чтобы увидеть схему.${minor?' V7 взят из гармонического минора, так звучит привычнее.':''}</p>
+    <div class="cchips">${key.chords.map(chip).join('')}</div>
+    <h3 class="sec-h">Популярные последовательности</h3>
+    <div class="progs">${key.prog.map(p=>`<div class="prog">${p.map(chip).join('<span class="arr">→</span>')}</div>`).join('')}</div>`;
+}
+function cofSelect(i,minor){cofState.i=i;cofState.minor=minor;lsSet('sb.cof',JSON.stringify(cofState));fillCircle()}
 
 /* ---------- tuner ---------- */
 const OFFLINE_URL='https://armarzak.github.io/songbook-/';
@@ -1323,6 +1464,9 @@ document.addEventListener('click',e=>{
   else if(a==='tab-list'){S.cur=null;renderList()}
   else if(a==='tab-chart')renderChart();
   else if(a==='tab-tuner')renderTuner();
+  else if(a==='tab-circle')renderCircle();
+  else if(a==='cof')cofSelect(+b.dataset.i,b.dataset.m==='1');
+  else if(a==='cof-mode')cofSelect(cofState.i,b.dataset.m==='1');
   else if(a==='tuner-toggle'){TU.on?tunerStop():tunerStart()}
   else if(a==='a4'){TU.a4=Math.min(445,Math.max(435,TU.a4+ +b.dataset.d));lsSet('sb.a4',TU.a4);document.getElementById('t-a4').textContent=TU.a4+' Гц';if(TU.last)TU.hist=[]}
   else if(a==='import')renderImport();
@@ -1368,7 +1512,11 @@ document.addEventListener('input',e=>{
   else if(id==='se-name'){document.getElementById('se-err').textContent='';fillShapeEditor()}
   else if(id==='se-frets'){const f=parseFretsText(e.target.value);if(f){SE.frets=f;const p=f.filter(x=>x>0);if(p.length){const mx=Math.max(...p),mn=Math.min(...p);if(mx>SE.base+4||mn<SE.base)SE.base=mx>5?mn:1}fillShapeEditor()}}
 });
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden)closeSheet()});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&!sheet.hidden)closeSheet();
+  const g=e.target.closest&&e.target.closest('g.key');
+  if(g&&(e.key==='Enter'||e.key===' ')){e.preventDefault();cofSelect(+g.dataset.i,g.dataset.m==='1')}
+});
 
 /* ---------- boot ---------- */
 applySkin(lsGet('sb.skin')||'auto');
