@@ -1085,14 +1085,34 @@ let AC=null,acOut=null,ringing=[],progTimers=[];
 const pluckCache=new Map();
 function audioCtx(){
   if(!AC){
+    try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch{} // iOS 17+: ignore the ring/silent switch
     AC=new (window.AudioContext||window.webkitAudioContext)();
-    try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch{} // play even with the iPhone ring switch on silent
     const comp=AC.createDynamicsCompressor(),out=AC.createGain();
     out.gain.value=0.9; comp.connect(out); out.connect(AC.destination); acOut=comp;
   }
-  if(AC.state!=='running')AC.resume().catch(()=>{});
+  if(AC.state!=='running')AC.resume().catch(()=>{}); // also wakes iOS's "interrupted" state
   return AC;
 }
+/* Older iOS mutes Web Audio on the silent switch unless a media element is playing,
+   so a silent clip runs alongside the sound; it is started from the tap itself. */
+let mediaEl=null,mediaT=0;
+function silentWavUrl(){
+  const sr=8000,n=sr,b=new ArrayBuffer(44+n),v=new DataView(b),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+  w(0,'RIFF');v.setUint32(4,36+n,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,sr,true);v.setUint32(28,sr,true);v.setUint16(32,1,true);v.setUint16(34,8,true);w(36,'data');v.setUint32(40,n,true);
+  for(let i=0;i<n;i++)v.setUint8(44+i,128);
+  return URL.createObjectURL(new Blob([b],{type:'audio/wav'}));
+}
+function unlockAudio(seconds){
+  const ctx=audioCtx();
+  try{const s=ctx.createBufferSource();s.buffer=ctx.createBuffer(1,1,22050);s.connect(ctx.destination);s.start(0)}catch{}
+  try{
+    if(!mediaEl){mediaEl=document.createElement('audio');mediaEl.src=silentWavUrl();mediaEl.loop=true;mediaEl.setAttribute('playsinline','');mediaEl.setAttribute('x-webkit-airplay','deny');mediaEl.preload='auto'}
+    const p=mediaEl.play(); if(p&&p.catch)p.catch(()=>{});
+    clearTimeout(mediaT); mediaT=setTimeout(()=>{try{mediaEl.pause()}catch{}},((seconds||3)+1)*1000);
+  }catch{}
+}
+function whenRunning(ctx,fn){if(ctx.state==='running')fn();else ctx.resume().then(fn,fn)}
 function pluckBuffer(ctx,midi){
   if(pluckCache.has(midi))return pluckCache.get(midi);
   const sr=ctx.sampleRate,f=440*Math.pow(2,(midi-69)/12),len=Math.floor(sr*2.8),y=new Float32Array(len);
@@ -1106,32 +1126,35 @@ function pluckBuffer(ctx,midi){
   pluckCache.set(midi,b); return b;
 }
 function silence(ctx){const t=ctx.currentTime;ringing.forEach(g=>{try{g.gain.cancelScheduledValues(t);g.gain.setTargetAtTime(0,t,0.03)}catch{}});ringing=[]}
-function playFrets(frets,when){
-  const ctx=audioCtx(); silence(ctx);
-  const t0=Math.max(ctx.currentTime+0.02,when||0),open=[40,45,50,55,59,64];
-  let k=0;
-  frets.forEach((f,s)=>{
-    if(f<0)return;
-    const src=ctx.createBufferSource(),g=ctx.createGain(),t=t0+k++*0.028;
-    src.buffer=pluckBuffer(ctx,open[s]+f);
-    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.32,t+0.004);g.gain.setTargetAtTime(0,t+2.2,0.25);
-    src.connect(g);g.connect(acOut);src.start(t);src.stop(t+2.8);ringing.push(g);
+function playFrets(frets){
+  const ctx=audioCtx();
+  whenRunning(ctx,()=>{
+    silence(ctx);
+    const t0=ctx.currentTime+0.03,open=[40,45,50,55,59,64];
+    let k=0;
+    frets.forEach((f,s)=>{
+      if(f<0)return;
+      const src=ctx.createBufferSource(),g=ctx.createGain(),t=t0+k++*0.028;
+      src.buffer=pluckBuffer(ctx,open[s]+f);
+      g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.32,t+0.004);g.gain.setTargetAtTime(0,t+2.2,0.25);
+      src.connect(g);g.connect(acOut);src.start(t);src.stop(t+2.8);ringing.push(g);
+    });
   });
 }
-function playNote(midi,when){
-  const ctx=audioCtx(),t=Math.max(ctx.currentTime+0.01,when||0);
+function pluckAt(ctx,midi,t){
   const src=ctx.createBufferSource(),g=ctx.createGain();
   src.buffer=pluckBuffer(ctx,midi);
   g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.45,t+0.004);g.gain.setTargetAtTime(0,t+1.8,0.25);
   src.connect(g);g.connect(acOut);src.start(t);src.stop(t+2.8);ringing.push(g);
 }
+function playNote(midi){const ctx=audioCtx();whenRunning(ctx,()=>pluckAt(ctx,midi,ctx.currentTime+0.02))}
 /* one octave up from the lowest tonic on the low E string, then back to the tonic an octave up */
 function playScale(){
   stopProg();
-  const ctx=audioCtx(); silence(ctx);
-  const {rpc,notes}=scaleData(),m0=40+((rpc-4)%12+12)%12;
-  const seq=[...notes.map(x=>m0+x.semi),m0+12],t0=ctx.currentTime+0.05;
-  seq.forEach((m,k)=>playNote(m,t0+k*0.32));
+  const ctx=audioCtx(),{rpc,notes}=scaleData(),m0=40+((rpc-4)%12+12)%12;
+  const seq=[...notes.map(x=>m0+x.semi),m0+12];
+  unlockAudio(seq.length*0.32+2);
+  whenRunning(ctx,()=>{silence(ctx);const t0=ctx.currentTime+0.05;seq.forEach((m,k)=>pluckAt(ctx,m,t0+k*0.32))});
 }
 function playChord(name){const v=getVoicings(name).list[0];if(v)playFrets(v.frets);return !!v}
 function stopProg(){progTimers.forEach(clearTimeout);progTimers=[];document.querySelectorAll('.cchip.playing').forEach(e=>e.classList.remove('playing'))}
@@ -1747,12 +1770,12 @@ document.addEventListener('click',e=>{
   else if(a==='sc-root'){scState.root=+b.dataset.i;scSave()}
   else if(a==='sc-lab'){scState.labels=b.dataset.v;scSave()}
   else if(a==='sc-pos'){scState.pos=+b.dataset.v;scSave()}
-  else if(a==='cof'){const i=+b.dataset.i,mi=b.dataset.m==='1';cofSelect(i,mi);if(b.tagName.toLowerCase()==='g')playChord(mi?COF_MIN[i]+'m':COF_MAJ[i])}
-  else if(a==='play'){stopProg();playChord(b.dataset.c)}
-  else if(a==='note'){playNote(+b.dataset.m);b.classList.remove('hit');void b.getBBox();b.classList.add('hit')}
+  else if(a==='cof'){const i=+b.dataset.i,mi=b.dataset.m==='1';if(b.tagName.toLowerCase()==='g'){unlockAudio(3);playChord(mi?COF_MIN[i]+'m':COF_MAJ[i])}cofSelect(i,mi)}
+  else if(a==='play'){unlockAudio(3);stopProg();playChord(b.dataset.c)}
+  else if(a==='note'){unlockAudio(2.5);playNote(+b.dataset.m);b.classList.remove('hit');void b.getBBox();b.classList.add('hit')}
   else if(a==='play-scale')playScale();
-  else if(a==='play-frets'){playFrets(b.dataset.f.split(',').map(Number))}
-  else if(a==='play-prog')playProg(b,b.dataset.c.split('|'));
+  else if(a==='play-frets'){unlockAudio(3);playFrets(b.dataset.f.split(',').map(Number))}
+  else if(a==='play-prog'){const names=b.dataset.c.split('|');unlockAudio(names.length*1.1+2);playProg(b,names)}
   else if(a==='cof-mode')cofSelect(cofState.i,b.dataset.m==='1');
   else if(a==='tuner-toggle'){TU.on?tunerStop():tunerStart()}
   else if(a==='a4'){TU.a4=Math.min(445,Math.max(435,TU.a4+ +b.dataset.d));lsSet('sb.a4',TU.a4);document.getElementById('t-a4').textContent=TU.a4+' Гц';if(TU.last)TU.hist=[];else{const hz=document.getElementById('t-hz');if(hz)hz.textContent=TU.a4.toFixed(1)+' Гц'}}
@@ -1803,7 +1826,7 @@ document.addEventListener('input',e=>{
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&!sheet.hidden)closeSheet();
   const g=e.target.closest&&e.target.closest('g.key');
-  if(g&&(e.key==='Enter'||e.key===' ')){e.preventDefault();const i=+g.dataset.i,mi=g.dataset.m==='1';cofSelect(i,mi);playChord(mi?COF_MIN[i]+'m':COF_MAJ[i])}
+  if(g&&(e.key==='Enter'||e.key===' ')){e.preventDefault();const i=+g.dataset.i,mi=g.dataset.m==='1';unlockAudio(3);playChord(mi?COF_MIN[i]+'m':COF_MAJ[i]);cofSelect(i,mi)}
 });
 
 /* ---------- boot ---------- */
