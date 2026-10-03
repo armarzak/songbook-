@@ -60,6 +60,30 @@
   --grid:#D3CCE8; --string:#9C94B8; --warn:#A8520A; --warn-bg:#FBEBDD; --good:#2D7A3E; --good-bg:#E2F1E5; --shadow:rgba(40,20,90,.12);
   color-scheme:light;
 }
+:root[data-skin="mint"]{
+  --bg:#EEF6F2; --surface:#FFFFFF; --sunk:#DDEDE6; --fg:#14231D; --muted:#5B7068; --line:#CFE2DA;
+  --chord:#0E7A64; --accent:#0E7A64; --on-accent:#FFFFFF; --danger:#B3261E; --bar:rgba(238,246,242,.92); --scrim:rgba(8,30,22,.35);
+  --grid:#C6DCD3; --string:#8FA89E; --warn:#A8520A; --warn-bg:#FBEBDD; --good:#1F7A3A; --good-bg:#DDF2E3; --shadow:rgba(10,60,40,.12);
+  color-scheme:light;
+}
+:root[data-skin="coral"]{
+  --bg:#FFF5F2; --surface:#FFFFFF; --sunk:#FBE6E0; --fg:#2A1712; --muted:#7A5D55; --line:#F1D6CE;
+  --chord:#C9401B; --accent:#C9401B; --on-accent:#FFFFFF; --danger:#A3201A; --bar:rgba(255,245,242,.92); --scrim:rgba(40,12,6,.35);
+  --grid:#EDCFC6; --string:#B89A91; --warn:#A8520A; --warn-bg:#FBEBDD; --good:#2D7A3E; --good-bg:#E2F1E5; --shadow:rgba(90,30,10,.12);
+  color-scheme:light;
+}
+:root[data-skin="neon"]{
+  --bg:#0F0B1A; --surface:#18122A; --sunk:#221A3A; --fg:#F1EAFF; --muted:#A497C2; --line:#2E2548;
+  --chord:#FF6AD5; --accent:#FF6AD5; --on-accent:#2A0420; --danger:#FF8A80; --bar:rgba(15,11,26,.9); --scrim:rgba(5,2,12,.65);
+  --grid:#2F2650; --string:#5E5285; --warn:#FFB86B; --warn-bg:#2E2014; --good:#7DF0B0; --good-bg:#13291F; --shadow:rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+:root[data-skin="forest"]{
+  --bg:#0D1712; --surface:#14211A; --sunk:#1C2D24; --fg:#E8F1EA; --muted:#94A99B; --line:#253A2E;
+  --chord:#F2C14E; --accent:#F2C14E; --on-accent:#1E1600; --danger:#FF8A80; --bar:rgba(13,23,18,.92); --scrim:rgba(2,8,5,.6);
+  --grid:#28402F; --string:#557060; --warn:#F7A26A; --warn-bg:#2E2216; --good:#8EE59B; --good-bg:#14301C; --shadow:rgba(0,0,0,.5);
+  color-scheme:dark;
+}
 html,body{background:var(--bg);color:var(--fg)}
 body{font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
 *{box-sizing:border-box}
@@ -267,9 +291,19 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 .notes b{font:700 16px var(--f-mono)}
 .notes i{font-style:normal;font-size:11px;color:var(--muted)}
 .cchips{display:flex;flex-wrap:wrap;gap:6px}
-.cchip{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;align-items:center;min-width:52px;padding:6px 8px;border-radius:10px;background:var(--surface);border:1px solid var(--line)}
-.cchip:hover{background:var(--sunk)}
-.cchip:focus-visible{outline:2px solid var(--accent)}
+.cchip{display:inline-flex;align-items:stretch;border-radius:10px;background:var(--surface);border:1px solid var(--line);overflow:hidden;transition:border-color .15s,background .15s}
+.cchip .cplay{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;align-items:center;min-width:48px;padding:6px 6px 6px 8px}
+.cchip .cdia{all:unset;box-sizing:border-box;cursor:pointer;display:grid;place-items:center;width:26px;border-left:1px solid var(--line);color:var(--muted)}
+.cchip .cdia svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8}
+.cchip .cplay:hover,.cchip .cdia:hover{background:var(--sunk)}
+.cchip .cplay:focus-visible,.cchip .cdia:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.cchip.playing{border-color:var(--accent);background:var(--sunk)}
+.cchip.playing{background:color-mix(in srgb,var(--accent) 18%,var(--surface))}
+.pplay{all:unset;box-sizing:border-box;cursor:pointer;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--on-accent);margin-right:4px;flex:0 0 auto}
+.pplay svg{width:14px;height:14px;fill:currentColor}
+.pplay:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.panel-top .play-btn{margin-left:auto}
+.play-btn svg{fill:currentColor;stroke:none}
 .cchip .rn{font:600 11px var(--f-body);color:var(--muted)}
 .cchip .cn{font:700 15px var(--f-mono);color:var(--chord)}
 .cchip.harm{border-style:dashed}
@@ -727,6 +761,7 @@ const ICON={
   trash:'<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
   plus:'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
   play:'<svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>',
+  dia:'<svg viewBox="0 0 24 24"><path d="M6 3h12v18H6zM6 8h12M6 13h12M10 3v18M14 3v18"/></svg>',
   pause:'<svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>'
 };
 
@@ -890,7 +925,9 @@ function fillCircle(){
   const box=document.getElementById('cof-svg'); if(!box)return;
   box.innerHTML=cofSvg();
   const {i,minor}=cofState,key=cofKey(),rel=minor?COF_MAJ[i]:COF_MIN[i]+'m';
-  const chip=c=>`<button class="cchip${c.harm?' harm':''}" data-act="chord" data-c="${esc(c.name)}"><span class="rn">${esc(c.rn)}</span><span class="cn">${esc(prettyChord(c.name))}</span></button>`;
+  const chip=c=>`<span class="cchip${c.harm?' harm':''}" data-name="${esc(c.name)}">
+    <button class="cplay" data-act="play" data-c="${esc(c.name)}" aria-label="Сыграть ${esc(prettyChord(c.name))}"><span class="rn">${esc(c.rn)}</span><span class="cn">${esc(prettyChord(c.name))}</span></button>
+    <button class="cdia" data-act="chord" data-c="${esc(c.name)}" aria-label="Схема ${esc(prettyChord(c.name))}">${ICON.dia}</button></span>`;
   document.getElementById('cof-info').innerHTML=`
     <div class="cof-head">
       <h2>${esc(pretty2(key.root))} ${minor?'минор':'мажор'}</h2>
@@ -903,10 +940,11 @@ function fillCircle(){
     <h3 class="sec-h">Гамма</h3>
     <div class="notes">${key.notes.map((n,k)=>`<span><b>${esc(pretty2(n))}</b><i>${k+1}</i></span>`).join('')}</div>
     <h3 class="sec-h">Аккорды тональности</h3>
-    <p class="sec-p">Нажмите на аккорд, чтобы увидеть схему.${minor?' V7 взят из гармонического минора, так звучит привычнее.':''}</p>
+    <p class="sec-p">Нажмите на аккорд, чтобы услышать его, на значок справа — чтобы открыть схему.${minor?' V7 взят из гармонического минора, так звучит привычнее.':''}</p>
     <div class="cchips">${key.chords.map(chip).join('')}</div>
     <h3 class="sec-h">Популярные последовательности</h3>
-    <div class="progs">${key.prog.map(p=>`<div class="prog">${p.map(chip).join('<span class="arr">→</span>')}</div>`).join('')}</div>`;
+    <p class="sec-p">▶ проигрывает последовательность целиком.</p>
+    <div class="progs">${key.prog.map(p=>`<div class="prog"><button class="pplay" data-act="play-prog" data-c="${esc(p.map(c=>c.name).join('|'))}" aria-label="Сыграть последовательность">${ICON.play}</button>${p.map(chip).join('<span class="arr">→</span>')}</div>`).join('')}</div>`;
 }
 /* ---------- scales on the fretboard ---------- */
 const SC_ROOTS=['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
@@ -1018,6 +1056,55 @@ function fillScales(){
   if(sc2)sc2.scrollLeft=box?Math.max(0,34+(box.lo-1)*46-24):0;
 }
 function scSave(){lsSet('sb.sc',JSON.stringify(scState));fillScales()}
+/* ---------- chord sound: Karplus–Strong plucked strings, strummed low to high ---------- */
+let AC=null,acOut=null,ringing=[],progTimers=[];
+const pluckCache=new Map();
+function audioCtx(){
+  if(!AC){
+    AC=new (window.AudioContext||window.webkitAudioContext)();
+    try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch{} // play even with the iPhone ring switch on silent
+    const comp=AC.createDynamicsCompressor(),out=AC.createGain();
+    out.gain.value=0.9; comp.connect(out); out.connect(AC.destination); acOut=comp;
+  }
+  if(AC.state!=='running')AC.resume().catch(()=>{});
+  return AC;
+}
+function pluckBuffer(ctx,midi){
+  if(pluckCache.has(midi))return pluckCache.get(midi);
+  const sr=ctx.sampleRate,f=440*Math.pow(2,(midi-69)/12),len=Math.floor(sr*2.8),y=new Float32Array(len);
+  const P=sr/f-0.5,N=Math.ceil(P)+2;
+  let lp=0; for(let i=0;i<N;i++){lp=lp*0.55+(Math.random()*2-1)*0.45;y[i]=lp} // softened pick noise
+  let prev=0; const decay=midi<50?0.9975:0.9962;
+  for(let n=N;n<len;n++){const r=n-P,i0=Math.floor(r),fr=r-i0,x=y[i0]*(1-fr)+y[i0+1]*fr;y[n]=decay*0.5*(x+prev);prev=x}
+  let mx=0; for(let i=0;i<len;i++)if(Math.abs(y[i])>mx)mx=Math.abs(y[i]);
+  if(mx)for(let i=0;i<len;i++)y[i]/=mx;
+  const b=ctx.createBuffer(1,len,sr); b.getChannelData(0).set(y);
+  pluckCache.set(midi,b); return b;
+}
+function silence(ctx){const t=ctx.currentTime;ringing.forEach(g=>{try{g.gain.cancelScheduledValues(t);g.gain.setTargetAtTime(0,t,0.03)}catch{}});ringing=[]}
+function playFrets(frets,when){
+  const ctx=audioCtx(); silence(ctx);
+  const t0=Math.max(ctx.currentTime+0.02,when||0),open=[40,45,50,55,59,64];
+  let k=0;
+  frets.forEach((f,s)=>{
+    if(f<0)return;
+    const src=ctx.createBufferSource(),g=ctx.createGain(),t=t0+k++*0.028;
+    src.buffer=pluckBuffer(ctx,open[s]+f);
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.32,t+0.004);g.gain.setTargetAtTime(0,t+2.2,0.25);
+    src.connect(g);g.connect(acOut);src.start(t);src.stop(t+2.8);ringing.push(g);
+  });
+}
+function playChord(name){const v=getVoicings(name).list[0];if(v)playFrets(v.frets);return !!v}
+function stopProg(){progTimers.forEach(clearTimeout);progTimers=[];document.querySelectorAll('.cchip.playing').forEach(e=>e.classList.remove('playing'))}
+function playProg(btn,names){
+  stopProg();
+  const chips=[...btn.parentElement.querySelectorAll('.cchip')];
+  names.forEach((n,k)=>progTimers.push(setTimeout(()=>{
+    chips.forEach(c=>c.classList.remove('playing')); if(chips[k])chips[k].classList.add('playing'); playChord(n);
+    if(k===names.length-1)progTimers.push(setTimeout(()=>chips.forEach(c=>c.classList.remove('playing')),1400));
+  },k*1100)));
+}
+function playBtn(attrs){return `<button class="btn icon play-btn" ${attrs} aria-label="Сыграть аккорд">${ICON.play}</button>`}
 function cofSelect(i,minor){cofState.i=i;cofState.minor=minor;lsSet('sb.cof',JSON.stringify(cofState));fillCircle()}
 
 /* ---------- tuner ---------- */
@@ -1177,7 +1264,7 @@ function openChartChord(name){
   const v=CHART_BY_NAME[name]; if(!v)return;
   const info=chordInfo(v,name);
   sheet.innerHTML=`<div class="panel" role="dialog" aria-label="Схема ${esc(pretty(name))}">
-    <div class="panel-top"><h2>${esc(pretty(name))}</h2><button class="btn" data-act="close">Закрыть</button></div>
+    <div class="panel-top"><h2>${esc(pretty(name))}</h2>${playBtn(`data-act="play-frets" data-f="${v.frets.join(',')}"`)}<button class="btn" data-act="close">Закрыть</button></div>
     <div class="one">${diagram({...v})}<div class="info">Ноты: ${esc(info.notes)}<br>Лады: ${esc(info.frets)}</div></div>
   </div>`;
   sheet.hidden=false;
@@ -1219,7 +1306,11 @@ const SKINS=[
   {id:'auto',name:'Авто',hint:'как на телефоне',bg:'linear-gradient(135deg,#F1F2EE 50%,#111312 50%)',fg:'#191B19',ch:'#1A57AE'},
   {id:'midnight',name:'Полночь',hint:'для сцены и темноты',bg:'#000000',fg:'#F2EFE9',ch:'#FFB648'},
   {id:'ocean',name:'Океан',hint:'спокойный тёмный',bg:'#0B1622',fg:'#E6F1FA',ch:'#5EE0D0'},
-  {id:'lavender',name:'Лаванда',hint:'мягкий светлый',bg:'#F4F2FA',fg:'#1E1A2E',ch:'#6A3FD0'}
+  {id:'lavender',name:'Лаванда',hint:'мягкий светлый',bg:'#F4F2FA',fg:'#1E1A2E',ch:'#6A3FD0'},
+  {id:'mint',name:'Мята',hint:'свежий светлый',bg:'#EEF6F2',fg:'#14231D',ch:'#0E7A64'},
+  {id:'coral',name:'Коралл',hint:'тёплый светлый',bg:'#FFF5F2',fg:'#2A1712',ch:'#C9401B'},
+  {id:'neon',name:'Неон',hint:'яркий тёмный',bg:'#0F0B1A',fg:'#F1EAFF',ch:'#FF6AD5'},
+  {id:'forest',name:'Лес',hint:'глубокий тёмный',bg:'#0D1712',fg:'#E8F1EA',ch:'#F2C14E'}
 ];
 const themeMetas=[...document.querySelectorAll('meta[name="theme-color"]')].map(m=>({m,c:m.getAttribute('content'),media:m.getAttribute('media')}));
 function applySkin(id){
@@ -1545,7 +1636,7 @@ function openMyShape(name){
   const s=S.shapes[name]; if(!s)return;
   const v={frets:s.frets,base:s.base||0,barre:autoBarre(s.frets)},info=chordInfo(v,name),ck=checkShape(name,s.frets);
   sheet.innerHTML=`<div class="panel" role="dialog" aria-label="Моя схема ${esc(pretty(name))}">
-    <div class="panel-top"><h2>${esc(pretty(name))}</h2><button class="btn" data-act="close">Закрыть</button></div>
+    <div class="panel-top"><h2>${esc(pretty(name))}</h2>${playBtn(`data-act="play-frets" data-f="${s.frets.join(',')}"`)}<button class="btn" data-act="close">Закрыть</button></div>
     <div class="one">${diagram(v)}<div class="info">Ноты: ${esc(info.notes)}<br>Лады: ${esc(info.frets)}</div></div>
     ${ck&&!ck.unknown?(ck.ok?'<p class="verdict ok">Ноты совпадают с названием аккорда.</p>':`<p class="verdict bad">Схема не совпадает с названием.${ck.extra.length?` Лишние ноты: ${esc(ck.extra.join(', '))}.`:''}${ck.missing.length?` Не хватает: ${esc(ck.missing.join(', '))}.`:''}</p>`):''}
     <div class="actions"><button class="btn danger" data-act="del-shape" data-c="${esc(name)}">Удалить</button><button class="btn primary" data-act="edit-shape" data-c="${esc(name)}">Изменить</button></div>
@@ -1562,7 +1653,7 @@ async function deleteShape(name,btn){
 function openChord(name){
   const {list,approx}=getVoicings(name);
   sheet.innerHTML=`<div class="panel" role="dialog" aria-label="Аппликатура ${esc(name)}">
-    <div class="panel-top"><h2>${esc(name)}</h2><button class="btn" data-act="close">Закрыть</button></div>
+    <div class="panel-top"><h2>${esc(name)}</h2>${list.length?playBtn(`data-act="play" data-c="${esc(name)}"`):''}<button class="btn" data-act="close">Закрыть</button></div>
     ${approx&&list.length?'<p class="hint">Точной схемы нет, показан упрощённый вариант.</p>':''}
     ${list.length?(v=>`<div class="one">${diagram(v)}<div class="info">Ноты: ${esc(chordInfo(v,name).notes)}<br>Лады: ${esc(chordInfo(v,name).frets)}</div></div>`)(list[0])
       :'<p class="hint">Для этого аккорда схемы пока нет.</p>'}
@@ -1608,7 +1699,10 @@ document.addEventListener('click',e=>{
   else if(a==='sc-root'){scState.root=+b.dataset.i;scSave()}
   else if(a==='sc-lab'){scState.labels=b.dataset.v;scSave()}
   else if(a==='sc-pos'){scState.pos=+b.dataset.v;scSave()}
-  else if(a==='cof')cofSelect(+b.dataset.i,b.dataset.m==='1');
+  else if(a==='cof'){const i=+b.dataset.i,mi=b.dataset.m==='1';cofSelect(i,mi);if(b.tagName.toLowerCase()==='g')playChord(mi?COF_MIN[i]+'m':COF_MAJ[i])}
+  else if(a==='play'){stopProg();playChord(b.dataset.c)}
+  else if(a==='play-frets'){playFrets(b.dataset.f.split(',').map(Number))}
+  else if(a==='play-prog')playProg(b,b.dataset.c.split('|'));
   else if(a==='cof-mode')cofSelect(cofState.i,b.dataset.m==='1');
   else if(a==='tuner-toggle'){TU.on?tunerStop():tunerStart()}
   else if(a==='a4'){TU.a4=Math.min(445,Math.max(435,TU.a4+ +b.dataset.d));lsSet('sb.a4',TU.a4);document.getElementById('t-a4').textContent=TU.a4+' Гц';if(TU.last)TU.hist=[]}
@@ -1659,7 +1753,7 @@ document.addEventListener('input',e=>{
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&!sheet.hidden)closeSheet();
   const g=e.target.closest&&e.target.closest('g.key');
-  if(g&&(e.key==='Enter'||e.key===' ')){e.preventDefault();cofSelect(+g.dataset.i,g.dataset.m==='1')}
+  if(g&&(e.key==='Enter'||e.key===' ')){e.preventDefault();const i=+g.dataset.i,mi=g.dataset.m==='1';cofSelect(i,mi);playChord(mi?COF_MIN[i]+'m':COF_MAJ[i])}
 });
 
 /* ---------- boot ---------- */
