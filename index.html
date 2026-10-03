@@ -358,6 +358,10 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 .t-ref{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);margin-top:6px}
 .t-ref b{color:var(--fg);font-family:var(--f-mono);min-width:64px;text-align:center}
 .tuner .verdict{max-width:60ch;text-align:center}
+.t-help{width:100%;max-width:520px}
+.t-help .verdict{text-align:left;background:var(--surface);color:var(--fg);border:1px solid var(--line);font-size:15px;line-height:1.5}
+.t-help ol{margin:6px 0;padding-left:22px;display:flex;flex-direction:column;gap:6px}
+.t-help .t-alt{color:var(--muted);font-size:13px}
 .tuner .verdict a{color:var(--accent)}
 @media (prefers-reduced-motion:reduce){.gauge .needle{transition:none}}
 .backup{margin-top:28px;padding-top:6px;border-top:1px solid var(--line)}
@@ -1172,7 +1176,7 @@ function cofSelect(i,minor){cofState.i=i;cofState.minor=minor;lsSet('sb.cof',JSO
 /* ---------- tuner ---------- */
 const OFFLINE_URL='https://armarzak.github.io/songbook-/';
 const GUITAR=[{n:'E',m:40},{n:'A',m:45},{n:'D',m:50},{n:'G',m:55},{n:'B',m:59},{n:'E',m:64}];
-const TU={on:false,ctx:null,stream:null,an:null,buf:null,raf:0,frame:0,hist:[],shown:0,target:0,a4:Math.min(445,Math.max(435,+lsGet('sb.a4')||440)),last:null,lastAt:0};
+const TU={on:false,ctx:null,stream:null,an:null,buf:null,raf:0,frame:0,hist:[],shown:0,target:0,a4:440,last:null,lastAt:0};
 const GA=48; // the needle swings ±48° for ±50 cents
 /* Instrument-panel meter: wide scale arc, long needle pivoting under a small arc, readouts in the lower corners */
 function gaugeSvg(){
@@ -1212,32 +1216,58 @@ function renderTuner(){
       <div class="actions" style="justify-content:center">
         <button class="btn primary" id="t-btn" data-act="tuner-toggle">Включить</button>
       </div>
-      <div class="t-ref"><span>Эталон A4</span>
-        <button class="btn icon" data-act="a4" data-d="-1" aria-label="Ниже">−</button>
-        <b id="t-a4">${TU.a4} Гц</b>
-        <button class="btn icon" data-act="a4" data-d="1" aria-label="Выше">+</button></div>
-      ${inClaude?`<p class="verdict">На claude.ai страницам не дают доступ к микрофону, поэтому здесь тюнер не услышит гитару. Он работает в приложении на экране «Домой»: <a href="${OFFLINE_URL}" target="_blank" rel="noopener">${OFFLINE_URL.replace('https://','')}</a></p>`:''}
+      <div class="t-help" id="t-help"></div>
     </div>
   </div>`;
 }
 function tunerMsg(t){const el=document.getElementById('t-status');if(el)el.textContent=t}
-async function tunerStart(){
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){tunerMsg('Этот браузер не даёт доступ к микрофону. Откройте песенник в Safari.');return}
-  let stream;
-  try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}})}
-  catch(e){
-    tunerMsg(!window.SONGBOOK_OFFLINE&&window.claude?'Здесь микрофон недоступен. Откройте приложение с экрана «Домой».'
-      :'Нет доступа к микрофону. Разрешите его: Настройки → Safari → Микрофон, затем нажмите «Включить» ещё раз.');
-    return;
+function micHelp(kind){
+  const el=document.getElementById('t-help'); if(!el)return;
+  if(!kind){el.innerHTML='';return}
+  const standalone=window.navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
+  const retry='<div class="actions" style="justify-content:center"><button class="btn primary" data-act="tuner-toggle">Попробовать снова</button></div>';
+  let h;
+  if(kind==='claude')h=`<p>На claude.ai страницам не дают доступ к микрофону. Тюнер работает в приложении на экране «Домой»: <a href="${OFFLINE_URL}" target="_blank" rel="noopener">${OFFLINE_URL.replace('https://','')}</a></p>`;
+  else if(kind==='NotAllowedError'||kind==='SecurityError'){
+    const app=`<li>Откройте <b>Настройки</b> → <b>Приложения</b> → <b>Safari</b> → <b>Микрофон</b>. На iOS 17 и старше: <b>Настройки</b> → <b>Safari</b> → <b>Микрофон</b>.</li>
+      <li>Выберите <b>«Спрашивать»</b> или <b>«Разрешить»</b>.</li>
+      <li>Полностью закройте песенник (смахните его вверх в списке приложений), откройте снова и нажмите «Включить». Когда айфон спросит про микрофон, нажмите «Разрешить».</li>`;
+    const web=`<li>Нажмите <b>«аА»</b> слева в адресной строке Safari.</li>
+      <li>Выберите <b>«Настройки веб-сайта»</b> → <b>«Микрофон»</b> → <b>«Разрешить»</b>.</li>
+      <li>Обновите страницу и нажмите «Включить».</li>`;
+    h=`<p><b>Микрофон запрещён для песенника.</b> Как разрешить:</p><ol>${standalone?app:web}</ol>
+      <p class="t-alt">${standalone?'Если открываете песенник в Safari, а не с экрана «Домой»: «аА» в адресной строке → «Настройки веб-сайта» → «Микрофон» → «Разрешить».':'Если открываете песенник с экрана «Домой»: Настройки → Приложения → Safari → Микрофон → «Спрашивать».'}</p>${retry}`;
   }
-  const ctx=new (window.AudioContext||window.webkitAudioContext)();
-  try{await ctx.resume()}catch{}
-  const an=ctx.createAnalyser(); an.fftSize=4096;
-  ctx.createMediaStreamSource(stream).connect(an);
-  Object.assign(TU,{on:true,ctx,stream,an,buf:new Float32Array(an.fftSize),hist:[],frame:0,last:null});
-  document.getElementById('t-btn').textContent='Выключить';
-  tunerMsg('Сыграйте одну струну');
-  TU.raf=requestAnimationFrame(tunerLoop);
+  else if(kind==='NotFoundError')h='<p>Айфон не нашёл микрофон. Если подключены наушники без микрофона, отключите их и попробуйте снова.</p>'+retry;
+  else if(kind==='NotReadableError'||kind==='AbortError')h='<p>Микрофон занят: возможно, идёт звонок или запись в другом приложении. Завершите её и попробуйте снова.</p>'+retry;
+  else if(kind==='unsupported')h='<p>Этот браузер не даёт доступ к микрофону. Откройте песенник в Safari или с экрана «Домой».</p>';
+  else h=`<p>Не получилось включить микрофон (${esc(String(kind))}).</p>`+retry;
+  el.innerHTML=`<div class="verdict">${h}</div>`;
+}
+/* Everything that needs the tap (creating and waking the audio engine) happens before the first await */
+function tunerStart(){
+  if(!window.SONGBOOK_OFFLINE&&window.claude){micHelp('claude');return}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){micHelp('unsupported');return}
+  let ctx;
+  try{ctx=new (window.AudioContext||window.webkitAudioContext)();ctx.resume().catch(()=>{})}catch(e){micHelp(e&&e.name);return}
+  micHelp(null); tunerMsg('Запрашиваю микрофон…');
+  const want={audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}};
+  navigator.mediaDevices.getUserMedia(want)
+    .catch(e=>e&&(e.name==='OverconstrainedError'||e.name==='TypeError')?navigator.mediaDevices.getUserMedia({audio:true}):Promise.reject(e))
+    .then(stream=>{
+      if(ctx.state!=='running')ctx.resume().catch(()=>{});
+      const src=ctx.createMediaStreamSource(stream),an=ctx.createAnalyser(),mute=ctx.createGain();
+      an.fftSize=4096; mute.gain.value=0;
+      src.connect(an); an.connect(mute); mute.connect(ctx.destination); // Safari only processes nodes that reach the output
+      Object.assign(TU,{on:true,ctx,stream,an,buf:new Float32Array(an.fftSize),hist:[],frame:0,last:null});
+      const b=document.getElementById('t-btn'); if(b)b.textContent='Выключить';
+      tunerMsg('Сыграйте одну струну');
+      TU.raf=requestAnimationFrame(tunerLoop);
+    },e=>{
+      try{ctx.close()}catch{}
+      tunerMsg('Микрофон не включён');
+      micHelp((e&&e.name)||'unknown');
+    });
 }
 function tunerStop(){
   if(!TU.on)return;
@@ -1267,6 +1297,7 @@ function detectPitch(buf,sr){
 function tunerLoop(){
   if(!TU.on)return;
   TU.raf=requestAnimationFrame(tunerLoop);
+  if(TU.frame%60===0&&TU.ctx.state!=='running')TU.ctx.resume().catch(()=>{}); // iOS can pause the engine after a call or notification
   if(TU.frame++%3===0){
     TU.an.getFloatTimeDomainData(TU.buf);
     const f=detectPitch(TU.buf,TU.ctx.sampleRate);
@@ -1778,7 +1809,6 @@ document.addEventListener('click',e=>{
   else if(a==='play-prog'){const names=b.dataset.c.split('|');unlockAudio(names.length*1.1+2);playProg(b,names)}
   else if(a==='cof-mode')cofSelect(cofState.i,b.dataset.m==='1');
   else if(a==='tuner-toggle'){TU.on?tunerStop():tunerStart()}
-  else if(a==='a4'){TU.a4=Math.min(445,Math.max(435,TU.a4+ +b.dataset.d));lsSet('sb.a4',TU.a4);document.getElementById('t-a4').textContent=TU.a4+' Гц';if(TU.last)TU.hist=[];else{const hz=document.getElementById('t-hz');if(hz)hz.textContent=TU.a4.toFixed(1)+' Гц'}}
   else if(a==='import')renderImport();
   else if(a==='export')exportBackup();
   else if(a==='skin'){applySkin(b.dataset.s);lsSet('sb.skin',S.skin);fillSkins()}
