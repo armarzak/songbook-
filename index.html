@@ -332,19 +332,24 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 .tuner[data-state="ok"]{--t-col:var(--good)}
 .tuner[data-state="near"]{--t-col:var(--accent)}
 .tuner[data-state="off"]{--t-col:var(--warn)}
-.t-note{font-family:var(--f-display);font-weight:700;font-size:76px;line-height:1;color:var(--t-col);min-height:76px;transition:color .2s}
-.t-note sub{font-size:22px;font-weight:500;vertical-align:baseline;margin-left:2px;color:var(--muted)}
-.gauge{width:100%;max-width:400px;height:auto;display:block}
-.gauge .zone{fill:var(--good-bg)}
-.gauge .tm{stroke:var(--grid);stroke-width:2}
-.gauge .tM{stroke:var(--string);stroke-width:2.5}
-.gauge .t0{stroke:var(--good);stroke-width:3.5}
-.gauge text{fill:var(--muted);font:600 11px var(--f-mono)}
-.gauge .fs{font:400 22px var(--f-body)}
-.gauge .needle{stroke:var(--t-col);stroke-width:4;stroke-linecap:round;transition:stroke .2s}
-.gauge .hub{fill:var(--t-col);transition:fill .2s}
-.t-read{display:flex;gap:18px;font:600 16px var(--f-mono);font-variant-numeric:tabular-nums;color:var(--fg)}
-.t-read #t-hz{color:var(--muted)}
+/* The meter is a dark instrument panel in every theme, by design; only the status colours come from the theme */
+.tpanel{width:100%;max-width:520px;border-radius:16px;overflow:hidden;background:linear-gradient(170deg,#2E2F33 0%,#202124 55%,#1A1B1D 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 10px 28px rgba(0,0,0,.28);--p-ink:#76777D;--p-tick:#56575C;--p-needle:#CFD0D4;--p-ok:#62D274;--p-near:#E8B54A}
+.tuner[data-state="ok"] .tpanel{--p-needle:var(--p-ok)}
+.tuner[data-state="near"] .tpanel{--p-needle:var(--p-near)}
+.gauge{width:100%;height:auto;display:block}
+.gauge .sheen{fill:url(#sheen)}
+.gauge .band{fill:none;stroke:rgba(255,255,255,.055);stroke-width:16}
+.gauge .zone{fill:none;stroke:rgba(98,210,116,.22);stroke-width:16}
+.gauge .tm{stroke:var(--p-tick);stroke-width:1.5}
+.gauge .tM{stroke:var(--p-ink);stroke-width:2}
+.gauge .lab{fill:var(--p-ink);font:500 13px var(--f-body)}
+.gauge .cap{fill:none;stroke:#4A4B50;stroke-width:2}
+.gauge .read{fill:#8A8B91;font:500 16px var(--f-body);font-variant-numeric:tabular-nums}
+.tuner[data-state="ok"] .gauge #t-cents{fill:var(--p-ok)}
+.gauge .note{fill:#E6E7EA;font:700 30px var(--f-display)}
+.gauge .note .oct{font-size:13px;font-weight:500;fill:#8A8B91}
+.gauge .needle{stroke:var(--p-needle);stroke-width:2.5;stroke-linecap:round;transition:stroke .2s}
 .t-status{font-weight:600;min-height:1.5em;color:var(--t-col);text-align:center}
 .t-strings{display:flex;gap:8px;margin-top:4px}
 .t-strings span{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font:700 16px var(--f-body);background:var(--sunk);color:var(--muted);position:relative;transition:background .2s,color .2s}
@@ -354,7 +359,7 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 .t-ref b{color:var(--fg);font-family:var(--f-mono);min-width:64px;text-align:center}
 .tuner .verdict{max-width:60ch;text-align:center}
 .tuner .verdict a{color:var(--accent)}
-@media (prefers-reduced-motion:reduce){.gauge .needle,.gauge .hub,.t-note{transition:none}}
+@media (prefers-reduced-motion:reduce){.gauge .needle{transition:none}}
 .backup{margin-top:28px;padding-top:6px;border-top:1px solid var(--line)}
 label.btn{cursor:pointer}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
@@ -1145,22 +1150,31 @@ function cofSelect(i,minor){cofState.i=i;cofState.minor=minor;lsSet('sb.cof',JSO
 const OFFLINE_URL='https://armarzak.github.io/songbook-/';
 const GUITAR=[{n:'E',m:40},{n:'A',m:45},{n:'D',m:50},{n:'G',m:55},{n:'B',m:59},{n:'E',m:64}];
 const TU={on:false,ctx:null,stream:null,an:null,buf:null,raf:0,frame:0,hist:[],shown:0,target:0,a4:Math.min(445,Math.max(435,+lsGet('sb.a4')||440)),last:null,lastAt:0};
-const GA=60; // the needle swings ±60° for ±50 cents
+const GA=48; // the needle swings ±48° for ±50 cents
+/* Instrument-panel meter: wide scale arc, long needle pivoting under a small arc, readouts in the lower corners */
 function gaugeSvg(){
-  const cx=160,cy=170,R=140,pt=(c,r)=>{const a=(c/50*GA-90)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]};
-  let s=`<svg class="gauge" viewBox="0 0 320 190" aria-hidden="true">`;
-  const [zx1,zy1]=pt(-3,R),[zx2,zy2]=pt(3,R);
-  s+=`<path class="zone" d="M${cx} ${cy} L${zx1.toFixed(1)} ${zy1.toFixed(1)} A${R} ${R} 0 0 1 ${zx2.toFixed(1)} ${zy2.toFixed(1)} Z"/>`;
+  const cx=210,cy=252,R=212,pt=(c,r)=>{const a=(c/50*GA-90)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]};
+  const arc=(r,c1,c2)=>{const [x1,y1]=pt(c1,r),[x2,y2]=pt(c2,r);return `M${x1.toFixed(1)} ${y1.toFixed(1)}A${r} ${r} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}`};
+  let s=`<svg class="gauge" viewBox="0 0 420 290" aria-hidden="true">
+    <defs><linearGradient id="sheen" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".02"/><stop offset="1" stop-color="#fff" stop-opacity=".07"/></linearGradient></defs>
+    <path class="sheen" d="M0 200 C 120 150, 230 60, 420 18 L420 0 L0 0 Z"/>
+    <path class="band" d="${arc(R-4,-50,50)}"/>
+    <path class="zone" d="${arc(R-4,-3,3)}"/>`;
   for(let c=-50;c<=50;c+=5){
-    const major=c%25===0,[x1,y1]=pt(c,R),[x2,y2]=pt(c,R-(c===0?26:major?18:10));
-    s+=`<line class="${c===0?'t0':major?'tM':'tm'}" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`;
-    if(major&&c!==0){const [tx,ty]=pt(c,R+14);s+=`<text x="${tx.toFixed(1)}" y="${(ty+4).toFixed(1)}" text-anchor="middle">${c>0?'+':''}${c}</text>`}
+    const major=c%10===0,[x1,y1]=pt(c,R+3),[x2,y2]=pt(c,R-(major?11:5));
+    s+=`<line class="${major?'tM':'tm'}" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`;
+    if(major){const [tx,ty]=pt(c,R+18);s+=`<text class="lab" x="${tx.toFixed(1)}" y="${(ty+4).toFixed(1)}" text-anchor="middle">${c}</text>`}
   }
-  const [fx,fy]=pt(-50,R+2),[sx,sy]=pt(50,R+2);
-  s+=`<text class="fs" x="${(fx-6).toFixed(1)}" y="${(fy+30).toFixed(1)}" text-anchor="middle">♭</text><text class="fs" x="${(sx+6).toFixed(1)}" y="${(sy+30).toFixed(1)}" text-anchor="middle">♯</text>`;
-  s+=`<g id="needle" style="transform-origin:${cx}px ${cy}px"><line class="needle" x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy-R+6}"/></g><circle class="hub" cx="${cx}" cy="${cy}" r="7"/></svg>`;
+  const capR=64,ca=62*Math.PI/180,[c1x,c1y]=[cx-capR*Math.sin(ca),cy-capR*Math.cos(ca)],[c2x,c2y]=[cx+capR*Math.sin(ca),cy-capR*Math.cos(ca)];
+  s+=`<path class="cap" d="M${c1x.toFixed(1)} ${c1y.toFixed(1)}A${capR} ${capR} 0 0 1 ${c2x.toFixed(1)} ${c2y.toFixed(1)}"/>
+    <text class="note" x="${cx}" y="238" text-anchor="middle"><tspan id="t-name"></tspan><tspan id="t-oct" class="oct" dy="-14"></tspan></text>
+    <text class="read" id="t-hz" x="74" y="262" text-anchor="middle">${TU.a4.toFixed(1)} Гц</text>
+    <text class="read" id="t-cents" x="346" y="262" text-anchor="middle">0 центов</text>
+    <g id="needle" style="transform-origin:${cx}px ${cy}px"><line class="needle" x1="${cx}" y1="${cy-68}" x2="${cx}" y2="${cy-R+2}"/></g>
+  </svg>`;
   return s;
 }
+function centsWord(n){return plural(Math.abs(n),'цент','цента','центов')}
 function renderTuner(){
   stopScroll(); S.view='tuner'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
   const inClaude=!window.SONGBOOK_OFFLINE&&window.claude;
@@ -1169,9 +1183,7 @@ function renderTuner(){
   <div class="wrap">
     ${tabsHtml('tuner')}
     <div class="tuner" id="tuner" data-state="idle">
-      <div class="t-note"><span id="t-name">–</span><sub id="t-oct"></sub></div>
-      ${gaugeSvg()}
-      <div class="t-read"><span id="t-cents">0 ¢</span><span id="t-hz">— Гц</span></div>
+      <div class="tpanel">${gaugeSvg()}</div>
       <div class="t-status" id="t-status">${inClaude?'':'Нажмите «Включить» и сыграйте одну струну'}</div>
       <div class="t-strings" id="t-strings">${GUITAR.map((g,i)=>`<span data-i="${i}">${g.n}<sub>${6-i}</sub></span>`).join('')}</div>
       <div class="actions" style="justify-content:center">
@@ -1251,13 +1263,13 @@ function tunerLoop(){
 function showPitch(p){
   const box=document.getElementById('tuner'); if(!box)return;
   const $=id=>document.getElementById(id);
-  if(!p){box.dataset.state='listen';$('t-name').textContent='–';$('t-oct').textContent='';$('t-cents').textContent='0 ¢';$('t-hz').textContent='— Гц';TU.target=0;tunerMsg('Сыграйте одну струну');
+  if(!p){box.dataset.state='listen';$('t-name').textContent='';$('t-oct').textContent='';$('t-cents').textContent='0 центов';$('t-hz').textContent=TU.a4.toFixed(1)+' Гц';TU.target=0;tunerMsg('Сыграйте одну струну');
     document.querySelectorAll('#t-strings span').forEach(s=>s.classList.remove('on'));return}
   const c=Math.round(p.cents),ok=Math.abs(p.cents)<=3;
   box.dataset.state=ok?'ok':Math.abs(p.cents)<=12?'near':'off';
   $('t-name').textContent=NS[((p.n%12)+12)%12];
   $('t-oct').textContent=Math.floor(p.n/12)-1;
-  $('t-cents').textContent=(c>0?'+':c<0?'−':'')+Math.abs(c)+' ¢';
+  $('t-cents').textContent=(c>0?'+':c<0?'−':'')+Math.abs(c)+' '+centsWord(c);
   $('t-hz').textContent=p.f.toFixed(1)+' Гц';
   tunerMsg(ok?'В строю':p.cents<0?'Ниже — подтяните':'Выше — ослабьте');
   let best=0;GUITAR.forEach((g,i)=>{if(Math.abs(g.m-p.n)<Math.abs(GUITAR[best].m-p.n))best=i});
@@ -1743,7 +1755,7 @@ document.addEventListener('click',e=>{
   else if(a==='play-prog')playProg(b,b.dataset.c.split('|'));
   else if(a==='cof-mode')cofSelect(cofState.i,b.dataset.m==='1');
   else if(a==='tuner-toggle'){TU.on?tunerStop():tunerStart()}
-  else if(a==='a4'){TU.a4=Math.min(445,Math.max(435,TU.a4+ +b.dataset.d));lsSet('sb.a4',TU.a4);document.getElementById('t-a4').textContent=TU.a4+' Гц';if(TU.last)TU.hist=[]}
+  else if(a==='a4'){TU.a4=Math.min(445,Math.max(435,TU.a4+ +b.dataset.d));lsSet('sb.a4',TU.a4);document.getElementById('t-a4').textContent=TU.a4+' Гц';if(TU.last)TU.hist=[];else{const hz=document.getElementById('t-hz');if(hz)hz.textContent=TU.a4.toFixed(1)+' Гц'}}
   else if(a==='import')renderImport();
   else if(a==='export')exportBackup();
   else if(a==='skin'){applySkin(b.dataset.s);lsSet('sb.skin',S.skin);fillSkins()}
