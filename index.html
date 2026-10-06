@@ -368,6 +368,38 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 .seg.vt button{width:38px;height:34px;padding:0;display:grid;place-items:center;color:var(--muted)}
 .seg.vt button[aria-pressed="true"]{color:var(--accent)}
 .seg.vt svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.listctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-block:2px 4px}
+.listctl:empty{display:none}
+.listctl .cap{font-size:12px;color:var(--muted)}
+.listctl .seg button{padding:5px 10px;font-size:12.5px}
+.songs li.sec{border:0;font:600 12px var(--f-body);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:16px 4px 4px}
+.songs li.sec+li{border-top:0}
+.song-row .star{color:var(--accent);margin-right:6px}
+.song-row .snip{grid-column:1/-1;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.song-row mark{background:var(--sunk);color:var(--fg);border-radius:3px;padding:0 1px;font-weight:600}
+.favbtn[aria-pressed="true"]{color:var(--accent)}
+.favbtn[aria-pressed="true"] svg{fill:currentColor}
+.menu{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.menu .btn{justify-content:flex-start;min-height:48px}
+.panel-top .ptitle{font-family:var(--f-display);font-size:18px;color:var(--fg)}
+.share-text{min-height:40vh;font-size:14px}
+.grp .metrobtn{display:inline-flex;align-items:center;gap:4px;padding:0 8px}
+.grp .metrobtn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
+.metrobtn.beat{animation:mbeat .12s ease-out}
+@keyframes mbeat{from{transform:scale(1.12)}to{transform:none}}
+.metro .m-big{display:flex;align-items:center;justify-content:center;gap:6px;margin:6px 0 10px}
+.metro .m-val{display:flex;flex-direction:column;align-items:center;min-width:110px}
+.metro .m-val b{font:700 52px/1 var(--f-display);color:var(--accent);font-variant-numeric:tabular-nums}
+.metro .m-val span{font-size:12px;color:var(--muted)}
+.metro .btn.icon{width:auto;min-width:42px;padding:0 8px}
+.metro input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--accent)}
+.mdots{display:flex;justify-content:center;gap:12px;margin:14px 0}
+.mdots i{width:16px;height:16px;border-radius:50%;background:var(--sunk);border:2px solid var(--line);transition:background .05s}
+.mdots i.acc{border-color:var(--accent)}
+.mdots i.on{background:var(--accent);border-color:var(--accent)}
+.m-row{display:flex;align-items:center;gap:10px;justify-content:center}
+.m-row .cap{font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.metrobtn.beat{animation:none}}
 .tagbar{display:flex;flex-wrap:wrap;gap:6px;margin-block:2px 6px}
 .tagbar:empty{display:none}
 .tchip{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:6px 12px;font:500 14px var(--f-body);display:inline-flex;align-items:center;gap:6px}
@@ -845,6 +877,11 @@ const ICON={
   play:'<svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>',
   guitar:'<svg viewBox="0 0 24 24"><path d="M19 3l2 2-6.5 6.5M14 7.5l2.5 2.5"/><path d="M10.2 9.8c-1.6-1-3.6-.8-4.8.4-.9.9-1 2-1.6 2.7-.7.8-2.3.9-2.6 2.6-.4 2.2 1.4 4.6 3.6 5.6 2.1.9 4.3.4 5.2-1 .6-.9.3-2 1.1-2.8.8-.8 2-.6 2.8-1.6 1.1-1.3 1-3.3-.1-4.8"/><circle cx="9" cy="15" r="1.6"/></svg>',
   book:'<svg viewBox="0 0 24 24"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5zM12 6.5V19.5"/></svg>',
+  star:'<svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"/></svg>',
+  more:'<svg viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="3.4"/></svg>',
+  share:'<svg viewBox="0 0 24 24"><path d="M12 15V3M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>',
+  copy:'<svg viewBox="0 0 24 24"><path d="M9 9h10v12H9zM5 15V3h10"/></svg>',
+  metro:'<svg viewBox="0 0 24 24"><path d="M9 3h6l4 18H5zM12 17l5-9M8 17h8"/></svg>',
   stage:'<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
   dia:'<svg viewBox="0 0 24 24"><path d="M6 3h12v18H6zM6 8h12M6 13h12M10 3v18M14 3v18"/></svg>',
   pause:'<svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>'
@@ -869,7 +906,7 @@ C            G           E
 [Dm]Пока мы и[E7]дём по до[Am]роге одной.`};
 
 /* ---------- storage ---------- */
-const S={songs:[],checks:{},shapes:{},tag:null,stage:false,textOnly:lsGet('sb.textonly')==='1',sfs:+lsGet('sb.sfs')||24,loaded:false,mode:'local',view:'list',cur:null,shift:0,q:'',
+const S={songs:[],checks:{},shapes:{},tag:null,sort:lsGet('sb.sort')||'title',stage:false,textOnly:lsGet('sb.textonly')==='1',sfs:+lsGet('sb.sfs')||24,loaded:false,mode:'local',view:'list',cur:null,shift:0,q:'',
   fs:Math.min(26,Math.max(12,+lsGet('sb.fs')||16)),scroll:{on:false,speed:loadSpeed()}};
 /* Scroll speed in pixels per second; old saves stored a 1–5 step instead. */
 function loadSpeed(){
@@ -919,7 +956,11 @@ function saveErr(e){
 
 /* ---------- views ---------- */
 const app=document.getElementById('app'),tools=document.getElementById('tools'),sheet=document.getElementById('sheet');
-function songsSorted(){return [...S.songs].sort((a,b)=>(a.title||'').localeCompare(b.title||'','ru'))}
+function songsSorted(){
+  const t=(a,b)=>(a.title||'').localeCompare(b.title||'','ru');
+  const by=S.sort==='new'?(a,b)=>(b.createdAt||0)-(a.createdAt||0)||t(a,b):S.sort==='artist'?(a,b)=>(a.artist||'').localeCompare(b.artist||'','ru')||t(a,b):t;
+  return [...S.songs].sort(by);
+}
 function findSong(id){return id==='demo'?DEMO:S.songs.find(s=>s.id===id)}
 
 function tabsHtml(cur){
@@ -1428,6 +1469,166 @@ function openChartChord(name){
   sheet.hidden=false;
 }
 
+/* ---------- favourites, recent, sorting ---------- */
+const RECENT=(()=>{try{return JSON.parse(lsGet('sb.recent')||'[]')}catch{return []}})(); // this device only
+function pushRecent(id){const i=RECENT.indexOf(id);if(i>=0)RECENT.splice(i,1);RECENT.unshift(id);RECENT.length=Math.min(RECENT.length,12);lsSet('sb.recent',JSON.stringify(RECENT))}
+function fillSortseg(){
+  const el=document.getElementById('sortseg'); if(!el)return;
+  if(S.songs.length<2){el.innerHTML='';return}
+  const o=[['title','Название'],['artist','Исполнитель'],['new','Новые']];
+  el.innerHTML=`<span class="cap">Сортировка</span><div class="seg" role="group" aria-label="Сортировка">${o.map(([v,t])=>`<button data-act="sort" data-v="${v}" aria-pressed="${S.sort===v}">${t}</button>`).join('')}</div>`;
+}
+async function toggleFav(){
+  const s=findSong(S.cur); if(!s||s.demo)return;
+  const fav=!s.fav;
+  document.querySelectorAll('.favbtn').forEach(b=>b.setAttribute('aria-pressed',String(fav)));
+  try{await store.patch(s.id,{fav,updatedAt:Date.now()});toast(fav?'Добавлено в избранное':'Убрано из избранного')}catch(e){saveErr(e)}
+}
+/* the first lyric line that contains the search, shown under the title */
+function lyricHit(s,q){
+  for(const l of parseSong(s.body))if(l.k==='ly'&&l.t.toLowerCase().includes(q))return l.t.trim();
+  return '';
+}
+function markHit(t,q){
+  const i=t.toLowerCase().indexOf(q); if(i<0)return esc(t);
+  const from=Math.max(0,i-24);
+  return (from?'…':'')+esc(t.slice(from,i))+'<mark>'+esc(t.slice(i,i+q.length))+'</mark>'+esc(t.slice(i+q.length,i+q.length+40));
+}
+
+/* ---------- send a song as plain text ---------- */
+function chordLineText(s,shift,flats){
+  let out='';const re=/\S+/g;let m;
+  while((m=re.exec(s))){
+    const tk=chordTok(m[0]),disp=tk?tk.pre+chordName(tk.c,shift,flats)+tk.post:m[0];
+    const target=out.length?Math.max(m.index,out.length+1):m.index;
+    out=out.padEnd(target,' ')+disp;
+  }
+  return out;
+}
+/* the song as it is on screen: current key, with or without chords */
+function songText(s){
+  const flats=usesFlats(s.body),shift=S.cur===s.id?S.shift:(s.transpose||0),plain=S.textOnly;
+  const out=[s.title+(s.artist?' — '+s.artist:'')];
+  if(+s.capo&&!plain)out.push('Каподастр: '+(+s.capo)+' лад');
+  out.push('');
+  for(const l of parseSong(s.body)){
+    if(l.k==='gap'){if(out[out.length-1]!=='')out.push('')}
+    else if(l.k==='head')out.push('['+l.t+']');
+    else if(l.k==='ch'){if(!plain)out.push(chordLineText(l.s,shift,flats))}
+    else if(!(plain&&TAB_LINE.test(l.t)))out.push(l.t);
+  }
+  return out.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+function openMore(){
+  const s=findSong(S.cur); if(!s)return;
+  sheet.innerHTML=`<div class="panel" role="dialog" aria-label="Действия с песней">
+    <div class="panel-top"><h2 class="ptitle">${esc(s.title)}</h2><button class="btn" data-act="close">Закрыть</button></div>
+    <div class="menu">
+      <button class="btn" data-act="share">${ICON.share}Отправить песню</button>
+      <button class="btn" data-act="copy">${ICON.copy}Скопировать текст</button>
+      ${s.demo?'':`<button class="btn danger" data-act="ask-del">${ICON.trash}Удалить песню</button>`}
+    </div>
+    <p class="hint">Песня уйдёт ${S.textOnly?'только текстом':'с аккордами'}${S.shift&&!S.textOnly?' в текущей тональности':''}, как сейчас на экране.</p>
+  </div>`;
+  sheet.hidden=false;
+}
+async function shareSong(){
+  const s=findSong(S.cur); if(!s)return;
+  const text=songText(s);
+  if(navigator.share&&(window.SONGBOOK_OFFLINE||!window.claude)){
+    try{await navigator.share({title:s.title,text});closeSheet();return}
+    catch(e){if(e&&e.name==='AbortError')return}
+  }
+  copySong(true);
+}
+async function copySong(fromShare){
+  const s=findSong(S.cur); if(!s)return;
+  const text=songText(s);
+  try{await navigator.clipboard.writeText(text);closeSheet();toast(fromShare?'Текст скопирован. Вставьте его в мессенджер.':'Текст песни скопирован');return}catch{}
+  sheet.innerHTML=`<div class="panel" role="dialog" aria-label="Текст песни">
+    <div class="panel-top"><h2 class="ptitle">Текст песни</h2><button class="btn" data-act="close">Закрыть</button></div>
+    <p class="hint">Скопировать автоматически не получилось. Выделите текст ниже и скопируйте его.</p>
+    <textarea id="share-text" class="share-text" readonly>${esc(text)}</textarea></div>`;
+  sheet.hidden=false; const ta=document.getElementById('share-text'); ta.focus(); ta.select();
+}
+
+/* ---------- metronome: clicks scheduled ahead on the audio clock, so the beat stays steady ---------- */
+const M={on:false,bpm:100,beats:4,beat:0,next:0,timer:0,taps:[],saveT:0};
+function metroLoad(s){M.bpm=Math.min(240,Math.max(30,+(s&&s.bpm)||100));M.beats=[2,3,4,6].includes(+(s&&s.beats))?+s.beats:4}
+function metroClick(t,accent){
+  const o=AC.createOscillator(),g=AC.createGain();
+  o.type='square'; o.frequency.value=accent?1760:1175;
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(accent?0.35:0.2,t+0.002);g.gain.exponentialRampToValueAtTime(0.0001,t+0.045);
+  o.connect(g);g.connect(acOut);o.start(t);o.stop(t+0.06);
+}
+function metroTick(){
+  if(!M.on)return;
+  while(M.next<AC.currentTime+0.12){
+    const b=M.beat,t=M.next;
+    metroClick(t,b===0);
+    setTimeout(()=>metroFlash(b),Math.max(0,(t-AC.currentTime)*1000));
+    M.beat=(M.beat+1)%M.beats; M.next+=60/M.bpm;
+  }
+}
+function metroStart(){
+  const ctx=audioCtx(); unlockAudio(6*3600);
+  whenRunning(ctx,()=>{M.on=true;M.beat=0;M.next=ctx.currentTime+0.08;clearInterval(M.timer);M.timer=setInterval(metroTick,25);metroTick();metroUI()});
+}
+function metroStop(){
+  if(!M.on)return;
+  M.on=false; clearInterval(M.timer);
+  try{if(mediaEl){clearTimeout(mediaT);mediaEl.pause()}}catch{}
+  metroUI();
+}
+function metroFlash(b){
+  document.querySelectorAll('.mdots i').forEach((d,i)=>d.classList.toggle('on',M.on&&i===b));
+  const btn=document.querySelector('.metrobtn'); if(btn&&M.on){btn.classList.remove('beat');void btn.offsetWidth;btn.classList.add('beat')}
+}
+function metroSet(bpm){
+  M.bpm=Math.min(240,Math.max(30,Math.round(bpm)));
+  const n=document.getElementById('m-num'); if(n)n.textContent=M.bpm;
+  const r=document.getElementById('m-bpm'); if(r&&+r.value!==M.bpm)r.value=M.bpm;
+  const l=document.querySelector('.metrobtn .lbl'); if(l)l.textContent=M.bpm;
+  metroSave();
+}
+function metroSave(){
+  const s=findSong(S.cur); if(!s||s.demo)return;
+  clearTimeout(M.saveT);
+  M.saveT=setTimeout(()=>{if(store&&((+s.bpm||100)!==M.bpm||(+s.beats||4)!==M.beats))store.patch(s.id,{bpm:M.bpm,beats:M.beats,updatedAt:Date.now()}).catch(()=>{})},900);
+}
+function metroUI(){
+  const btn=document.querySelector('.metrobtn'); if(btn)btn.classList.toggle('on',M.on);
+  const t=document.getElementById('m-toggle'); if(t)t.textContent=M.on?'Стоп':'Старт';
+  if(!M.on)document.querySelectorAll('.mdots i').forEach(d=>d.classList.remove('on'));
+}
+function openMetro(){
+  sheet.innerHTML=`<div class="panel metro" role="dialog" aria-label="Метроном">
+    <div class="panel-top"><h2 class="ptitle">Метроном</h2><button class="btn" data-act="close">Закрыть</button></div>
+    <div class="m-big">
+      <button class="btn icon" data-act="m-step" data-d="-5" aria-label="Медленнее на 5">−5</button>
+      <button class="btn icon" data-act="m-step" data-d="-1" aria-label="Медленнее на 1">−</button>
+      <div class="m-val"><b id="m-num">${M.bpm}</b><span>ударов в минуту</span></div>
+      <button class="btn icon" data-act="m-step" data-d="1" aria-label="Быстрее на 1">+</button>
+      <button class="btn icon" data-act="m-step" data-d="5" aria-label="Быстрее на 5">+5</button>
+    </div>
+    <input type="range" id="m-bpm" min="30" max="240" step="1" value="${M.bpm}" aria-label="Темп">
+    <div class="mdots">${Array.from({length:M.beats},(_,i)=>`<i class="${i===0?'acc':''}"></i>`).join('')}</div>
+    <div class="m-row"><span class="cap">Размер</span><div class="seg" role="group" aria-label="Долей в такте">${[2,3,4,6].map(n=>`<button data-act="m-beats" data-v="${n}" aria-pressed="${M.beats===n}">${n===6?'6/8':n+'/4'}</button>`).join('')}</div></div>
+    <div class="actions" style="justify-content:space-between">
+      <button class="btn" data-act="m-tap">Тап</button>
+      <button class="btn primary" id="m-toggle" data-act="m-toggle">${M.on?'Стоп':'Старт'}</button>
+    </div>
+    <p class="hint">«Тап»: нажмите несколько раз в ритм песни, и темп подстроится. Темп и размер запоминаются для этой песни.</p>
+  </div>`;
+  sheet.hidden=false;
+}
+function metroTap(){
+  const now=performance.now();
+  M.taps=M.taps.filter(t=>now-t<2500); M.taps.push(now);
+  if(M.taps.length>6)M.taps.shift();
+  if(M.taps.length>=2)metroSet(60000/((M.taps[M.taps.length-1]-M.taps[0])/(M.taps.length-1)));
+}
+
 /* ---------- tags ---------- */
 const DEFAULT_TAGS=['костёр','медленные','разучиваю'];
 const ED={tags:[]};
@@ -1488,6 +1689,7 @@ function renderList(){
     ${tabsHtml('list')}
     <input id="search" class="search" type="search" placeholder="Поиск по названию или исполнителю" value="${esc(S.q)}" autocomplete="off">
     <div class="tagbar" id="tagbar"></div>
+    <div class="listctl" id="sortseg"></div>
     <ul class="songs" id="songs"></ul>
     <p class="note" id="note"></p>
     <section class="backup">
@@ -1547,12 +1749,23 @@ function fillList(){
   const empty=S.loaded&&!list.length;
   if(empty)list=[DEMO];
   if(S.tag&&!empty)list=list.filter(s=>(s.tags||[]).includes(S.tag));
-  if(q)list=list.filter(s=>((s.title||'')+' '+(s.artist||'')+' '+(s.tags||[]).join(' ')).toLowerCase().includes(q));
-  fillTagbar();
-  ul.innerHTML=list.map(s=>{
+  if(q)list=list.filter(s=>((s.title||'')+' '+(s.artist||'')+' '+(s.tags||[]).join(' ')+' '+(s.body||'')).toLowerCase().includes(q));
+  fillTagbar(); fillSortseg();
+  const row=s=>{
+    const hit=q&&!((s.title||'')+' '+(s.artist||'')).toLowerCase().includes(q)?lyricHit(s,q):'';
     return `<li><button class="song-row" data-act="open" data-id="${esc(s.id)}">
-      <span class="t">${esc(s.title||'Без названия')}${s.demo?'<span class="tag">пример</span>':''}</span>
-      <span class="a">${esc(s.artist||'Исполнитель не указан')}</span>${(s.tags||[]).length?`<span class="tg">${s.tags.map(t=>`<i>${esc(t)}</i>`).join('')}</span>`:''}</button></li>`}).join('');
+      <span class="t">${s.fav?'<span class="star" aria-label="в избранном">★</span>':''}${esc(s.title||'Без названия')}${s.demo?'<span class="tag">пример</span>':''}</span>
+      <span class="a">${esc(s.artist||'Исполнитель не указан')}</span>${(s.tags||[]).length?`<span class="tg">${s.tags.map(t=>`<i>${esc(t)}</i>`).join('')}</span>`:''}${hit?`<span class="snip">${markHit(hit,q)}</span>`:''}</button></li>`;
+  };
+  let html='';
+  if(!q&&!S.tag&&!empty){
+    const favs=list.filter(s=>s.fav);
+    const rec=RECENT.map(id=>S.songs.find(s=>s.id===id)).filter(Boolean).slice(0,5);
+    if(favs.length)html+='<li class="sec">Избранное</li>'+favs.map(row).join('');
+    if(rec.length)html+='<li class="sec">Недавние</li>'+rec.map(row).join('');
+    if(favs.length||rec.length)html+='<li class="sec">Все песни</li>';
+  }
+  ul.innerHTML=html+list.map(row).join('');
   let note='';
   if(!S.loaded)note='Загружаю ваши песни…';
   else if(empty&&!q)note='';
@@ -1568,7 +1781,7 @@ function plural(n,a,b,c){const m=n%10,h=n%100;return m===1&&h!==11?a:m>=2&&m<=4&
 function renderSong(id,keepScroll){
   const s=findSong(id); if(!s){renderList();return}
   const y=keepScroll?scrollY:0;
-  if(S.cur!==id){S.cur=id;S.shift=s.transpose||0}
+  if(S.cur!==id){metroStop();metroLoad(s);S.cur=id;S.shift=s.transpose||0;if(!s.demo)pushRecent(id)}
   S.view='song';
   app.innerHTML=`
   <header class="bar"><div class="bar-in">
@@ -1578,9 +1791,10 @@ function renderSong(id,keepScroll){
       <button data-act="viewmode" data-v="0" aria-pressed="${!S.textOnly}" aria-label="С аккордами">${ICON.guitar}</button>
       <button data-act="viewmode" data-v="1" aria-pressed="${S.textOnly}" aria-label="Только текст">${ICON.book}</button>
     </div>
+    ${s.demo?'':`<button class="btn icon favbtn" data-act="fav" aria-pressed="${!!s.fav}" aria-label="Избранное">${ICON.star}</button>`}
     <button class="btn icon" data-act="stage" aria-label="Режим сцены">${ICON.stage}</button>
     <button class="btn icon" data-act="edit" aria-label="Изменить песню">${ICON.edit}</button>
-    ${s.demo?'':`<button class="btn icon danger" data-act="ask-del" aria-label="Удалить песню">${ICON.trash}</button>`}
+    <button class="btn icon" data-act="more" aria-label="Ещё: отправить, скопировать, удалить">${ICON.more}</button>
   </div></header>
   <div class="wrap">
     <div class="song-head">
@@ -1645,6 +1859,7 @@ function renderTools(){
     <div class="grp" aria-label="Размер текста">
       <button data-act="fs" data-d="-1" aria-label="Мельче" style="font-size:13px">A</button>
       <button data-act="fs" data-d="1" aria-label="Крупнее" style="font-size:18px">A</button></div>
+    <div class="grp" aria-label="Метроном"><button class="metrobtn${M.on?' on':''}" data-act="metro" aria-label="Метроном, ${M.bpm} ударов в минуту">${ICON.metro}<span class="lbl">${M.bpm}</span></button></div>
     <div class="grp scroll" aria-label="Автопрокрутка">
       <button data-act="scroll" class="${sp.on?'on':''}" aria-label="${sp.on?'Остановить':'Запустить'} автопрокрутку">${sp.on?ICON.pause:ICON.play}</button>
       <label class="speed" for="speed"><span class="cap">Медл.</span>
@@ -1920,12 +2135,13 @@ function tick(t){
   if(!S.scroll.on)return;
   if(lastT!=null){acc+=S.scroll.speed*(t-lastT)/1000;if(acc>=1){const n=Math.floor(acc);acc-=n;scrollBy(0,n)}
     const el=document.scrollingElement||document.documentElement;
-    if(innerHeight+scrollY>=el.scrollHeight-2){stopScroll();renderTools();return}}
+    if(innerHeight+scrollY>=el.scrollHeight-2){stopAuto();renderTools();return}}
   lastT=t;raf=requestAnimationFrame(tick);
 }
 async function startScroll(){S.scroll.on=true;lastT=null;acc=0;raf=requestAnimationFrame(tick);
   try{wake=await navigator.wakeLock.request('screen')}catch{wake=null}}
-function stopScroll(){tunerStop();S.scroll.on=false;cancelAnimationFrame(raf);if(wake){wake.release().catch(()=>{});wake=null}}
+function stopScroll(){tunerStop();metroStop();stopAuto()}
+function stopAuto(){S.scroll.on=false;cancelAnimationFrame(raf);if(wake){wake.release().catch(()=>{});wake=null}}
 
 /* ---------- events ---------- */
 let patchT;
@@ -1956,6 +2172,16 @@ document.addEventListener('click',e=>{
   else if(a==='cof-mode')cofSelect(cofState.i,b.dataset.m==='1');
   else if(a==='tuner-toggle'){TU.on?tunerStop():tunerStart()}
   else if(a==='import')renderImport();
+  else if(a==='fav')toggleFav();
+  else if(a==='more')openMore();
+  else if(a==='share')shareSong();
+  else if(a==='copy')copySong(false);
+  else if(a==='sort'){S.sort=b.dataset.v;lsSet('sb.sort',S.sort);fillList()}
+  else if(a==='metro')openMetro();
+  else if(a==='m-toggle'){M.on?metroStop():metroStart()}
+  else if(a==='m-step')metroSet(M.bpm+ +b.dataset.d);
+  else if(a==='m-tap')metroTap();
+  else if(a==='m-beats'){M.beats=+b.dataset.v;M.beat=0;metroSave();openMetro()}
   else if(a==='stage')enterStage();
   else if(a==='stage-exit')exitStage();
   else if(a==='viewmode'){S.textOnly=b.dataset.v==='1';lsSet('sb.textonly',S.textOnly?'1':'0');document.querySelectorAll('.vt button').forEach(x=>x.setAttribute('aria-pressed',String((x.dataset.v==='1')===S.textOnly)));fillSong();renderTools()}
@@ -2002,7 +2228,7 @@ document.addEventListener('click',e=>{
     if(S.stage){S.sfs=Math.min(44,Math.max(14,S.sfs+ +b.dataset.d*2));lsSet('sb.sfs',S.sfs);document.getElementById('body').style.setProperty('--fs',S.sfs+'px')}
     else{S.fs=Math.min(26,Math.max(12,S.fs+ +b.dataset.d*2));lsSet('sb.fs',S.fs);document.getElementById('body').style.setProperty('--fs',S.fs+'px')}
   }
-  else if(a==='scroll'){S.scroll.on?stopScroll():startScroll();renderTools()}});
+  else if(a==='scroll'){S.scroll.on?stopAuto():startScroll();renderTools()}});
 document.addEventListener('change',e=>{
   if(e.target.id==='sc-type'){scState.type=e.target.value;scState.pos=0;scSave()}
   if(e.target.id==='imp-file'&&e.target.files&&e.target.files[0]){importBackup(e.target.files[0]);e.target.value=''}
@@ -2013,6 +2239,7 @@ document.addEventListener('input',e=>{
   const id=e.target.id;
   if(id==='search'){S.q=e.target.value;fillList()}
   else if(id==='speed'){S.scroll.speed=+e.target.value;lsSet('sb.speed',S.scroll.speed)}
+  else if(id==='m-bpm')metroSet(+e.target.value);
   else if(id==='imp-src'){clearTimeout(impT);impT=setTimeout(fillImport,250)}
   else if(id==='se-name'){document.getElementById('se-err').textContent='';fillShapeEditor()}
   else if(id==='se-frets'){const f=parseFretsText(e.target.value);if(f){SE.frets=f;const p=f.filter(x=>x>0);if(p.length){const mx=Math.max(...p),mn=Math.min(...p);if(mx>SE.base+4||mn<SE.base)SE.base=mx>5?mn:1}fillShapeEditor()}}
