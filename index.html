@@ -97,6 +97,29 @@
   color-scheme:dark;
 }
 html,body{background:var(--bg);color:var(--fg)}
+/* "Сияние": the user's Songbook Pro login look — near-black ground, blue and violet glows, glass surfaces, white primary button */
+:root[data-skin="glow"]{
+  --bg:#0A0A0D; --surface:rgba(255,255,255,.055); --sunk:rgba(255,255,255,.085); --fg:#FFFFFF; --muted:#A1A1AA; --line:rgba(255,255,255,.1);
+  --chord:#93C5FD; --accent:#60A5FA; --on-accent:#0A0F1F; --danger:#F87171; --bar:rgba(10,10,13,.62); --scrim:rgba(0,0,0,.6);
+  --grid:rgba(255,255,255,.12); --string:rgba(255,255,255,.3); --warn:#FBBF24; --warn-bg:rgba(251,191,36,.12); --good:#4ADE80; --good-bg:rgba(74,222,128,.12); --shadow:rgba(0,0,0,.5);
+  --f-display:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+:root[data-skin="glow"] body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(55% 45% at 0% 0%,rgba(37,99,235,.38),transparent 70%),radial-gradient(55% 45% at 100% 100%,rgba(147,51,234,.34),transparent 70%)}
+:root[data-skin="glow"] body{isolation:isolate}
+:root[data-skin="glow"] .brand,:root[data-skin="glow"] h1,:root[data-skin="glow"] .song-head h1,:root[data-skin="glow"] .cof-head h2,:root[data-skin="glow"] .sc-head h2{font-weight:900;letter-spacing:-.025em}
+:root[data-skin="glow"] .btn,:root[data-skin="glow"] input,:root[data-skin="glow"] select,:root[data-skin="glow"] textarea{border-radius:14px}
+:root[data-skin="glow"] .btn{backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+:root[data-skin="glow"] .btn.primary{background:#FFFFFF;color:#000000;border-color:transparent;font-weight:900;text-transform:uppercase;letter-spacing:.14em;font-size:13px;box-shadow:0 12px 24px -8px rgba(255,255,255,.12)}
+:root[data-skin="glow"] input:focus,:root[data-skin="glow"] textarea:focus,:root[data-skin="glow"] select:focus{outline:none;box-shadow:0 0 0 2px rgba(59,130,246,.5)}
+:root[data-skin="glow"] .panel{background:rgba(22,22,28,.92);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.1);border-bottom:0}
+:root[data-skin="glow"] .chip,:root[data-skin="glow"] .tabs,:root[data-skin="glow"] .grp,:root[data-skin="glow"] .seg{backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+:root[data-skin="glow"] .tabs button[aria-pressed="true"],:root[data-skin="glow"] .tabs button[aria-selected="true"]{background:rgba(255,255,255,.14)}
+/* text that sits on solid light marks needs a dark ink here, not the see-through surface */
+:root[data-skin="glow"] .dia .fg{fill:#0A0A0D}
+:root[data-skin="glow"] .t-strings span.on,:root[data-skin="glow"] .cell .badge,:root[data-skin="glow"] .cell .tick{color:#0A0A0D}
+
 body{font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
 *{box-sizing:border-box}
 button{font-family:inherit;cursor:pointer}
@@ -1722,7 +1745,8 @@ const SKINS=[
   {id:'neon',name:'Неон',hint:'яркий тёмный',bg:'#0F0B1A',fg:'#F1EAFF',ch:'#FF6AD5'},
   {id:'forest',name:'Лес',hint:'глубокий тёмный',bg:'#0D1712',fg:'#E8F1EA',ch:'#F2C14E'},
   {id:'sakura',name:'Сакура',hint:'нежный светлый',bg:'#FFF2F6',fg:'#2B1520',ch:'#B8195A'},
-  {id:'graphite',name:'Графит',hint:'строгий тёмный',bg:'#17181B',fg:'#ECEDEF',ch:'#FF8A3D'}
+  {id:'graphite',name:'Графит',hint:'строгий тёмный',bg:'#17181B',fg:'#ECEDEF',ch:'#FF8A3D'},
+  {id:'glow',name:'Сияние',hint:'как Songbook Pro',bg:'radial-gradient(70% 70% at 0% 0%,#1E3A8A,transparent 70%),radial-gradient(70% 70% at 100% 100%,#581C87,transparent 70%),#0A0A0D',fg:'#FFFFFF',ch:'#93C5FD'}
 ];
 const themeMetas=[...document.querySelectorAll('meta[name="theme-color"]')].map(m=>({m,c:m.getAttribute('content'),media:m.getAttribute('media')}));
 function applySkin(id){
