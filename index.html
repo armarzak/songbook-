@@ -439,6 +439,9 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 .vplay{all:unset;box-sizing:border-box;cursor:pointer;position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#fff;font:600 15px var(--f-body);background:radial-gradient(circle at 50% 45%,#2a2a33,#000)}
 .vplay svg{width:54px;height:54px;padding:16px;border-radius:50%;background:rgba(255,255,255,.14);fill:#fff;stroke:none}
 .vplay:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.vlist{display:flex;flex-direction:column;gap:18px;margin-top:6px}
+.vitem .vframe{margin-top:0}
+.vlinks-in{min-height:0;font-family:var(--f-body);font-size:15px;white-space:pre-wrap;line-height:1.5}
 .vlinks{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .vlinks .btn{text-decoration:none}
 body.stage .video{display:none}
@@ -1701,20 +1704,24 @@ function videoInfo(url){
   if(/^https?:\/\//i.test(url))return {kind:'link',name:'видео',url,embed:null};
   return null;
 }
+const videoLinks=s=>String((s&&s.video)||'').split(/\s+/).filter(x=>/^https?:\/\//i.test(x));
 function videoHtml(s){
-  const v=videoInfo(s.video);
-  if(!v)return '';
-  const canEmbed=v.embed&&(window.SONGBOOK_OFFLINE||!window.claude); // claude.ai pages cannot embed other sites
+  const list=videoLinks(s).map(videoInfo).filter(Boolean);
+  if(!list.length)return '';
+  const canEmbedHere=window.SONGBOOK_OFFLINE||!window.claude; // claude.ai pages cannot embed other sites
+  const kinds=new Set(list.map(v=>v.kind));
   return `<section class="video" id="video">
-    <h3 class="sec-h">Видео</h3>
-    ${canEmbed?`<div class="vframe${v.tall?' tall':''}" id="vframe"><button class="vplay" data-act="video-load" aria-label="Показать видео">${ICON.play}<span>Показать видео · ${esc(v.name)}</span></button></div>`:''}
-    <div class="vlinks"><a class="btn" href="${esc(v.url)}" target="_blank" rel="noopener">Открыть в ${esc(v.name)}</a></div>
-    ${v.kind==='youtube'?'<p class="hint">Встроенный плеер YouTube в России подвисает и просит войти, поэтому здесь только ссылка: она откроется в приложении YouTube.</p>':''}${v.kind==='instagram'?'<p class="hint">Instagram в России открывается только с VPN. Если видео не загрузилось, нажмите «Открыть в Instagram».</p>':''}
+    <h3 class="sec-h">${list.length>1?'Видео · '+list.length:'Видео'}</h3>
+    <div class="vlist">${list.map((v,i)=>`<div class="vitem">
+      ${v.embed&&canEmbedHere?`<div class="vframe${v.tall?' tall':''}" id="vframe-${i}"><button class="vplay" data-act="video-load" data-i="${i}" aria-label="Показать видео ${i+1}">${ICON.play}<span>Показать видео · ${esc(v.name)}</span></button></div>`:''}
+      <div class="vlinks"><a class="btn" href="${esc(v.url)}" target="_blank" rel="noopener">Открыть в ${esc(v.name)}</a></div>
+    </div>`).join('')}</div>
+    ${kinds.has('youtube')?'<p class="hint">Встроенный плеер YouTube в России подвисает и просит войти, поэтому для YouTube здесь только ссылка: она откроется в приложении YouTube.</p>':''}${kinds.has('instagram')?'<p class="hint">Instagram в России открывается только с VPN. Если видео не загрузилось, нажмите «Открыть в Instagram».</p>':''}
   </section>`;
 }
-function loadVideo(){
-  const s=findSong(S.cur),v=s&&videoInfo(s.video),box=document.getElementById('vframe'); if(!v||!box)return;
-  box.innerHTML=`<iframe src="${esc(v.embed)}" title="Видео: ${esc(s.title)}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+function loadVideo(i){
+  const s=findSong(S.cur),v=s&&videoInfo(videoLinks(s)[i]),box=document.getElementById('vframe-'+i); if(!v||!v.embed||!box)return;
+  box.innerHTML=`<iframe src="${esc(v.embed)}" title="Видео ${i+1}: ${esc(s.title)}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
 }
 
 /* ---------- backing track ("минус"): the file stays on this device (IndexedDB); the song keeps its name, length and line marks ---------- */
@@ -2170,7 +2177,7 @@ function renderEditor(id,draft){
     </div>
     <div class="field"><label>Метки</label><div class="tagpick" id="tagpick"></div>
       <div class="tagadd"><input id="f-tag" placeholder="Новая метка" autocomplete="off" maxlength="24"><button class="btn" type="button" data-act="tag-add">Добавить</button></div></div>
-    <div class="field"><label for="f-video">Видео</label><input id="f-video" type="url" inputmode="url" value="${esc((s&&s.video)||'')}" placeholder="Ссылка на YouTube, Rutube, VK Видео или Instagram" autocomplete="off" autocapitalize="off"><div class="hint">Видео покажется в конце песни. Rutube и VK Видео работают без VPN, YouTube и Instagram — только с VPN.</div></div>
+    <div class="field"><label for="f-video">Видео</label><textarea id="f-video" class="vlinks-in" rows="3" spellcheck="false" autocapitalize="off" placeholder="Ссылки на видео — каждая с новой строки: YouTube, Rutube, VK Видео, Instagram">${esc((s&&s.video)||'')}</textarea><div class="hint">Можно несколько ссылок, каждая с новой строки. Видео покажутся в конце песни. Rutube и VK Видео работают без VPN, YouTube и Instagram — только с VPN.</div></div>
     <div class="field"><label for="f-body">Текст с аккордами</label>
       <textarea id="f-body" spellcheck="false" placeholder="Am            F&#10;Утро тихо стелет туман,">${esc(s?s.body:'')}</textarea><div class="err" id="e-body"></div></div>
     <div class="hint">Подойдут оба привычных формата:<br>
@@ -2186,7 +2193,7 @@ async function doSave(id){
   document.getElementById('e-title').textContent=title?'':'Введите название песни.';
   document.getElementById('e-body').textContent=body?'':'Вставьте текст с аккордами.';
   if(!title||!body)return;
-  saveSong(id,{title,artist:document.getElementById('f-artist').value.trim(),capo:+document.getElementById('f-capo').value,body,tags:[...ED.tags],video:(document.getElementById('f-video').value||'').trim()});
+  saveSong(id,{title,artist:document.getElementById('f-artist').value.trim(),capo:+document.getElementById('f-capo').value,body,tags:[...ED.tags],video:(document.getElementById('f-video').value||'').split(/\s+/).filter(x=>/^https?:\/\//i.test(x)).join('\n')});
 }
 async function saveSong(id,f){
   const old=id?findSong(id):null;
@@ -2465,7 +2472,7 @@ document.addEventListener('click',e=>{
   else if(a==='mk-undo')markUndo();
   else if(a==='mk-done')markDone();
   else if(a==='mk-cancel')markCancel();
-  else if(a==='video-load')loadVideo();
+  else if(a==='video-load')loadVideo(+b.dataset.i||0);
   else if(a==='fav')toggleFav();
   else if(a==='more')openMore();
   else if(a==='share')shareSong();
