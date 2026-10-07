@@ -439,6 +439,14 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 .vplay{all:unset;box-sizing:border-box;cursor:pointer;position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#fff;font:600 15px var(--f-body);background:radial-gradient(circle at 50% 45%,#2a2a33,#000)}
 .vplay svg{width:54px;height:54px;padding:16px;border-radius:50%;background:rgba(255,255,255,.14);fill:#fff;stroke:none}
 .vplay:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.vframe.vfull{position:fixed;inset:0;z-index:80;width:100vw;max-width:none;height:100vh;height:100dvh;aspect-ratio:auto;border-radius:0;margin:0;background:#000}
+.vframe.vfull iframe{top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px);height:auto}
+.vframe.tall.vfull iframe{left:50%;right:auto;transform:translateX(-50%);width:min(100vw,calc((100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))*9/16))}
+.vclose{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));z-index:2;width:44px;height:44px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:20px;line-height:44px;text-align:center;cursor:pointer}
+.vclose:focus-visible{outline:2px solid #fff}
+body.vfull-on{overflow:hidden}
+body.vfull-on .tools,body.vfull-on .bar{visibility:hidden}
+.vlinks .btn svg{width:16px;height:16px}
 .vlist{display:flex;flex-direction:column;gap:18px;margin-top:6px}
 .vitem .vframe{margin-top:0}
 .vlinks-in{min-height:0;font-family:var(--f-body);font-size:15px;white-space:pre-wrap;line-height:1.5}
@@ -1714,11 +1722,33 @@ function videoHtml(s){
     <h3 class="sec-h">${list.length>1?'Видео · '+list.length:'Видео'}</h3>
     <div class="vlist">${list.map((v,i)=>`<div class="vitem">
       ${v.embed&&canEmbedHere?`<div class="vframe${v.tall?' tall':''}" id="vframe-${i}"><button class="vplay" data-act="video-load" data-i="${i}" aria-label="Показать видео ${i+1}">${ICON.play}<span>Показать видео · ${esc(v.name)}</span></button></div>`:''}
-      <div class="vlinks"><a class="btn" href="${esc(v.url)}" target="_blank" rel="noopener">Открыть в ${esc(v.name)}</a></div>
+      <div class="vlinks">${v.embed&&canEmbedHere?`<button class="btn" data-act="video-full" data-i="${i}">${ICON.stage}На весь экран</button>`:''}<a class="btn" href="${esc(v.url)}" target="_blank" rel="noopener">Открыть в ${esc(v.name)}</a></div>
     </div>`).join('')}</div>
     ${kinds.has('youtube')?'<p class="hint">Встроенный плеер YouTube в России подвисает и просит войти, поэтому для YouTube здесь только ссылка: она откроется в приложении YouTube.</p>':''}${kinds.has('instagram')?'<p class="hint">Instagram в России открывается только с VPN. Если видео не загрузилось, нажмите «Открыть в Instagram».</p>':''}
   </section>`;
 }
+/* Full screen for an embedded video: the real fullscreen API where the browser allows it (iPad, computer),
+   and on iPhone, where it does not, the player is stretched over the whole screen */
+function videoFull(i){
+  const box=document.getElementById('vframe-'+i); if(!box)return;
+  if(!box.querySelector('iframe'))loadVideo(i);
+  box.classList.add('vfull'); document.body.classList.add('vfull-on');
+  if(!box.querySelector('.vclose'))box.insertAdjacentHTML('beforeend','<button class="vclose" data-act="video-exit" aria-label="Свернуть видео">✕</button>');
+  try{
+    if(box.requestFullscreen)box.requestFullscreen().catch(()=>{});
+    else if(box.webkitRequestFullscreen)box.webkitRequestFullscreen();
+  }catch{}
+}
+function videoExit(){
+  document.querySelectorAll('.vframe.vfull').forEach(b=>{b.classList.remove('vfull');const c=b.querySelector('.vclose');if(c)c.remove()});
+  document.body.classList.remove('vfull-on');
+  try{
+    if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
+    else if(document.webkitFullscreenElement)document.webkitExitFullscreen();
+  }catch{}
+}
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&document.querySelector('.vframe.vfull'))videoExit()});
+document.addEventListener('webkitfullscreenchange',()=>{if(!document.webkitFullscreenElement&&document.querySelector('.vframe.vfull'))videoExit()});
 function loadVideo(i){
   const s=findSong(S.cur),v=s&&videoInfo(videoLinks(s)[i]),box=document.getElementById('vframe-'+i); if(!v||!v.embed||!box)return;
   box.innerHTML=`<iframe src="${esc(v.embed)}" title="Видео ${i+1}: ${esc(s.title)}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
@@ -2431,7 +2461,7 @@ function tick(t){
 }
 async function startScroll(){S.scroll.on=true;lastT=null;acc=0;raf=requestAnimationFrame(tick);
   try{wake=await navigator.wakeLock.request('screen')}catch{wake=null}}
-function stopScroll(){tunerStop();metroStop();trackStop();stopAuto()}
+function stopScroll(){if(document.body.classList.contains('vfull-on'))videoExit();tunerStop();metroStop();trackStop();stopAuto()}
 function stopAuto(){S.scroll.on=false;cancelAnimationFrame(raf);if(wake){wake.release().catch(()=>{});wake=null}}
 
 /* ---------- events ---------- */
@@ -2473,6 +2503,8 @@ document.addEventListener('click',e=>{
   else if(a==='mk-done')markDone();
   else if(a==='mk-cancel')markCancel();
   else if(a==='video-load')loadVideo(+b.dataset.i||0);
+  else if(a==='video-full')videoFull(+b.dataset.i||0);
+  else if(a==='video-exit')videoExit();
   else if(a==='fav')toggleFav();
   else if(a==='more')openMore();
   else if(a==='share')shareSong();
@@ -2548,6 +2580,7 @@ document.addEventListener('input',e=>{
   else if(id==='se-frets'){const f=parseFretsText(e.target.value);if(f){SE.frets=f;const p=f.filter(x=>x>0);if(p.length){const mx=Math.max(...p),mn=Math.min(...p);if(mx>SE.base+4||mn<SE.base)SE.base=mx>5?mn:1}fillShapeEditor()}}
 });
 document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&document.body.classList.contains('vfull-on'))videoExit();
   if(e.key==='Escape'&&!sheet.hidden)closeSheet();
   const g=e.target.closest&&e.target.closest('g.key');
   if(g&&(e.key==='Enter'||e.key===' ')){e.preventDefault();const i=+g.dataset.i,mi=g.dataset.m==='1';unlockAudio(3);playChord(mi?COF_MIN[i]+'m':COF_MAJ[i]);cofSelect(i,mi)}
