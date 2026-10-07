@@ -441,6 +441,19 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 .vlinks{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .vlinks .btn{text-decoration:none}
 body.stage .video{display:none}
+.trackgrp{flex:1 1 260px;gap:6px;padding-inline-end:8px}
+.trackgrp .tt{font:600 12px var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.trackgrp input{flex:1;min-width:70px;padding:0;border:0;background:transparent;accent-color:var(--accent);height:36px}
+.ln.cur{background:var(--sunk);box-shadow:-6px 0 0 var(--sunk),6px 0 0 var(--sunk);border-radius:4px;transition:background .25s}
+.ln.ly.cur{color:var(--accent);font-weight:600}
+.ln.next{outline:2px dashed var(--accent);outline-offset:2px;border-radius:4px}
+.markbar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--bar);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.markbar p{margin:0;font-size:14px;color:var(--muted);max-width:52ch}
+.mk-btns{display:flex;gap:8px;width:100%;max-width:560px}
+.mk-btns .btn{min-height:52px}
+.mk-btns .mk-main{flex:1;font-size:17px}
+.menu label.btn{justify-content:flex-start;min-height:48px}
+.menu .hint{margin:2px 2px 0}
 .tagbar{display:flex;flex-wrap:wrap;gap:6px;margin-block:2px 6px}
 .tagbar:empty{display:none}
 .tchip{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:6px 12px;font:500 14px var(--f-body);display:inline-flex;align-items:center;gap:6px}
@@ -923,6 +936,7 @@ const ICON={
   share:'<svg viewBox="0 0 24 24"><path d="M12 15V3M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>',
   copy:'<svg viewBox="0 0 24 24"><path d="M9 9h10v12H9zM5 15V3h10"/></svg>',
   metro:'<svg viewBox="0 0 24 24"><path d="M9 3h6l4 18H5zM12 17l5-9M8 17h8"/></svg>',
+  music:'<svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>',
   stage:'<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
   dia:'<svg viewBox="0 0 24 24"><path d="M6 3h12v18H6zM6 8h12M6 13h12M10 3v18M14 3v18"/></svg>',
   pause:'<svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>'
@@ -1567,6 +1581,7 @@ function openMore(){
     <div class="menu">
       <button class="btn" data-act="share">${ICON.share}Отправить песню</button>
       <button class="btn" data-act="copy">${ICON.copy}Скопировать текст</button>
+      ${trackMenu(s)}
       ${s.demo?'':`<button class="btn danger" data-act="ask-del">${ICON.trash}Удалить песню</button>`}
     </div>
     <p class="hint">Песня уйдёт ${S.textOnly?'только текстом':'с аккордами'}${S.shift&&!S.textOnly?' в текущей тональности':''}, как сейчас на экране.</p>
@@ -1700,6 +1715,151 @@ function videoHtml(s){
 function loadVideo(){
   const s=findSong(S.cur),v=s&&videoInfo(s.video),box=document.getElementById('vframe'); if(!v||!box)return;
   box.innerHTML=`<iframe src="${esc(v.embed)}" title="Видео: ${esc(s.title)}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+}
+
+/* ---------- backing track ("минус"): the file stays on this device (IndexedDB); the song keeps its name, length and line marks ---------- */
+const TR={el:null,url:'',id:null,has:false,raf:0,cur:-1,marking:false,marks:[],k:0,n:0,seeking:0};
+const trackCan=()=>!!window.SONGBOOK_OFFLINE&&'indexedDB' in window;
+function idb(){return new Promise((ok,no)=>{const r=indexedDB.open('songbook-audio',1);r.onupgradeneeded=()=>r.result.createObjectStore('tracks');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
+async function trackGet(id){try{const db=await idb();return await new Promise(ok=>{const q=db.transaction('tracks').objectStore('tracks').get(id);q.onsuccess=()=>ok(q.result||null);q.onerror=()=>ok(null)})}catch{return null}}
+async function trackPut(id,rec){const db=await idb();return new Promise((ok,no)=>{const t=db.transaction('tracks','readwrite');t.objectStore('tracks').put(rec,id);t.oncomplete=()=>ok();t.onerror=()=>no(t.error)})}
+async function trackDelete(id){try{const db=await idb();await new Promise(ok=>{const t=db.transaction('tracks','readwrite');t.objectStore('tracks').delete(id);t.oncomplete=ok;t.onerror=ok})}catch{}}
+const fmtTime=t=>{t=Math.max(0,Math.floor(t||0));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')};
+
+async function trackLoad(s){
+  trackStop(); TR.id=s.id; TR.marks=Array.isArray(s.marks)?s.marks.slice():[];
+  if(!trackCan()||!s.track)return;
+  const rec=await trackGet(s.id);
+  if(!rec||S.cur!==s.id||TR.id!==s.id)return;
+  const a=new Audio(); TR.url=URL.createObjectURL(rec.blob);
+  a.preload='auto'; a.setAttribute('playsinline',''); a.src=TR.url;
+  a.addEventListener('loadedmetadata',()=>{if(S.view==='song')renderTools()});
+  a.addEventListener('ended',()=>{if(TR.marking)markDone();renderTools()});
+  a.addEventListener('pause',()=>{if(S.view==='song')renderTools()});
+  TR.el=a; TR.has=true;
+  if(S.view==='song')renderTools();
+}
+function trackStop(){
+  if(TR.el){try{TR.el.pause();TR.el.removeAttribute('src');TR.el.load()}catch{}}
+  if(TR.url)URL.revokeObjectURL(TR.url);
+  cancelAnimationFrame(TR.raf);
+  const mb=document.getElementById('markbar'); if(mb)mb.remove();
+  Object.assign(TR,{el:null,url:'',id:null,has:false,raf:0,cur:-1,marking:false});
+}
+function trackTools(){
+  if(!TR.has||!TR.el)return '';
+  const d=isFinite(TR.el.duration)?TR.el.duration:0,t=TR.el.currentTime||0,on=!TR.el.paused;
+  return `<div class="grp trackgrp" aria-label="Минус">
+    <button data-act="t-play" class="${on?'on':''}" aria-label="${on?'Пауза':'Играть минус'}">${on?ICON.pause:ICON.play}</button>
+    <span class="tt" id="t-time">${fmtTime(t)} / ${fmtTime(d)}</span>
+    <input type="range" id="t-seek" min="0" max="${Math.max(1,Math.round(d*10))}" value="${Math.round(t*10)}" aria-label="Перемотка минуса"></div>`;
+}
+function trackToggle(){
+  if(!TR.el)return;
+  if(TR.el.paused){
+    stopAuto();
+    TR.el.play().then(()=>{if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow);renderTools()}).catch(()=>toast('Не получилось включить минус. Проверьте, что файл открывается в «Файлах».'));
+  }else TR.el.pause();
+}
+/* each frame: update the clock, then either jump between marked lines or glide through the song */
+function trackFollow(){
+  if(!TR.el||TR.el.paused){TR.raf=0;return}
+  TR.raf=requestAnimationFrame(trackFollow);
+  const t=TR.el.currentTime,d=TR.el.duration||0;
+  const tm=document.getElementById('t-time'); if(tm)tm.textContent=fmtTime(t)+' / '+fmtTime(d);
+  const sk=document.getElementById('t-seek'); if(sk&&Date.now()-TR.seeking>400)sk.value=Math.round(t*10);
+  if(TR.marking)return;
+  if(TR.marks.some(x=>x!=null)){
+    let i=-1; TR.marks.forEach((m,k)=>{if(m!=null&&m<=t+0.05)i=k});
+    if(i!==TR.cur){TR.cur=i;lineHL(i,'cur',true)}
+  }else if(d>0){
+    const el=document.scrollingElement||document.documentElement,max=el.scrollHeight-innerHeight;
+    if(max>0){const y=Math.round(max*Math.min(1,t/d));if(Math.abs(y-scrollY)>1)scrollTo(0,y)}
+  }
+}
+function lineHL(li,cls,scroll){
+  document.querySelectorAll('.ln.'+cls).forEach(e=>e.classList.remove(cls));
+  if(li<0)return;
+  const ly=document.querySelector(`.ln[data-li="${li}"]`); if(!ly)return;
+  ly.classList.add(cls);
+  document.querySelectorAll(`.ln[data-pli="${li}"]`).forEach(e=>e.classList.add(cls));
+  if(scroll){const top=scrollY+ly.getBoundingClientRect().top-innerHeight*0.35;scrollTo({top:Math.max(0,top),behavior:'smooth'})}
+}
+async function trackAdd(file){
+  const s=findSong(S.cur); if(!s||s.demo)return;
+  if(file.size>150*1024*1024){toast('Файл больше 150 МБ. Сожмите его в m4a или mp3.');return}
+  toast('Добавляю минус…');
+  const url=URL.createObjectURL(file),probe=new Audio();
+  const dur=await new Promise(ok=>{const tm=setTimeout(()=>ok(0),8000);probe.addEventListener('loadedmetadata',()=>{clearTimeout(tm);ok(probe.duration||0)});probe.addEventListener('error',()=>{clearTimeout(tm);ok(-1)});probe.preload='metadata';probe.src=url});
+  URL.revokeObjectURL(url);
+  if(dur<0){toast('Этот файл не воспроизводится на айфоне. Подойдут m4a, mp3, wav или aac.');return}
+  try{
+    await trackPut(s.id,{blob:file,name:file.name,type:file.type,size:file.size,added:Date.now()});
+    await store.patch(s.id,{track:{name:file.name,dur:Math.round(dur)},updatedAt:Date.now()});
+  }catch(e){toast('Не хватило места на устройстве для этого файла.');return}
+  closeSheet(); await trackLoad(findSong(s.id)); toast('Минус добавлен');
+}
+async function trackRemove(btn){
+  if(btn.dataset.sure!=='1'){btn.dataset.sure='1';btn.lastChild.textContent='Точно удалить минус?';return}
+  const s=findSong(S.cur); if(!s)return;
+  trackStop(); await trackDelete(s.id);
+  try{await store.patch(s.id,{track:null,updatedAt:Date.now()})}catch(e){saveErr(e)}
+  closeSheet(); renderTools(); toast('Минус удалён');
+}
+
+/* marking: the track plays from the start and each tap stamps the time of the next lyric line */
+function markStart(){
+  if(!TR.el)return; closeSheet();
+  const n=document.querySelectorAll('.ln[data-li]').length;
+  if(!n){toast('В песне нет строк текста.');return}
+  stopAuto(); exitStage();
+  Object.assign(TR,{marking:true,marks:[],k:0,n,cur:-1}); lineHL(-1,'cur');
+  const bar=document.createElement('div'); bar.id='markbar'; bar.className='markbar';
+  bar.innerHTML=`<p>Нажимайте <b>«Строка»</b> в момент, когда начинается каждая строка. Ошиблись — «Назад».</p>
+    <div class="mk-btns"><button class="btn" data-act="mk-undo">Назад</button>
+    <button class="btn primary mk-main" data-act="mk-tap" id="mk-main">Строка 1 из ${n}</button>
+    <button class="btn" data-act="mk-done">Готово</button></div>
+    <button class="link2" data-act="mk-cancel">Отменить разметку</button>`;
+  document.body.appendChild(bar);
+  lineHL(0,'next',true);
+  TR.el.currentTime=0;
+  TR.el.play().then(()=>{if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow);renderTools()}).catch(()=>{});
+}
+function markTap(){
+  if(!TR.marking||!TR.el)return;
+  TR.marks[TR.k]=Math.round(TR.el.currentTime*100)/100; TR.k++;
+  if(TR.k>=TR.n){markDone();return}
+  lineHL(TR.k,'next',true); markLabel();
+}
+function markUndo(){
+  if(!TR.marking||!TR.k)return;
+  TR.k--; TR.marks.length=TR.k;
+  TR.el.currentTime=Math.max(0,(TR.k?TR.marks[TR.k-1]:0)-0.5);
+  lineHL(TR.k,'next',true); markLabel();
+}
+function markLabel(){const b=document.getElementById('mk-main');if(b)b.textContent='Строка '+(TR.k+1)+' из '+TR.n}
+async function markDone(){
+  if(!TR.marking)return;
+  TR.marking=false; const mb=document.getElementById('markbar'); if(mb)mb.remove();
+  lineHL(-1,'next'); if(TR.el)TR.el.pause();
+  const s=findSong(S.cur); if(!s)return;
+  const marks=TR.marks.slice(0,TR.k);
+  try{await store.patch(s.id,{marks,updatedAt:Date.now()});TR.marks=marks;toast(marks.length?'Разметка сохранена: '+marks.length+' '+plural(marks.length,'строка','строки','строк'):'Разметка очищена')}catch(e){saveErr(e)}
+}
+function markCancel(){
+  TR.marking=false; const mb=document.getElementById('markbar'); if(mb)mb.remove();
+  lineHL(-1,'next'); if(TR.el)TR.el.pause();
+  const s=findSong(S.cur); TR.marks=s&&Array.isArray(s.marks)?s.marks.slice():[];
+}
+function trackMenu(s){
+  if(s.demo)return '';
+  if(!trackCan())return '<p class="hint">Минусы работают в приложении с экрана «Домой».</p>';
+  const add=`<label class="btn" for="track-file">${ICON.music}${s.track&&TR.has?'Заменить минус':'Добавить минус'}</label><input type="file" id="track-file" class="vh" accept="audio/*,.m4a,.mp3,.wav,.aac,.aif,.aiff">`;
+  if(!TR.has)return add+(s.track?`<p class="hint">Минус «${esc(s.track.name)}» добавлен на другом устройстве. Файлы минусов хранятся там, куда их добавили: выберите его и здесь.</p>`:'');
+  const marked=TR.marks.filter(x=>x!=null).length;
+  return `<button class="btn" data-act="t-mark">${ICON.metro}${marked?'Разметить строки заново':'Разметить строки под минус'}</button>`+add+
+    `<button class="btn danger" data-act="t-del">${ICON.trash}<span>Удалить минус</span></button>`+
+    `<p class="hint">${marked?'Размечено строк: '+marked+'. Текущая строка подсвечивается и сама встаёт на место.':'Без разметки текст просто плавно идёт за минусом от начала до конца. С разметкой каждая строка подсвечивается точно в своё время.'}</p>`;
 }
 
 /* ---------- tags ---------- */
@@ -1854,7 +2014,7 @@ function plural(n,a,b,c){const m=n%10,h=n%100;return m===1&&h!==11?a:m>=2&&m<=4&
 function renderSong(id,keepScroll){
   const s=findSong(id); if(!s){renderList();return}
   const y=keepScroll?scrollY:0;
-  if(S.cur!==id){metroStop();metroLoad(s);S.cur=id;S.shift=s.transpose||0;if(!s.demo)pushRecent(id)}
+  if(S.cur!==id){metroStop();trackStop();metroLoad(s);S.cur=id;S.shift=s.transpose||0;if(!s.demo)pushRecent(id)}
   S.view='song';
   app.innerHTML=`
   <header class="bar"><div class="bar-in">
@@ -1880,6 +2040,7 @@ function renderSong(id,keepScroll){
     <div id="videobox"></div>
   </div>`;
   fillSong(); renderTools();
+  if(TR.id!==id&&!s.demo)trackLoad(s);
   document.body.classList.add('has-tools');
   scrollTo(0,y);
 }
@@ -1887,7 +2048,9 @@ function fillSong(){
   const s=findSong(S.cur); if(!s)return;
   const flats=usesFlats(s.body),seen=[];
   const plain=S.textOnly;
-  let lines=parseSong(s.body);
+  let lines=parseSong(s.body),li=0;
+  lines=lines.map(l=>l.k==='ly'&&l.t.trim()&&!TAB_LINE.test(l.t)?{...l,li:li++}:l);
+  lines.forEach((l,i)=>{if(l.k==='ch'&&lines[i+1]&&lines[i+1].li!=null)l.pli=lines[i+1].li});
   if(plain){
     // text only: drop chord lines and tab staves, then squeeze the blank lines that leaves behind
     lines=lines.filter(l=>l.k!=='ch'&&!(l.k==='ly'&&TAB_LINE.test(l.t)));
@@ -1896,8 +2059,8 @@ function fillSong(){
   const html=lines.map(l=>
     l.k==='gap'?'<div class="ln gap"></div>':
     l.k==='head'?`<div class="ln head">${esc(l.t)}</div>`:
-    l.k==='ch'?`<div class="ln ch">${chordLineHtml(l.s,S.shift,flats,seen)}</div>`:
-    `<div class="ln ly">${esc(l.t)||' '}</div>`).join('');
+    l.k==='ch'?`<div class="ln ch"${l.pli!=null?` data-pli="${l.pli}"`:''}>${chordLineHtml(l.s,S.shift,flats,seen)}</div>`:
+    `<div class="ln ly"${l.li!=null?` data-li="${l.li}"`:''}>${esc(l.t)||' '}</div>`).join('');
   const bodyEl=document.getElementById('body');
   bodyEl.innerHTML=html||'<div class="ln ly">Текст песни пока пустой.</div>';
   bodyEl.classList.toggle('plain',plain);
@@ -1910,12 +2073,16 @@ function fillSong(){
   (s.tags||[]).forEach(t=>meta.push(`<button class="pill tagpill" data-act="tagfilter" data-t="${esc(t)}">${esc(t)}</button>`));
   if(+s.capo)meta.push(`<span class="pill">Каподастр: ${+s.capo} лад</span>`);
   if(S.shift)meta.push(`<span class="pill">Тональность сдвинута на ${S.shift>0?'+':''}${S.shift}</span>`);
+  if(s.track)meta.push(`<span class="pill">Минус: ${fmtTime(s.track.dur)}</span>`);
   document.getElementById('meta').innerHTML=meta.join('');
+  if(TR.cur>=0)lineHL(TR.cur,'cur',false);
+  if(TR.marking)lineHL(TR.k,'next',false);
 }
 function renderTools(){
   const sp=S.scroll;
   if(S.stage){
     tools.innerHTML=`<div class="tools-in stage-tools">
+      ${trackTools()}
       <div class="grp scroll" aria-label="Автопрокрутка">
         <button data-act="scroll" class="${sp.on?'on':''}" aria-label="${sp.on?'Остановить':'Запустить'} автопрокрутку">${sp.on?ICON.pause:ICON.play}</button>
         <label class="speed" for="speed"><input type="range" id="speed" min="${SPEED_MIN}" max="${SPEED_MAX}" step="1" value="${sp.speed}" aria-label="Скорость прокрутки"></label></div>
@@ -1934,6 +2101,7 @@ function renderTools(){
     <div class="grp" aria-label="Размер текста">
       <button data-act="fs" data-d="-1" aria-label="Мельче" style="font-size:13px">A</button>
       <button data-act="fs" data-d="1" aria-label="Крупнее" style="font-size:18px">A</button></div>
+    ${trackTools()}
     <div class="grp" aria-label="Метроном"><button class="metrobtn${M.on?' on':''}" data-act="metro" aria-label="Метроном, ${M.bpm} ударов в минуту">${ICON.metro}<span class="lbl">${M.bpm}</span></button></div>
     <div class="grp scroll" aria-label="Автопрокрутка">
       <button data-act="scroll" class="${sp.on?'on':''}" aria-label="${sp.on?'Остановить':'Запустить'} автопрокрутку">${sp.on?ICON.pause:ICON.play}</button>
@@ -2217,7 +2385,7 @@ function tick(t){
 }
 async function startScroll(){S.scroll.on=true;lastT=null;acc=0;raf=requestAnimationFrame(tick);
   try{wake=await navigator.wakeLock.request('screen')}catch{wake=null}}
-function stopScroll(){tunerStop();metroStop();stopAuto()}
+function stopScroll(){tunerStop();metroStop();trackStop();stopAuto()}
 function stopAuto(){S.scroll.on=false;cancelAnimationFrame(raf);if(wake){wake.release().catch(()=>{});wake=null}}
 
 /* ---------- events ---------- */
@@ -2227,7 +2395,7 @@ document.addEventListener('click',e=>{
   if(S.stage){
     const act=b&&b.dataset.act;
     if(!b||act==='chord'){if(!e.target.closest('#tools'))stageTap(e);return}
-    if(!['scroll','fs','stage-exit'].includes(act))exitStage();
+    if(!['scroll','fs','stage-exit','t-play'].includes(act))exitStage();
   }
   if(!b){if(e.target===sheet)closeSheet();return}
   const a=b.dataset.act;
@@ -2249,6 +2417,13 @@ document.addEventListener('click',e=>{
   else if(a==='cof-mode')cofSelect(cofState.i,b.dataset.m==='1');
   else if(a==='tuner-toggle'){TU.on?tunerStop():tunerStart()}
   else if(a==='import')renderImport();
+  else if(a==='t-play')trackToggle();
+  else if(a==='t-mark')markStart();
+  else if(a==='t-del')trackRemove(b);
+  else if(a==='mk-tap')markTap();
+  else if(a==='mk-undo')markUndo();
+  else if(a==='mk-done')markDone();
+  else if(a==='mk-cancel')markCancel();
   else if(a==='video-load')loadVideo();
   else if(a==='fav')toggleFav();
   else if(a==='more')openMore();
@@ -2310,6 +2485,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('change',e=>{
   if(e.target.id==='sc-type'){scState.type=e.target.value;scState.pos=0;scSave()}
   if(e.target.id==='imp-file'&&e.target.files&&e.target.files[0]){importBackup(e.target.files[0]);e.target.value=''}
+  if(e.target.id==='track-file'&&e.target.files&&e.target.files[0]){trackAdd(e.target.files[0]);e.target.value=''}
   if(e.target.id==='imp-pdf'&&e.target.files&&e.target.files[0]){importPdf(e.target.files[0]);e.target.value=''}
 });
 let impT;
@@ -2318,6 +2494,7 @@ document.addEventListener('input',e=>{
   if(id==='search'){S.q=e.target.value;fillList()}
   else if(id==='speed'){S.scroll.speed=+e.target.value;lsSet('sb.speed',S.scroll.speed)}
   else if(id==='m-bpm')metroSet(+e.target.value);
+  else if(id==='t-seek'&&TR.el){TR.seeking=Date.now();TR.el.currentTime=+e.target.value/10;TR.cur=-2}
   else if(id==='imp-src'){clearTimeout(impT);impT=setTimeout(fillImport,250)}
   else if(id==='se-name'){document.getElementById('se-err').textContent='';fillShapeEditor()}
   else if(id==='se-frets'){const f=parseFretsText(e.target.value);if(f){SE.frets=f;const p=f.filter(x=>x>0);if(p.length){const mx=Math.max(...p),mn=Math.min(...p);if(mx>SE.base+4||mn<SE.base)SE.base=mx>5?mn:1}fillShapeEditor()}}
