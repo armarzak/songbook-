@@ -1675,7 +1675,7 @@ function videoInfo(url){
   url=(url||'').trim(); if(!url)return null;
   let m;
   if((m=url.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})/i)))
-    return {kind:'youtube',name:'YouTube',url,embed:'https://www.youtube-nocookie.com/embed/'+m[1]+'?rel=0&playsinline=1'};
+    return {kind:'youtube',name:'YouTube',url,embed:null};
   if((m=url.match(/rutube\.ru\/(?:video|play\/embed|shorts)\/([0-9a-f]{20,})/i)))
     return {kind:'rutube',name:'Rutube',url,embed:'https://rutube.ru/play/embed/'+m[1]};
   if((m=url.match(/(?:vk\.com|vkvideo\.ru|vk\.ru)\/(?:[^?#]*?)video(-?\d+)_(\d+)/i)))
@@ -1686,15 +1686,15 @@ function videoInfo(url){
 function videoHtml(s){
   const v=videoInfo(s.video);
   const q=encodeURIComponent(((s.artist||'')+' '+(s.title||'')).trim());
-  const find=`<a class="btn" href="https://rutube.ru/search/?query=${q}" target="_blank" rel="noopener">Найти на Rutube</a>
+  const find=`<a class="btn primary" href="https://rutube.ru/search/?query=${q}" target="_blank" rel="noopener">Найти на Rutube</a>
     <a class="btn" href="https://vkvideo.ru/?q=${q}" target="_blank" rel="noopener">Найти в VK Видео</a>`;
   if(!v)return '';
   const canEmbed=v.embed&&(window.SONGBOOK_OFFLINE||!window.claude); // claude.ai pages cannot embed other sites
   return `<section class="video" id="video">
     <h3 class="sec-h">Видео</h3>
     ${canEmbed?`<div class="vframe" id="vframe"><button class="vplay" data-act="video-load" aria-label="Показать видео">${ICON.play}<span>Показать видео · ${esc(v.name)}</span></button></div>`:''}
-    <div class="vlinks"><a class="btn" href="${esc(v.url)}" target="_blank" rel="noopener">Открыть в ${esc(v.name)}</a>${v.kind==='youtube'?find:''}</div>
-    ${v.kind==='youtube'?'<p class="hint">YouTube в России часто не открывается без VPN. Тот же клип или разбор обычно есть на Rutube и в VK Видео: найдите его кнопками выше и вставьте ссылку в песню вместо этой.</p>':''}
+    <div class="vlinks">${v.kind==='youtube'?find:''}<a class="btn" href="${esc(v.url)}" target="_blank" rel="noopener">Открыть в ${esc(v.name)}</a></div>
+    ${v.kind==='youtube'?'<p class="hint">Встроенный плеер YouTube в России подвисает и просит войти, поэтому здесь только ссылка: она откроется в приложении YouTube. Чтобы видео играло прямо в песне без VPN, найдите тот же клип на Rutube или в VK Видео кнопками выше и вставьте ссылку в песню вместо этой.</p>':''}
   </section>`;
 }
 function loadVideo(){
