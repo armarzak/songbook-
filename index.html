@@ -434,6 +434,7 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 @media (prefers-reduced-motion:reduce){.metrobtn.beat{animation:none}}
 .video{margin-top:26px;padding-top:6px;border-top:1px solid var(--line)}
 .vframe{position:relative;width:100%;max-width:720px;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000;margin-top:8px}
+.vframe.tall{aspect-ratio:9/16;max-width:360px}
 .vframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .vplay{all:unset;box-sizing:border-box;cursor:pointer;position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#fff;font:600 15px var(--f-body);background:radial-gradient(circle at 50% 45%,#2a2a33,#000)}
 .vplay svg{width:54px;height:54px;padding:16px;border-radius:50%;background:rgba(255,255,255,.14);fill:#fff;stroke:none}
@@ -1691,6 +1692,8 @@ function videoInfo(url){
   let m;
   if((m=url.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})/i)))
     return {kind:'youtube',name:'YouTube',url,embed:null};
+  if((m=url.match(/instagram\.com\/(?:[\w.]+\/)?(p|reel|reels|tv)\/([\w-]+)/i)))
+    return {kind:'instagram',name:'Instagram',url,embed:'https://www.instagram.com/'+(m[1]==='p'?'p':'reel')+'/'+m[2]+'/embed/',tall:true};
   if((m=url.match(/rutube\.ru\/(?:video|play\/embed|shorts)\/([0-9a-f]{20,})/i)))
     return {kind:'rutube',name:'Rutube',url,embed:'https://rutube.ru/play/embed/'+m[1]};
   if((m=url.match(/(?:vk\.com|vkvideo\.ru|vk\.ru)\/(?:[^?#]*?)video(-?\d+)_(\d+)/i)))
@@ -1700,16 +1703,13 @@ function videoInfo(url){
 }
 function videoHtml(s){
   const v=videoInfo(s.video);
-  const q=encodeURIComponent(((s.artist||'')+' '+(s.title||'')).trim());
-  const find=`<a class="btn primary" href="https://rutube.ru/search/?query=${q}" target="_blank" rel="noopener">Найти на Rutube</a>
-    <a class="btn" href="https://vkvideo.ru/?q=${q}" target="_blank" rel="noopener">Найти в VK Видео</a>`;
   if(!v)return '';
   const canEmbed=v.embed&&(window.SONGBOOK_OFFLINE||!window.claude); // claude.ai pages cannot embed other sites
   return `<section class="video" id="video">
     <h3 class="sec-h">Видео</h3>
-    ${canEmbed?`<div class="vframe" id="vframe"><button class="vplay" data-act="video-load" aria-label="Показать видео">${ICON.play}<span>Показать видео · ${esc(v.name)}</span></button></div>`:''}
-    <div class="vlinks">${v.kind==='youtube'?find:''}<a class="btn" href="${esc(v.url)}" target="_blank" rel="noopener">Открыть в ${esc(v.name)}</a></div>
-    ${v.kind==='youtube'?'<p class="hint">Встроенный плеер YouTube в России подвисает и просит войти, поэтому здесь только ссылка: она откроется в приложении YouTube. Чтобы видео играло прямо в песне без VPN, найдите тот же клип на Rutube или в VK Видео кнопками выше и вставьте ссылку в песню вместо этой.</p>':''}
+    ${canEmbed?`<div class="vframe${v.tall?' tall':''}" id="vframe"><button class="vplay" data-act="video-load" aria-label="Показать видео">${ICON.play}<span>Показать видео · ${esc(v.name)}</span></button></div>`:''}
+    <div class="vlinks"><a class="btn" href="${esc(v.url)}" target="_blank" rel="noopener">Открыть в ${esc(v.name)}</a></div>
+    ${v.kind==='youtube'?'<p class="hint">Встроенный плеер YouTube в России подвисает и просит войти, поэтому здесь только ссылка: она откроется в приложении YouTube.</p>':''}${v.kind==='instagram'?'<p class="hint">Instagram в России открывается только с VPN. Если видео не загрузилось, нажмите «Открыть в Instagram».</p>':''}
   </section>`;
 }
 function loadVideo(){
@@ -2170,7 +2170,7 @@ function renderEditor(id,draft){
     </div>
     <div class="field"><label>Метки</label><div class="tagpick" id="tagpick"></div>
       <div class="tagadd"><input id="f-tag" placeholder="Новая метка" autocomplete="off" maxlength="24"><button class="btn" type="button" data-act="tag-add">Добавить</button></div></div>
-    <div class="field"><label for="f-video">Видео</label><input id="f-video" type="url" inputmode="url" value="${esc((s&&s.video)||'')}" placeholder="Ссылка на YouTube, Rutube или VK Видео" autocomplete="off" autocapitalize="off"><div class="hint">Видео покажется в конце песни. Rutube и VK Видео работают без VPN.</div></div>
+    <div class="field"><label for="f-video">Видео</label><input id="f-video" type="url" inputmode="url" value="${esc((s&&s.video)||'')}" placeholder="Ссылка на YouTube, Rutube, VK Видео или Instagram" autocomplete="off" autocapitalize="off"><div class="hint">Видео покажется в конце песни. Rutube и VK Видео работают без VPN, YouTube и Instagram — только с VPN.</div></div>
     <div class="field"><label for="f-body">Текст с аккордами</label>
       <textarea id="f-body" spellcheck="false" placeholder="Am            F&#10;Утро тихо стелет туман,">${esc(s?s.body:'')}</textarea><div class="err" id="e-body"></div></div>
     <div class="hint">Подойдут оба привычных формата:<br>
