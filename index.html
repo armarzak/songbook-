@@ -1718,7 +1718,9 @@ function loadVideo(){
 }
 
 /* ---------- backing track ("минус"): the file stays on this device (IndexedDB); the song keeps its name, length and line marks ---------- */
-const TR={el:null,url:'',id:null,has:false,raf:0,cur:-1,marking:false,marks:[],k:0,n:0,seeking:0};
+const TR={el:null,url:'',id:null,has:false,raf:0,cur:-1,marking:false,marks:[],k:0,n:0,seeking:0,vOn:false,vStart:0,vPaused:0};
+const hasMarks=()=>TR.marks.some(x=>x!=null);
+const vEnd=()=>Math.max(0,...TR.marks.filter(x=>x!=null))+5;
 const trackCan=()=>!!window.SONGBOOK_OFFLINE&&'indexedDB' in window;
 function idb(){return new Promise((ok,no)=>{const r=indexedDB.open('songbook-audio',1);r.onupgradeneeded=()=>r.result.createObjectStore('tracks');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
 async function trackGet(id){try{const db=await idb();return await new Promise(ok=>{const q=db.transaction('tracks').objectStore('tracks').get(id);q.onsuccess=()=>ok(q.result||null);q.onerror=()=>ok(null)})}catch{return null}}
@@ -1728,9 +1730,9 @@ const fmtTime=t=>{t=Math.max(0,Math.floor(t||0));return Math.floor(t/60)+':'+Str
 
 async function trackLoad(s){
   trackStop(); TR.id=s.id; TR.marks=Array.isArray(s.marks)?s.marks.slice():[];
+  if(S.view==='song')renderTools();
   if(!trackCan()||!s.track)return;
-  let rec=await trackGet(s.id);
-  if(!rec&&s.track.path&&ghOn()&&navigator.onLine!==false)rec=await trackFetch(s);
+  const rec=await trackGet(s.id);
   if(!rec||S.cur!==s.id||TR.id!==s.id)return;
   const a=new Audio(); TR.url=URL.createObjectURL(rec.blob||new Blob([rec.buf],{type:rec.type||'audio/mp4'}));
   a.preload='auto'; a.setAttribute('playsinline',''); a.src=TR.url;
@@ -1745,10 +1747,17 @@ function trackStop(){
   if(TR.url)URL.revokeObjectURL(TR.url);
   cancelAnimationFrame(TR.raf);
   const mb=document.getElementById('markbar'); if(mb)mb.remove();
-  Object.assign(TR,{el:null,url:'',id:null,has:false,raf:0,cur:-1,marking:false});
+  Object.assign(TR,{el:null,url:'',id:null,has:false,raf:0,cur:-1,marking:false,vOn:false,vPaused:0});
 }
 function trackTools(){
-  if(!TR.has||!TR.el)return '';
+  if(!TR.has||!TR.el){
+    if(!hasMarks()||TR.marking)return '';
+    const t=TR.vOn?(performance.now()-TR.vStart)/1000:TR.vPaused;
+    return `<div class="grp trackgrp" aria-label="Текст по разметке">
+      <button data-act="v-play" class="${TR.vOn?'on':''}" aria-label="${TR.vOn?'Пауза':'Запустить текст по разметке'}">${TR.vOn?ICON.pause:ICON.play}</button>
+      <span class="tt" id="t-time">${fmtTime(t)} / ${fmtTime(vEnd())}</span><span class="cap">по разметке</span>
+      ${TR.vPaused&&!TR.vOn?'<button data-act="v-reset" aria-label="С начала">↺</button>':''}</div>`;
+  }
   const d=isFinite(TR.el.duration)?TR.el.duration:0,t=TR.el.currentTime||0,on=!TR.el.paused;
   return `<div class="grp trackgrp" aria-label="Минус">
     <button data-act="t-play" class="${on?'on':''}" aria-label="${on?'Пауза':'Играть минус'}">${on?ICON.pause:ICON.play}</button>
@@ -1764,9 +1773,11 @@ function trackToggle(){
 }
 /* each frame: update the clock, then either jump between marked lines or glide through the song */
 function trackFollow(){
-  if(!TR.el||TR.el.paused){TR.raf=0;return}
+  const virt=!TR.el;
+  if(virt?!TR.vOn:TR.el.paused){TR.raf=0;return}
   TR.raf=requestAnimationFrame(trackFollow);
-  const t=TR.el.currentTime,d=TR.el.duration||0;
+  const t=virt?(performance.now()-TR.vStart)/1000:TR.el.currentTime,d=virt?vEnd():(TR.el.duration||0);
+  if(virt&&t>=d){vReset();return}
   const tm=document.getElementById('t-time'); if(tm)tm.textContent=fmtTime(t)+' / '+fmtTime(d);
   const sk=document.getElementById('t-seek'); if(sk&&Date.now()-TR.seeking>400)sk.value=Math.round(t*10);
   if(TR.marking)return;
@@ -1786,6 +1797,13 @@ function lineHL(li,cls,scroll){
   document.querySelectorAll(`.ln[data-pli="${li}"]`).forEach(e=>e.classList.add(cls));
   if(scroll){const top=scrollY+ly.getBoundingClientRect().top-innerHeight*0.35;scrollTo({top:Math.max(0,top),behavior:'smooth'})}
 }
+function vToggle(){
+  if(TR.el||!hasMarks())return;
+  if(TR.vOn){TR.vPaused=(performance.now()-TR.vStart)/1000;TR.vOn=false}
+  else{stopAuto();TR.vStart=performance.now()-TR.vPaused*1000;TR.vOn=true;if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow)}
+  renderTools();
+}
+function vReset(){TR.vOn=false;TR.vPaused=0;cancelAnimationFrame(TR.raf);TR.raf=0;TR.cur=-1;lineHL(-1,'cur');renderTools()}
 async function trackAdd(file){
   const s=findSong(S.cur); if(!s||s.demo)return;
   if(file.size>150*1024*1024){toast('Файл больше 150 МБ. Сожмите его в m4a или mp3.');return}
@@ -1807,13 +1825,11 @@ async function trackAdd(file){
   }
   try{await store.patch(s.id,{track:{name:file.name,dur:Math.round(dur)},updatedAt:Date.now()})}catch(e){saveErr(e);return}
   closeSheet(); await trackLoad(findSong(s.id)); toast('Минус добавлен');
-  if(ghOn())trackUpload(s.id);
 }
 async function trackRemove(btn){
   if(btn.dataset.sure!=='1'){btn.dataset.sure='1';btn.lastChild.textContent='Точно удалить минус?';return}
   const s=findSong(S.cur); if(!s)return;
-  const ghPath=s.track&&s.track.path;
-  trackStop(); await trackDelete(s.id); trackGhDelete(ghPath);
+  trackStop(); await trackDelete(s.id);
   try{await store.patch(s.id,{track:null,updatedAt:Date.now()})}catch(e){saveErr(e)}
   closeSheet(); renderTools(); toast('Минус удалён');
 }
@@ -1867,67 +1883,14 @@ function trackMenu(s){
   if(!trackCan())return '<p class="hint">Минусы работают в приложении с экрана «Домой».</p>';
   const add=`<label class="btn" for="track-file">${ICON.music}${s.track&&TR.has?'Заменить минус':'Добавить минус'}</label><input type="file" id="track-file" class="vh" accept="audio/*,.m4a,.mp3,.wav,.aac,.aif,.aiff">`;
   if(!TR.has){
-    if(!s.track)return add;
-    if(s.track.path)return (ghOn()?`<button class="btn primary" data-act="t-fetch">${ICON.music}Скачать минус с GitHub</button>`:'')+add+`<p class="hint">Минус «${esc(s.track.name)}» хранится на GitHub${ghOn()?'':'. Подключите синхронизацию с GitHub (Песни → внизу), и он скачается сам'}.</p>`;
-    return add+`<p class="hint">Минус «${esc(s.track.name)}» добавлен на другом устройстве и ещё не загружен на GitHub. На том устройстве откройте Песни → «Синхронизировать сейчас».</p>`;
+    const nm=hasMarks()?TR.marks.filter(x=>x!=null).length:0;
+    return add+(s.track?`<p class="hint">Минус «${esc(s.track.name)}» хранится на другом устройстве. Выберите здесь тот же файл, и текст пойдёт за ним по готовой разметке.</p>`:'')
+      +(nm?`<p class="hint">Разметка строк есть (${nm}). Без файла её можно запустить кнопкой ▶ «по разметке» в нижней панели: текст пойдёт по сохранённому таймингу без звука.</p>`:'');
   }
-  const where=!ghOn()?'Минус хранится только на этом устройстве. Подключите синхронизацию с GitHub, чтобы он был и на других.':s.track&&s.track.path?'Минус сохранён на GitHub и скачается на других устройствах.':'Минус ещё не на GitHub.';
   const marked=TR.marks.filter(x=>x!=null).length;
   return `<button class="btn" data-act="t-mark">${ICON.metro}${marked?'Разметить строки заново':'Разметить строки под минус'}</button>`+add+
     `<button class="btn danger" data-act="t-del">${ICON.trash}<span>Удалить минус</span></button>`+
-    (ghOn()&&s.track&&!s.track.path?`<button class="btn" data-act="t-upload">${ICON.share}Загрузить минус на GitHub</button>`:'')+
-    `<p class="hint">${where} ${marked?'Размечено строк: '+marked+'. Текущая строка подсвечивается и сама встаёт на место.':'Без разметки текст просто плавно идёт за минусом от начала до конца. С разметкой каждая строка подсвечивается точно в своё время.'}</p>`;
-}
-
-/* ---------- backing-track files in the GitHub repository (tracks/<song id>.<ext>) ---------- */
-const GH_TRACK_MAX=95*1024*1024; // GitHub refuses files over 100 MB
-function bufToB64(buf){const u=new Uint8Array(buf);let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)}
-async function ghFileSha(path){try{return (await ghFetch('/contents/'+path+'?ts='+Date.now())).sha}catch(e){if(e.status===404)return null;throw e}}
-async function ghGetRaw(path){
-  const r=await fetch('https://api.github.com/repos/'+GH.cfg.repo+'/contents/'+path+'?ts='+Date.now(),{cache:'no-store',
-    headers:{Authorization:'Bearer '+GH.cfg.token,Accept:'application/vnd.github.raw','X-GitHub-Api-Version':'2022-11-28'}});
-  if(!r.ok){const e=new Error('github '+r.status);e.status=r.status;throw e}
-  return r.arrayBuffer();
-}
-const trackUploading=new Set();
-async function trackUpload(id,quiet){
-  if(!ghOn()||trackUploading.has(id))return false;
-  const s=findSong(id),rec=await trackGet(id); if(!s||!s.track||!rec)return false;
-  if((rec.size||0)>GH_TRACK_MAX){if(!quiet)toast('Минус больше 95 МБ: GitHub такие файлы не принимает. Он останется только на этом устройстве.');return false}
-  trackUploading.add(id);
-  try{
-    if(!quiet)toast('Загружаю минус на GitHub…');
-    const buf=rec.buf||await rec.blob.arrayBuffer();
-    const ext=((s.track.name||'').split('.').pop()||'m4a').toLowerCase().replace(/[^a-z0-9]/g,'')||'m4a';
-    const path='tracks/'+id+'.'+ext,sha=await ghFileSha(path);
-    await ghFetch('/contents/'+path,{method:'PUT',body:JSON.stringify({message:'Песенник: минус «'+(s.title||'')+'»',content:bufToB64(buf),...(sha?{sha}:{})})});
-    const cur=findSong(id); if(cur&&cur.track)await store.patch(id,{track:{...cur.track,path},updatedAt:Date.now()});
-    if(!quiet)toast('Минус сохранён на GitHub');
-    if(S.cur===id&&!sheet.hidden&&document.querySelector('.menu'))openMore();
-    return true;
-  }catch(e){if(!quiet)toast('Не удалось загрузить минус на GitHub: '+ghErrText(e));return false}
-  finally{trackUploading.delete(id)}
-}
-async function trackFetch(s){
-  if(!ghOn()||!s.track||!s.track.path)return null;
-  toast('Скачиваю минус с GitHub…');
-  try{
-    const buf=await ghGetRaw(s.track.path);
-    const ext=s.track.path.split('.').pop();
-    const type=({m4a:'audio/mp4',mp3:'audio/mpeg',wav:'audio/wav',aac:'audio/aac',aif:'audio/aiff',aiff:'audio/aiff'}[ext])||'audio/mp4';
-    const rec={buf,type,name:s.track.name,size:buf.byteLength,added:Date.now()};
-    await trackPut(s.id,rec); toast('Минус скачан');
-    return rec;
-  }catch(e){toast('Не удалось скачать минус: '+(e.status?ghErrText(e):'нет связи с GitHub'));return null}
-}
-async function trackGhDelete(path){
-  if(!ghOn()||!path)return;
-  try{const sha=await ghFileSha(path);if(sha)await ghFetch('/contents/'+path,{method:'DELETE',body:JSON.stringify({message:'Песенник: минус удалён',sha})})}catch{}
-}
-/* after a sync: put on GitHub any minus that so far lives only on this device */
-async function tracksPending(){
-  if(!ghOn())return;
-  for(const s of S.songs.filter(x=>x.track&&!x.track.path)){if(await trackGet(s.id))await trackUpload(s.id,true)}
+    `<p class="hint">${marked?'Размечено строк: '+marked+'. Текущая строка подсвечивается и сама встаёт на место.':'Без разметки текст просто плавно идёт за минусом от начала до конца. С разметкой каждая строка подсвечивается точно в своё время.'}</p>`;
 }
 
 /* ---------- tags ---------- */
@@ -2108,7 +2071,8 @@ function renderSong(id,keepScroll){
     <div id="videobox"></div>
   </div>`;
   fillSong(); renderTools();
-  if((TR.id!==id||(!TR.has&&s.track&&s.track.path&&!TR.fetching))&&!s.demo){TR.fetching=!!(s.track&&s.track.path);trackLoad(s).finally(()=>{TR.fetching=false})}
+  if(TR.id!==id&&!s.demo)trackLoad(s);
+  else if(TR.id===id){const m=Array.isArray(s.marks)?s.marks:[];if(!TR.marking&&JSON.stringify(m)!==JSON.stringify(TR.marks)){TR.marks=m.slice();renderTools()}}
   document.body.classList.add('has-tools');
   scrollTo(0,y);
 }
@@ -2142,6 +2106,8 @@ function fillSong(){
   if(+s.capo)meta.push(`<span class="pill">Каподастр: ${+s.capo} лад</span>`);
   if(S.shift)meta.push(`<span class="pill">Тональность сдвинута на ${S.shift>0?'+':''}${S.shift}</span>`);
   if(s.track)meta.push(`<span class="pill">Минус: ${fmtTime(s.track.dur)}</span>`);
+  const nMarks=Array.isArray(s.marks)?s.marks.filter(x=>x!=null).length:0;
+  if(nMarks)meta.push(`<span class="pill">Разметка: ${nMarks} ${plural(nMarks,'строка','строки','строк')}</span>`);
   document.getElementById('meta').innerHTML=meta.join('');
   if(TR.cur>=0)lineHL(TR.cur,'cur',false);
   if(TR.marking)lineHL(TR.k,'next',false);
@@ -2463,7 +2429,7 @@ document.addEventListener('click',e=>{
   if(S.stage){
     const act=b&&b.dataset.act;
     if(!b||act==='chord'){if(!e.target.closest('#tools'))stageTap(e);return}
-    if(!['scroll','fs','stage-exit','t-play'].includes(act))exitStage();
+    if(!['scroll','fs','stage-exit','t-play','v-play','v-reset'].includes(act))exitStage();
   }
   if(!b){if(e.target===sheet)closeSheet();return}
   const a=b.dataset.act;
@@ -2486,8 +2452,8 @@ document.addEventListener('click',e=>{
   else if(a==='tuner-toggle'){TU.on?tunerStop():tunerStart()}
   else if(a==='import')renderImport();
   else if(a==='t-play')trackToggle();
-  else if(a==='t-upload'){closeSheet();trackUpload(S.cur)}
-  else if(a==='t-fetch'){closeSheet();const s=findSong(S.cur);if(s)trackLoad(s)}
+  else if(a==='v-play')vToggle();
+  else if(a==='v-reset')vReset();
   else if(a==='t-mark')markStart();
   else if(a==='t-del')trackRemove(b);
   else if(a==='mk-tap')markTap();
@@ -2639,7 +2605,6 @@ async function ghSync(){
       catch(e){if((e.status===409||e.status===422)&&attempt<2)continue;throw e}  // changed on another device meanwhile: merge again
     }
     GH.cfg.last=Date.now(); lsSet('sb.gh',JSON.stringify(GH.cfg)); ghStatus('',false);
-    setTimeout(tracksPending,0);
   }catch(e){ghStatus(ghErrText(e),true)}
   finally{GH.busy=false;fillSync()}
 }
