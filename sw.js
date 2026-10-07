@@ -1,4 +1,4 @@
-const V='songbook-v31';
+const V='songbook-v32';
 const SHELL=['./','./index.html','./manifest.json','./icon-180.png','./icon-512.png'];
 const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(async c=>{

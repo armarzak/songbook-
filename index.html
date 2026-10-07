@@ -440,7 +440,7 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 .vplay svg{width:54px;height:54px;padding:16px;border-radius:50%;background:rgba(255,255,255,.14);fill:#fff;stroke:none}
 .vplay:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
 .vframe.vfull{position:fixed;inset:0;z-index:80;width:100vw;max-width:none;height:100vh;height:100dvh;aspect-ratio:auto;border-radius:0;margin:0;background:#000}
-.vframe.vfull iframe{top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px);height:auto}
+.vframe.vfull iframe{top:env(safe-area-inset-top,0px);bottom:auto;left:0;width:100%;height:calc(100% - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
 .vframe.tall.vfull iframe{left:50%;right:auto;transform:translateX(-50%);width:min(100vw,calc((100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))*9/16))}
 .vclose{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));z-index:2;width:44px;height:44px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:20px;line-height:44px;text-align:center;cursor:pointer}
 .vclose:focus-visible{outline:2px solid #fff}
