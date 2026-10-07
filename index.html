@@ -66,22 +66,10 @@
   --grid:#C6DCD3; --string:#8FA89E; --warn:#A8520A; --warn-bg:#FBEBDD; --good:#1F7A3A; --good-bg:#DDF2E3; --shadow:rgba(10,60,40,.12);
   color-scheme:light;
 }
-:root[data-skin="coral"]{
-  --bg:#FFF5F2; --surface:#FFFFFF; --sunk:#FBE6E0; --fg:#2A1712; --muted:#7A5D55; --line:#F1D6CE;
-  --chord:#C9401B; --accent:#C9401B; --on-accent:#FFFFFF; --danger:#A3201A; --bar:rgba(255,245,242,.92); --scrim:rgba(40,12,6,.35);
-  --grid:#EDCFC6; --string:#B89A91; --warn:#A8520A; --warn-bg:#FBEBDD; --good:#2D7A3E; --good-bg:#E2F1E5; --shadow:rgba(90,30,10,.12);
-  color-scheme:light;
-}
 :root[data-skin="neon"]{
   --bg:#0F0B1A; --surface:#18122A; --sunk:#221A3A; --fg:#F1EAFF; --muted:#A497C2; --line:#2E2548;
   --chord:#FF6AD5; --accent:#FF6AD5; --on-accent:#2A0420; --danger:#FF8A80; --bar:rgba(15,11,26,.9); --scrim:rgba(5,2,12,.65);
   --grid:#2F2650; --string:#5E5285; --warn:#FFB86B; --warn-bg:#2E2014; --good:#7DF0B0; --good-bg:#13291F; --shadow:rgba(0,0,0,.5);
-  color-scheme:dark;
-}
-:root[data-skin="forest"]{
-  --bg:#0D1712; --surface:#14211A; --sunk:#1C2D24; --fg:#E8F1EA; --muted:#94A99B; --line:#253A2E;
-  --chord:#F2C14E; --accent:#F2C14E; --on-accent:#1E1600; --danger:#FF8A80; --bar:rgba(13,23,18,.92); --scrim:rgba(2,8,5,.6);
-  --grid:#28402F; --string:#557060; --warn:#F7A26A; --warn-bg:#2E2216; --good:#8EE59B; --good-bg:#14301C; --shadow:rgba(0,0,0,.5);
   color-scheme:dark;
 }
 :root[data-skin="sakura"]{
@@ -97,6 +85,27 @@
   color-scheme:dark;
 }
 html,body{background:var(--bg);color:var(--fg)}
+/* "Сияние светлое": the same glow-and-glass look on a light ground, with a black primary button */
+:root[data-skin="glowlight"]{
+  --bg:#F6F7FB; --surface:rgba(255,255,255,.62); --sunk:rgba(15,23,42,.055); --fg:#0B0B12; --muted:#52525B; --line:rgba(15,23,42,.1);
+  --chord:#1D4ED8; --accent:#2563EB; --on-accent:#FFFFFF; --danger:#DC2626; --bar:rgba(246,247,251,.66); --scrim:rgba(15,15,30,.35);
+  --grid:rgba(15,23,42,.14); --string:rgba(15,23,42,.35); --warn:#B45309; --warn-bg:rgba(245,158,11,.14); --good:#15803D; --good-bg:rgba(34,197,94,.14); --shadow:rgba(30,41,90,.12);
+  --f-display:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+:root[data-skin="glowlight"] body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(55% 45% at 0% 0%,rgba(59,130,246,.24),transparent 70%),radial-gradient(55% 45% at 100% 100%,rgba(168,85,247,.22),transparent 70%)}
+:root[data-skin="glowlight"] body{isolation:isolate}
+:root[data-skin="glowlight"] .brand,:root[data-skin="glowlight"] h1,:root[data-skin="glowlight"] .song-head h1,:root[data-skin="glowlight"] .cof-head h2,:root[data-skin="glowlight"] .sc-head h2{font-weight:900;letter-spacing:-.025em}
+:root[data-skin="glowlight"] .btn,:root[data-skin="glowlight"] input,:root[data-skin="glowlight"] select,:root[data-skin="glowlight"] textarea{border-radius:14px}
+:root[data-skin="glowlight"] .btn{backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+:root[data-skin="glowlight"] .btn.primary{background:#0B0B12;color:#FFFFFF;border-color:transparent;font-weight:900;text-transform:uppercase;letter-spacing:.14em;font-size:13px;box-shadow:0 12px 24px -10px rgba(15,23,42,.35)}
+:root[data-skin="glowlight"] input:focus,:root[data-skin="glowlight"] textarea:focus,:root[data-skin="glowlight"] select:focus{outline:none;box-shadow:0 0 0 2px rgba(37,99,235,.45)}
+:root[data-skin="glowlight"] .panel{background:rgba(255,255,255,.9);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border:1px solid rgba(15,23,42,.08);border-bottom:0}
+:root[data-skin="glowlight"] .chip,:root[data-skin="glowlight"] .tabs,:root[data-skin="glowlight"] .grp,:root[data-skin="glowlight"] .seg{backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+:root[data-skin="glowlight"] .dia .fg{fill:#FFFFFF}
+:root[data-skin="glowlight"] .t-strings span.on,:root[data-skin="glowlight"] .cell .badge,:root[data-skin="glowlight"] .cell .tick{color:#FFFFFF}
+
 /* "Сияние": the user's Songbook Pro login look — near-black ground, blue and violet glows, glass surfaces, white primary button */
 :root[data-skin="glow"]{
   --bg:#0A0A0D; --surface:rgba(255,255,255,.055); --sunk:rgba(255,255,255,.085); --fg:#FFFFFF; --muted:#A1A1AA; --line:rgba(255,255,255,.1);
@@ -423,6 +432,15 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 .m-row{display:flex;align-items:center;gap:10px;justify-content:center}
 .m-row .cap{font-size:13px;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.metrobtn.beat{animation:none}}
+.video{margin-top:26px;padding-top:6px;border-top:1px solid var(--line)}
+.vframe{position:relative;width:100%;max-width:720px;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000;margin-top:8px}
+.vframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.vplay{all:unset;box-sizing:border-box;cursor:pointer;position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#fff;font:600 15px var(--f-body);background:radial-gradient(circle at 50% 45%,#2a2a33,#000)}
+.vplay svg{width:54px;height:54px;padding:16px;border-radius:50%;background:rgba(255,255,255,.14);fill:#fff;stroke:none}
+.vplay:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.vlinks{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.vlinks .btn{text-decoration:none}
+body.stage .video{display:none}
 .tagbar{display:flex;flex-wrap:wrap;gap:6px;margin-block:2px 6px}
 .tagbar:empty{display:none}
 .tchip{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:6px 12px;font:500 14px var(--f-body);display:inline-flex;align-items:center;gap:6px}
@@ -1652,6 +1670,38 @@ function metroTap(){
   if(M.taps.length>=2)metroSet(60000/((M.taps[M.taps.length-1]-M.taps[0])/(M.taps.length-1)));
 }
 
+/* ---------- a video at the end of a song: YouTube, Rutube or VK Video ---------- */
+function videoInfo(url){
+  url=(url||'').trim(); if(!url)return null;
+  let m;
+  if((m=url.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})/i)))
+    return {kind:'youtube',name:'YouTube',url,embed:'https://www.youtube-nocookie.com/embed/'+m[1]+'?rel=0&playsinline=1'};
+  if((m=url.match(/rutube\.ru\/(?:video|play\/embed|shorts)\/([0-9a-f]{20,})/i)))
+    return {kind:'rutube',name:'Rutube',url,embed:'https://rutube.ru/play/embed/'+m[1]};
+  if((m=url.match(/(?:vk\.com|vkvideo\.ru|vk\.ru)\/(?:[^?#]*?)video(-?\d+)_(\d+)/i)))
+    return {kind:'vk',name:'VK Видео',url,embed:'https://vk.com/video_ext.php?oid='+m[1]+'&id='+m[2]+'&hd=2'};
+  if(/^https?:\/\//i.test(url))return {kind:'link',name:'видео',url,embed:null};
+  return null;
+}
+function videoHtml(s){
+  const v=videoInfo(s.video);
+  const q=encodeURIComponent(((s.artist||'')+' '+(s.title||'')).trim());
+  const find=`<a class="btn" href="https://rutube.ru/search/?query=${q}" target="_blank" rel="noopener">Найти на Rutube</a>
+    <a class="btn" href="https://vkvideo.ru/?q=${q}" target="_blank" rel="noopener">Найти в VK Видео</a>`;
+  if(!v)return '';
+  const canEmbed=v.embed&&(window.SONGBOOK_OFFLINE||!window.claude); // claude.ai pages cannot embed other sites
+  return `<section class="video" id="video">
+    <h3 class="sec-h">Видео</h3>
+    ${canEmbed?`<div class="vframe" id="vframe"><button class="vplay" data-act="video-load" aria-label="Показать видео">${ICON.play}<span>Показать видео · ${esc(v.name)}</span></button></div>`:''}
+    <div class="vlinks"><a class="btn" href="${esc(v.url)}" target="_blank" rel="noopener">Открыть в ${esc(v.name)}</a>${v.kind==='youtube'?find:''}</div>
+    ${v.kind==='youtube'?'<p class="hint">YouTube в России часто не открывается без VPN. Тот же клип или разбор обычно есть на Rutube и в VK Видео: найдите его кнопками выше и вставьте ссылку в песню вместо этой.</p>':''}
+  </section>`;
+}
+function loadVideo(){
+  const s=findSong(S.cur),v=s&&videoInfo(s.video),box=document.getElementById('vframe'); if(!v||!box)return;
+  box.innerHTML=`<iframe src="${esc(v.embed)}" title="Видео: ${esc(s.title)}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+}
+
 /* ---------- tags ---------- */
 const DEFAULT_TAGS=['костёр','медленные','разучиваю'];
 const ED={tags:[]};
@@ -1741,12 +1791,11 @@ const SKINS=[
   {id:'ocean',name:'Океан',hint:'спокойный тёмный',bg:'#0B1622',fg:'#E6F1FA',ch:'#5EE0D0'},
   {id:'lavender',name:'Лаванда',hint:'мягкий светлый',bg:'#F4F2FA',fg:'#1E1A2E',ch:'#6A3FD0'},
   {id:'mint',name:'Мята',hint:'свежий светлый',bg:'#EEF6F2',fg:'#14231D',ch:'#0E7A64'},
-  {id:'coral',name:'Коралл',hint:'тёплый светлый',bg:'#FFF5F2',fg:'#2A1712',ch:'#C9401B'},
   {id:'neon',name:'Неон',hint:'яркий тёмный',bg:'#0F0B1A',fg:'#F1EAFF',ch:'#FF6AD5'},
-  {id:'forest',name:'Лес',hint:'глубокий тёмный',bg:'#0D1712',fg:'#E8F1EA',ch:'#F2C14E'},
   {id:'sakura',name:'Сакура',hint:'нежный светлый',bg:'#FFF2F6',fg:'#2B1520',ch:'#B8195A'},
   {id:'graphite',name:'Графит',hint:'строгий тёмный',bg:'#17181B',fg:'#ECEDEF',ch:'#FF8A3D'},
-  {id:'glow',name:'Сияние',hint:'как Songbook Pro',bg:'radial-gradient(70% 70% at 0% 0%,#1E3A8A,transparent 70%),radial-gradient(70% 70% at 100% 100%,#581C87,transparent 70%),#0A0A0D',fg:'#FFFFFF',ch:'#93C5FD'}
+  {id:'glow',name:'Сияние',hint:'как Songbook Pro',bg:'radial-gradient(70% 70% at 0% 0%,#1E3A8A,transparent 70%),radial-gradient(70% 70% at 100% 100%,#581C87,transparent 70%),#0A0A0D',fg:'#FFFFFF',ch:'#93C5FD'},
+  {id:'glowlight',name:'Сияние светлое',hint:'светлая версия',bg:'radial-gradient(70% 70% at 0% 0%,#BFD3FF,transparent 70%),radial-gradient(70% 70% at 100% 100%,#E3CCFF,transparent 70%),#F6F7FB',fg:'#0B0B12',ch:'#1D4ED8'}
 ];
 const themeMetas=[...document.querySelectorAll('meta[name="theme-color"]')].map(m=>({m,c:m.getAttribute('content'),media:m.getAttribute('media')}));
 function applySkin(id){
@@ -1828,6 +1877,7 @@ function renderSong(id,keepScroll){
     </div>
     <div class="strip" id="strip"></div>
     <div class="sheet-body" id="body" style="--fs:${S.stage?S.sfs:S.fs}px"></div>
+    <div id="videobox"></div>
   </div>`;
   fillSong(); renderTools();
   document.body.classList.add('has-tools');
@@ -1852,6 +1902,7 @@ function fillSong(){
   bodyEl.innerHTML=html||'<div class="ln ly">Текст песни пока пустой.</div>';
   bodyEl.classList.toggle('plain',plain);
   document.getElementById('strip').hidden=plain;
+  const vb=document.getElementById('videobox'); if(vb&&vb.dataset.v!==(s.video||'')){vb.dataset.v=s.video||'';vb.innerHTML=videoHtml(s)}
   document.getElementById('strip').innerHTML=seen.map(n=>{
     const v=getVoicings(n).list[0];
     return `<button class="chip" data-act="chord" data-c="${esc(n)}"><span class="n">${esc(n)}</span>${v?diagram(v,true):'<span class="q">?</span>'}</button>`}).join('');
@@ -1912,6 +1963,7 @@ function renderEditor(id,draft){
     </div>
     <div class="field"><label>Метки</label><div class="tagpick" id="tagpick"></div>
       <div class="tagadd"><input id="f-tag" placeholder="Новая метка" autocomplete="off" maxlength="24"><button class="btn" type="button" data-act="tag-add">Добавить</button></div></div>
+    <div class="field"><label for="f-video">Видео</label><input id="f-video" type="url" inputmode="url" value="${esc((s&&s.video)||'')}" placeholder="Ссылка на YouTube, Rutube или VK Видео" autocomplete="off" autocapitalize="off"><div class="hint">Видео покажется в конце песни. Rutube и VK Видео работают без VPN.</div></div>
     <div class="field"><label for="f-body">Текст с аккордами</label>
       <textarea id="f-body" spellcheck="false" placeholder="Am            F&#10;Утро тихо стелет туман,">${esc(s?s.body:'')}</textarea><div class="err" id="e-body"></div></div>
     <div class="hint">Подойдут оба привычных формата:<br>
@@ -1927,11 +1979,12 @@ async function doSave(id){
   document.getElementById('e-title').textContent=title?'':'Введите название песни.';
   document.getElementById('e-body').textContent=body?'':'Вставьте текст с аккордами.';
   if(!title||!body)return;
-  saveSong(id,{title,artist:document.getElementById('f-artist').value.trim(),capo:+document.getElementById('f-capo').value,body,tags:[...ED.tags]});
+  saveSong(id,{title,artist:document.getElementById('f-artist').value.trim(),capo:+document.getElementById('f-capo').value,body,tags:[...ED.tags],video:(document.getElementById('f-video').value||'').trim()});
 }
 async function saveSong(id,f){
   const old=id?findSong(id):null;
   if(f.tags===undefined)f={...f,tags:(old&&old.tags)||[]};
+  if(f.video===undefined)f={...f,video:(old&&old.video)||''};
   const song={id:id||('s'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)),...f,
     transpose:old?old.transpose||0:0,createdAt:old?old.createdAt||Date.now():Date.now(),updatedAt:Date.now()};
   try{await store.save(song);S.cur=null;toast('Сохранено');renderSong(song.id)}catch(e){saveErr(e)}
@@ -2196,6 +2249,7 @@ document.addEventListener('click',e=>{
   else if(a==='cof-mode')cofSelect(cofState.i,b.dataset.m==='1');
   else if(a==='tuner-toggle'){TU.on?tunerStop():tunerStart()}
   else if(a==='import')renderImport();
+  else if(a==='video-load')loadVideo();
   else if(a==='fav')toggleFav();
   else if(a==='more')openMore();
   else if(a==='share')shareSong();
