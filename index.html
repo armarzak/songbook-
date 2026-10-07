@@ -1743,6 +1743,7 @@ async function trackLoad(s){
   if(S.view==='song')renderTools();
 }
 function trackStop(){
+  if(TR.marking&&TR.k>0&&TR.id&&store){const now=Date.now();store.patch(TR.id,{marks:TR.marks.slice(0,TR.k),marksAt:now,updatedAt:now}).catch(()=>{})}
   if(TR.el){try{TR.el.pause();TR.el.removeAttribute('src');TR.el.load()}catch{}}
   if(TR.url)URL.revokeObjectURL(TR.url);
   cancelAnimationFrame(TR.raf);
@@ -1871,7 +1872,11 @@ async function markDone(){
   lineHL(-1,'next'); if(TR.el)TR.el.pause();
   const s=findSong(S.cur); if(!s)return;
   const marks=TR.marks.slice(0,TR.k);
-  try{await store.patch(s.id,{marks,updatedAt:Date.now()});TR.marks=marks;toast(marks.length?'Разметка сохранена: '+marks.length+' '+plural(marks.length,'строка','строки','строк'):'Разметка очищена')}catch(e){saveErr(e)}
+  try{
+    const now=Date.now(); await store.patch(s.id,{marks,marksAt:now,updatedAt:now}); TR.marks=marks;
+    toast(marks.length?'Разметка сохранена: '+marks.length+' '+plural(marks.length,'строка','строки','строк')+(ghOn()?'. Отправляю на GitHub…':''):'Разметка очищена');
+    if(ghOn()){clearTimeout(GH.timer);ghSync(true)}
+  }catch(e){saveErr(e)}
 }
 function markCancel(){
   TR.marking=false; const mb=document.getElementById('markbar'); if(mb)mb.remove();
@@ -2480,7 +2485,7 @@ document.addEventListener('click',e=>{
   else if(a==='tag-add')addTag();
   else if(a==='export')exportBackup();
   else if(a==='gh-connect')ghConnect();
-  else if(a==='gh-sync')ghSync();
+  else if(a==='gh-sync')ghSync(true);
   else if(a==='gh-off')ghOff(b);
   else if(a==='skin'){applySkin(b.dataset.s);lsSet('sb.skin',S.skin);fillSkins()}
   else if(a==='imp-save'){const f=impFields();if(!f.title){document.getElementById('ie-title').textContent='Введите название песни.';document.getElementById('i-title').focus();return}saveSong(null,f)}
@@ -2572,7 +2577,12 @@ function mergeData(local,remote){
   for(const [k,v] of Object.entries(DEL))if(!(del[k]>=v))del[k]=v;
   const map=new Map();
   for(const s of (remote&&remote.songs)||[])if(s&&s.id)map.set(s.id,s);
-  for(const s of local.songs){const o=map.get(s.id);if(!o||(s.updatedAt||0)>=(o.updatedAt||0))map.set(s.id,s)}
+  for(const s of local.songs){
+    const o=map.get(s.id); if(!o){map.set(s.id,s);continue}
+    let w=(s.updatedAt||0)>=(o.updatedAt||0)?s:o; const l=w===s?o:s;
+    if((l.marksAt||0)>(w.marksAt||0))w={...w,marks:l.marks,marksAt:l.marksAt};
+    map.set(s.id,w);
+  }
   const songs=[...map.values()].filter(s=>!(del[s.id]>=(s.updatedAt||0))).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
   const shapes={};
   for(const src of [(remote&&remote.shapes)||{},local.shapes])for(const [n,v] of Object.entries(src))
@@ -2589,7 +2599,7 @@ async function applyMerged(m){
   if(JSON.stringify(m.shapes)!==JSON.stringify(S.shapes))await RAW.save({id:'_shapes',shapes:m.shapes});
 }
 const canon=d=>JSON.stringify({songs:d.songs,shapes:d.shapes,deleted:d.deleted});
-async function ghSync(){
+async function ghSync(report){
   if(!ghOn()||GH.busy)return;
   if(!navigator.onLine){ghStatus('Нет интернета. Синхронизирую, когда он появится.',false);return}
   GH.busy=true; ghStatus('Синхронизирую…',false);
@@ -2605,6 +2615,8 @@ async function ghSync(){
       catch(e){if((e.status===409||e.status===422)&&attempt<2)continue;throw e}  // changed on another device meanwhile: merge again
     }
     GH.cfg.last=Date.now(); lsSet('sb.gh',JSON.stringify(GH.cfg)); ghStatus('',false);
+    if(report){const n=S.songs.length,m=S.songs.filter(x=>Array.isArray(x.marks)&&x.marks.some(v=>v!=null)).length;
+      toast('Синхронизировано с GitHub: '+n+' '+plural(n,'песня','песни','песен')+(m?', с разметкой: '+m:''))}
   }catch(e){ghStatus(ghErrText(e),true)}
   finally{GH.busy=false;fillSync()}
 }
