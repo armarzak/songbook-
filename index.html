@@ -1731,7 +1731,7 @@ async function trackLoad(s){
   if(!trackCan()||!s.track)return;
   const rec=await trackGet(s.id);
   if(!rec||S.cur!==s.id||TR.id!==s.id)return;
-  const a=new Audio(); TR.url=URL.createObjectURL(rec.blob);
+  const a=new Audio(); TR.url=URL.createObjectURL(rec.blob||new Blob([rec.buf],{type:rec.type||'audio/mp4'}));
   a.preload='auto'; a.setAttribute('playsinline',''); a.src=TR.url;
   a.addEventListener('loadedmetadata',()=>{if(S.view==='song')renderTools()});
   a.addEventListener('ended',()=>{if(TR.marking)markDone();renderTools()});
@@ -1793,10 +1793,18 @@ async function trackAdd(file){
   const dur=await new Promise(ok=>{const tm=setTimeout(()=>ok(0),8000);probe.addEventListener('loadedmetadata',()=>{clearTimeout(tm);ok(probe.duration||0)});probe.addEventListener('error',()=>{clearTimeout(tm);ok(-1)});probe.preload='metadata';probe.src=url});
   URL.revokeObjectURL(url);
   if(dur<0){toast('Этот файл не воспроизводится на айфоне. Подойдут m4a, mp3, wav или aac.');return}
+  const ext=(file.name.split('.').pop()||'').toLowerCase();
+  const type=file.type||({m4a:'audio/mp4',mp3:'audio/mpeg',wav:'audio/wav',aac:'audio/aac',aif:'audio/aiff',aiff:'audio/aiff'}[ext])||'audio/mp4';
+  try{if(navigator.storage&&navigator.storage.persist)await navigator.storage.persist()}catch{}
   try{
-    await trackPut(s.id,{blob:file,name:file.name,type:file.type,size:file.size,added:Date.now()});
-    await store.patch(s.id,{track:{name:file.name,dur:Math.round(dur)},updatedAt:Date.now()});
-  }catch(e){toast('Не хватило места на устройстве для этого файла.');return}
+    const buf=await file.arrayBuffer();
+    await trackPut(s.id,{buf,type,name:file.name,size:file.size,added:Date.now()});
+  }catch(e){
+    const n=e&&e.name||'';
+    toast(n==='QuotaExceededError'?'Не хватило места на устройстве для этого файла.':'Не получилось сохранить минус'+(n?' ('+n+')':'')+'. Напишите мне этот текст.');
+    return;
+  }
+  try{await store.patch(s.id,{track:{name:file.name,dur:Math.round(dur)},updatedAt:Date.now()})}catch(e){saveErr(e);return}
   closeSheet(); await trackLoad(findSong(s.id)); toast('Минус добавлен');
 }
 async function trackRemove(btn){
