@@ -1,9 +1,12 @@
 CACHE MANIFEST
-# ipad v4
+# ipad v5
 
 CACHE:
 ipad.html
 icon-180.png
+alphatab/legacy/alphaTab.min.js
+alphatab/font/Bravura.woff
+alphatab/soundfont/sonivox.sf2
 
 NETWORK:
 *

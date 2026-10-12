@@ -101,6 +101,21 @@ body.dark .row .tg i{color:#86B6FF;background:#232724}
 body.dark .sheet .cur{background:#232724}
 body.dark .sheet div.cur{color:#86B6FF}
 .tt{min-width:84px}
+.gpview{position:fixed;top:0;left:0;right:0;bottom:0;z-index:30;background:#F1F2EE;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column}
+body.dark .gpview{background:#141615}
+.gp-top,.gp-bar{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-flex-wrap:wrap;flex-wrap:wrap;padding:6px 12px}
+.gp-top>*,.gp-bar>*{margin:3px 8px 3px 0}
+.gp-title{font-weight:bold}
+/* the score is drawn black on white in both themes, like printed music */
+.gp-wrap{-webkit-flex:1;flex:1;overflow:auto;-webkit-overflow-scrolling:touch;position:relative;background:#fff;color:#000}
+.gp-msg{margin:0;padding:24px 16px;text-align:center;color:#555}
+.gp-bar input[type=range]{width:160px;border:0;padding:0;background:none}
+.gp-bar .btn.on{background:#1A57AE;border-color:#1A57AE;color:#fff}
+body.gp-on{overflow:hidden}
+body.gp-on .tools{display:none}
+.at-cursor-bar{background:rgba(255,200,0,.22)}
+.at-cursor-beat{background:rgba(26,87,174,.85);width:3px}
+.at-highlight *{fill:#1A57AE;stroke:#1A57AE}
 svg.dia{display:block;width:100%;height:auto}
 .dia .fr{stroke:#CDD2C8;stroke-width:1.2}
 .dia .st{stroke:#9AA196;stroke-width:1.4}
@@ -390,7 +405,7 @@ function firstChord(s){
   return '';
 }
 function renderList(msg){
-  stopScroll(); trkStop(); S.cur=null; tools.className='tools hidden';
+  stopScroll(); trkStop(); gpClose(); S.cur=null; tools.className='tools hidden';
   var c=ghCfg(),last=c&&c.last?new Date(c.last):null;
   app.innerHTML='<div class="bar"><div class="bar-in"><div class="brand grow">Мой песенник</div>'+
     (c?'<button class="btn" data-act="pull">Обновить</button>':'')+
@@ -427,8 +442,8 @@ function renderSong(id){
   S.cur=id; S.shift=S.tr.hasOwnProperty(id)?S.tr[id]:(s.transpose||0);
   app.innerHTML='<div class="bar"><div class="bar-in"><button class="btn" data-act="home">‹ Песни</button><div class="grow" style="font-weight:600">'+esc(s.title||'')+'</div></div></div>'+
     '<div class="wrap"><h1>'+esc(s.title||'Без названия')+'</h1><p class="by">'+esc(s.artist||'')+(+s.capo?' · каподастр: '+(+s.capo)+' лад':'')+'</p>'+
-    '<div class="strip" id="strip"></div><div class="sheet" id="sheet"></div><div id="minus"></div></div>';
-  trkInit(s); fillSong(); renderTools(); window.scrollTo(0,0);
+    '<div class="strip" id="strip"></div><div class="sheet" id="sheet"></div><div id="gtpbox"></div><div id="minus"></div></div>';
+  trkInit(s); fillSong(); renderGtp(s); renderTools(); window.scrollTo(0,0);
 }
 function fillSong(){
   var s=find(S.cur); if(!s)return;
@@ -486,9 +501,9 @@ var TRK={el:null,url:'',id:null,marks:[],v:false,vStart:0,vPaused:0,cur:-1,raf:0
 function fmt(t){t=Math.max(0,Math.floor(t||0));var s=t%60;return Math.floor(t/60)+':'+(s<10?'0':'')+s}
 function hasMarks(){for(var i=0;i<TRK.marks.length;i++)if(TRK.marks[i]!=null)return true;return false}
 function vEnd(){var mx=0;for(var i=0;i<TRK.marks.length;i++)if(TRK.marks[i]!=null&&TRK.marks[i]>mx)mx=TRK.marks[i];return mx+5}
-function idbOpen(cb){try{var r=indexedDB.open('ipad-minus',1);r.onupgradeneeded=function(){r.result.createObjectStore('t')};r.onsuccess=function(){cb(r.result)};r.onerror=function(){cb(null)}}catch(e){cb(null)}}
-function idbGet(id,cb){idbOpen(function(db){if(!db)return cb(null);try{var q=db.transaction('t').objectStore('t').get(id);q.onsuccess=function(){cb(q.result||null)};q.onerror=function(){cb(null)}}catch(e){cb(null)}})}
-function idbPut(id,rec,cb){idbOpen(function(db){if(!db)return cb(false);try{var t=db.transaction('t','readwrite');t.objectStore('t').put(rec,id);t.oncomplete=function(){cb(true)};t.onerror=function(){cb(false)}}catch(e){cb(false)}})}
+function idbOpen(cb){try{var r=indexedDB.open('ipad-minus',2);r.onupgradeneeded=function(){var d=r.result;if(!d.objectStoreNames.contains('t'))d.createObjectStore('t');if(!d.objectStoreNames.contains('g'))d.createObjectStore('g')};r.onsuccess=function(){cb(r.result)};r.onerror=function(){cb(null)}}catch(e){cb(null)}}
+function idbGet(id,cb,st){st=st||'t';idbOpen(function(db){if(!db)return cb(null);try{var q=db.transaction(st).objectStore(st).get(id);q.onsuccess=function(){cb(q.result||null)};q.onerror=function(){cb(null)}}catch(e){cb(null)}})}
+function idbPut(id,rec,cb,st){st=st||'t';idbOpen(function(db){if(!db)return cb(false);try{var t=db.transaction(st,'readwrite');t.objectStore(st).put(rec,id);t.oncomplete=function(){cb(true)};t.onerror=function(){cb(false)}}catch(e){cb(false)}})}
 function trkStop(){
   if(TRK.el){try{TRK.el.pause()}catch(e){}}
   if(TRK.url){try{URL.revokeObjectURL(TRK.url)}catch(e){}}
@@ -575,6 +590,119 @@ function trkTools(){
   return '';
 }
 
+/* ---------- Guitar Pro files: downloaded from the GitHub repository, kept on this iPad, played with alphaTab 1.0.1 (ES5) ---------- */
+var GP={api:null,ctx:null,silent:null,profile:lsGet('ip.gpprofile')||'tab'};
+/* iOS 9 Safari only knows webkitAudioContext and keeps it silent until a tap: give it the standard name and remember it */
+(function(){
+  var W=window.webkitAudioContext,O=window.AudioContext;
+  if(!O&&W){window.AudioContext=function(){var c=new W();GP.ctx=c;return c};window.AudioContext.prototype=W.prototype}
+  else if(O){window.AudioContext=function(o){var c=o?new O(o):new O();GP.ctx=c;return c};window.AudioContext.prototype=O.prototype}
+})();
+function le32(v){return String.fromCharCode(v&255,(v>>8)&255,(v>>16)&255,(v>>24)&255)}
+function le16(v){return String.fromCharCode(v&255,(v>>8)&255)}
+/* wake the audio on the tap; a looping silent clip keeps the ring/silent switch from muting the music */
+function gpUnlock(){
+  var c=GP.ctx;
+  try{if(c){if(c.resume)c.resume();var b=c.createBuffer(1,1,22050),src=c.createBufferSource();src.buffer=b;src.connect(c.destination);if(src.start)src.start(0);else src.noteOn(0)}}catch(e){}
+  try{
+    if(!GP.silent){var n=4000,s='RIFF'+le32(36+n)+'WAVEfmt '+le32(16)+le16(1)+le16(1)+le32(8000)+le32(8000)+le16(1)+le16(8)+'data'+le32(n);for(var i=0;i<n;i++)s+=String.fromCharCode(128);GP.silent=new Audio('data:audio/wav;base64,'+btoa(s));GP.silent.loop=true}
+    GP.silent.play();
+  }catch(e){}
+}
+function gtpXhr(path,cb){
+  var c=ghCfg(); if(!c)return cb(null,'nogh');
+  var x=new XMLHttpRequest();
+  x.open('GET','https://api.github.com/repos/'+c.repo+'/contents/'+path.split('/').map(encodeURIComponent).join('/')+'?ts='+Date.now());
+  x.responseType='arraybuffer';
+  x.setRequestHeader('Authorization','token '+c.token);
+  x.setRequestHeader('Accept','application/vnd.github.v3.raw');
+  x.onload=function(){cb(x.status===200?x.response:null,x.status)};
+  x.onerror=function(){cb(null,0)};
+  x.send();
+}
+function gpFile(s,cb){
+  idbGet(s.id,function(rec){
+    if(rec&&rec.path===s.gtp.path)return cb(rec.buf);
+    if(!s.gtp.path||!ghCfg())return cb(rec?rec.buf:null,'nogh');
+    gtpXhr(s.gtp.path,function(buf,st){
+      if(!buf)return cb(rec?rec.buf:null,st);
+      idbPut(s.id,{buf:buf,path:s.gtp.path,name:s.gtp.name},function(){},'g');
+      cb(buf);
+    });
+  },'g');
+}
+function renderGtp(s){
+  var el=$('gtpbox'); if(!el)return;
+  if(!s.gtp){el.innerHTML='';return}
+  el.innerHTML='<div class="set"><h3>Табулатура Guitar Pro</h3><p class="note">'+esc(s.gtp.name||'')+'</p><button class="btn primary" data-act="gp-open">▶ GTP</button><p class="msg" id="gp-note"></p></div>';
+}
+function gpMsg(t){var m=$('gp-msg');if(m){m.textContent=t;m.className=t?'gp-msg':'gp-msg hidden'}}
+function gpLib(cb){
+  if(window.alphaTab)return cb(true);
+  var sc=document.createElement('script'); sc.src='alphatab/legacy/alphaTab.min.js';
+  sc.onload=function(){cb(!!window.alphaTab)}; sc.onerror=function(){cb(false)};
+  document.getElementsByTagName('head')[0].appendChild(sc);
+}
+function gpOpen(){
+  var s=find(S.cur); if(!s||!s.gtp)return;
+  var note=$('gp-note'); if(note){note.className='msg';note.textContent='Загружаю табулатуру…'}
+  stopScroll(); if(TRK.el)TRK.el.pause();
+  gpFile(s,function(buf,st){
+    if(!buf){
+      if(note){note.className='msg bad';note.textContent=st==='nogh'?'Подключите GitHub внизу списка песен: GTP-файлы загружаются оттуда.':(st===0?'Нет связи с GitHub. Откройте табулатуру, когда будет интернет: потом она будет открываться и без него.':'Не удалось скачать файл с GitHub (ошибка '+st+').')}
+      return;
+    }
+    if(note)note.textContent='';
+    gpShow(s,buf);
+  });
+}
+function gpShow(s,buf){
+  gpClose();
+  var ov=document.createElement('div'); ov.id='gpview'; ov.className='gpview';
+  ov.innerHTML='<div class="gp-top"><button class="btn" data-act="gp-close">✕</button><div class="grow gp-title" id="gp-title">'+esc(s.gtp.name||'')+'</div><select id="gp-track" class="hidden"></select></div>'+
+    '<div class="gp-wrap" id="gp-wrap"><p class="gp-msg" id="gp-msg">Загружаю проигрыватель…</p><div id="gp-at"></div></div>'+
+    '<div class="gp-bar"><button class="btn" data-act="gp-play" id="gp-play" disabled>▶</button><button class="btn" data-act="gp-stop">■</button>'+
+    '<span class="lbl tt" id="gp-time">0:00 / 0:00</span><span class="cap">Темп</span><input type="range" id="gp-speed" min="25" max="150" step="5" value="100"><b id="gp-speed-l">100%</b>'+
+    '<button class="btn" data-act="gp-metro" id="gp-metro">Метроном</button><button class="btn" data-act="gp-profile" id="gp-profile">'+(GP.profile==='tab'?'Ноты + табы':'Только табы')+'</button></div>';
+  document.body.appendChild(ov); document.body.className+=' gp-on';
+  gpLib(function(ok){
+    if(!ok){gpMsg('Не удалось загрузить проигрыватель. Откройте песенник один раз при включённом интернете.');return}
+    if(!$('gpview'))return;
+    gpMsg('Рисую табулатуру…');
+    var api=new alphaTab.AlphaTabApi($('gp-at'),{
+      core:{scriptFile:'alphatab/legacy/alphaTab.min.js',fontDirectory:'alphatab/font/'},
+      display:{layoutMode:alphaTab.LayoutMode.Page,staveProfile:GP.profile==='tab'?alphaTab.StaveProfile.Tab:alphaTab.StaveProfile.Default,scale:0.8},
+      player:{enablePlayer:true,soundFont:'alphatab/soundfont/sonivox.sf2',scrollElement:$('gp-wrap'),enableCursor:true}
+    });
+    GP.api=api;
+    api.scoreLoaded.on(function(score){
+      var t=$('gp-title'); if(t)t.textContent=[score.title,score.artist].filter(function(x){return x}).join(' — ')||s.gtp.name;
+      var sel=$('gp-track'); if(!sel)return;
+      var h='';for(var i=0;i<score.tracks.length;i++)h+='<option value="'+i+'">'+esc(score.tracks[i].name||('Дорожка '+(i+1)))+'</option>';
+      sel.innerHTML=h; sel.className=score.tracks.length>1?'':'hidden';
+    });
+    api.renderFinished.on(function(){gpMsg('')});
+    api.playerReady.on(function(){var b=$('gp-play');if(b)b.disabled=false});
+    api.playerStateChanged.on(function(e){var b=$('gp-play');if(b)b.textContent=e.state===1?'❚❚':'▶'});
+    api.playerPositionChanged.on(function(e){var t=$('gp-time');if(t)t.textContent=fmt(e.currentTime/1000)+' / '+fmt(e.endTime/1000)});
+    api.error.on(function(a,b){gpMsg('Не получилось открыть файл: '+((b&&b.message)||(a&&a.message)||a||'неизвестная ошибка'))});
+    api.load(new Uint8Array(buf));
+  });
+}
+function gpClose(){
+  if(GP.api){try{GP.api.stop()}catch(e){}try{GP.api.destroy()}catch(e){}GP.api=null}
+  var ov=$('gpview'); if(ov&&ov.parentNode)ov.parentNode.removeChild(ov);
+  document.body.className=document.body.className.replace(/\s*\bgp-on\b/g,'');
+  if(GP.silent){try{GP.silent.pause()}catch(e){}}
+}
+function gpPlay(){if(!GP.api)return;gpUnlock();GP.api.playPause()}
+function gpMetro(b){if(!GP.api)return;var on=b.className.indexOf(' on')<0;GP.api.metronomeVolume=on?1:0;b.className=on?'btn on':'btn'}
+function gpProfile(b){
+  GP.profile=GP.profile==='tab'?'all':'tab'; lsSet('ip.gpprofile',GP.profile);
+  b.textContent=GP.profile==='tab'?'Ноты + табы':'Только табы';
+  if(GP.api){GP.api.settings.display.staveProfile=GP.profile==='tab'?alphaTab.StaveProfile.Tab:alphaTab.StaveProfile.Default;GP.api.updateSettings();GP.api.render()}
+}
+
 /* ---------- autoscroll ---------- */
 var raf=0,lastT=0,acc=0;
 function tick(t){
@@ -593,6 +721,12 @@ document.addEventListener('click',function(e){
   if(a==='open')renderSong(b.getAttribute('data-id'));
   else if(a==='home')renderList();
   else if(a==='tag'){S.tag=b.getAttribute('data-t')||null;fillList()}
+  else if(a==='gp-open')gpOpen();
+  else if(a==='gp-close')gpClose();
+  else if(a==='gp-play')gpPlay();
+  else if(a==='gp-stop'){if(GP.api)GP.api.stop()}
+  else if(a==='gp-metro')gpMetro(b);
+  else if(a==='gp-profile')gpProfile(b);
   else if(a==='m-play')mPlay();
   else if(a==='v-play')vToggle();
   else if(a==='v-reset')vReset();
@@ -618,10 +752,12 @@ document.addEventListener('click',function(e){
 });
 document.addEventListener('change',function(e){
   if(e.target.id==='m-file'&&e.target.files&&e.target.files[0]){trkAdd(e.target.files[0]);e.target.value=''}
+  if(e.target.id==='gp-track'&&GP.api&&GP.api.score){var tr=GP.api.score.tracks[+e.target.value];if(tr)GP.api.renderTracks([tr])}
 });
 document.addEventListener('input',function(e){
   if(e.target.id==='q'){S.q=e.target.value;fillList()}
   else if(e.target.id==='speed'){S.speed=+e.target.value;lsSet('ip.speed',S.speed)}
+  else if(e.target.id==='gp-speed'){var v=+e.target.value;if(GP.api)GP.api.playbackSpeed=v/100;var l=$('gp-speed-l');if(l)l.textContent=v+'%'}
 });
 /* AppCache: switch to a freshly downloaded version on the next launch without asking */
 try{if(window.applicationCache)window.applicationCache.addEventListener('updateready',function(){try{window.applicationCache.swapCache()}catch(e){}})}catch(e){}
