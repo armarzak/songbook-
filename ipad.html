@@ -596,14 +596,18 @@ var GP={api:null,ctx:null,silent:null,profile:lsGet('ip.gpprofile')||'tab'};
 var BASE_URL=location.href.replace(/[?#].*$/,'').replace(/[^/]*$/,'');
 /* iOS 9 Safari only knows webkitAudioContext and keeps it silent until a tap: give it the standard name and remember it */
 (function(){
-  var W=window.webkitAudioContext,O=window.AudioContext;
-  if(!O&&W){window.AudioContext=function(){var c=new W();GP.ctx=c;return c};window.AudioContext.prototype=W.prototype}
-  else if(O){window.AudioContext=function(o){var c=o?new O(o):new O();GP.ctx=c;return c};window.AudioContext.prototype=O.prototype}
+  var K=window.AudioContext||window.webkitAudioContext; if(!K)return; GP.K=K;
+  window.AudioContext=function(){
+    if(GP.ctx&&GP.ctx.state!=='closed')return GP.ctx;
+    var c=new K(); GP.ctx=c; return c;
+  };
+  window.AudioContext.prototype=K.prototype;
 })();
 function le32(v){return String.fromCharCode(v&255,(v>>8)&255,(v>>16)&255,(v>>24)&255)}
 function le16(v){return String.fromCharCode(v&255,(v>>8)&255)}
 /* wake the audio on the tap; a looping silent clip keeps the ring/silent switch from muting the music */
 function gpUnlock(){
+  if((!GP.ctx||GP.ctx.state==='closed')&&GP.K){try{GP.ctx=new GP.K()}catch(e){}}
   var c=GP.ctx;
   try{if(c){if(c.resume)c.resume();var b=c.createBuffer(1,1,22050),src=c.createBufferSource();src.buffer=b;src.connect(c.destination);if(src.start)src.start(0);else src.noteOn(0)}}catch(e){}
   try{
@@ -647,6 +651,7 @@ function gpLib(cb){
 }
 function gpOpen(){
   var s=find(S.cur); if(!s||!s.gtp)return;
+  gpUnlock();
   var note=$('gp-note'); if(note){note.className='msg';note.textContent='Загружаю табулатуру…'}
   stopScroll(); if(TRK.el)TRK.el.pause();
   gpFile(s,function(buf,st){
@@ -685,8 +690,8 @@ function gpShow(s,buf){
     });
     api.renderFinished.on(function(){gpMsg('')});
     api.playerReady.on(function(){var b=$('gp-play');if(b)b.disabled=false});
-    api.playerStateChanged.on(function(e){var b=$('gp-play');if(b)b.textContent=e.state===1?'❚❚':'▶'});
-    api.playerPositionChanged.on(function(e){var t=$('gp-time');if(t)t.textContent=fmt(e.currentTime/1000)+' / '+fmt(e.endTime/1000)});
+    api.playerStateChanged.on(function(e){GP.state=e.state;var b=$('gp-play');if(b)b.textContent=e.state===1?'❚❚':'▶'});
+    api.playerPositionChanged.on(function(e){GP.pos=e.currentTime;var t=$('gp-time');if(t)t.textContent=fmt(e.currentTime/1000)+' / '+fmt(e.endTime/1000)});
     api.error.on(function(a,b){gpMsg('Не получилось открыть файл: '+((b&&b.message)||(a&&a.message)||a||'неизвестная ошибка'))});
     api.load(new Uint8Array(buf));
   });
@@ -697,7 +702,12 @@ function gpClose(){
   document.body.className=document.body.className.replace(/\s*\bgp-on\b/g,'');
   if(GP.silent){try{GP.silent.pause()}catch(e){}}
 }
-function gpPlay(){if(!GP.api)return;gpUnlock();GP.api.playPause()}
+function gpPlay(){
+  if(!GP.api)return;
+  gpUnlock(); GP.api.playPause();
+  var start=GP.pos||0;
+  setTimeout(function(){if(GP.api&&GP.state===1&&(GP.pos||0)===start)gpMsg('Звук не пошёл: iPad не запустил звуковой движок. Нажмите ■, затем ▶ ещё раз. Если не помогает, закройте проигрыватель, проверьте громкость и откройте снова.')},4000);
+}
 function gpMetro(b){if(!GP.api)return;var on=b.className.indexOf(' on')<0;GP.api.metronomeVolume=on?1:0;b.className=on?'btn on':'btn'}
 function gpProfile(b){
   GP.profile=GP.profile==='tab'?'all':'tab'; lsSet('ip.gpprofile',GP.profile);
