@@ -1969,8 +1969,9 @@ const G={id:null,file:null}; // the open song's file, ready in memory so sharing
 async function gtpLoad(s){
   G.id=s.id; G.file=null;
   if(!trackCan()||!s.gtp)return;
-  const rec=await fileGet('gtp',s.id);
-  if(rec&&G.id===s.id)G.file=new File([rec.buf],rec.name);
+  let rec=await fileGet('gtp',s.id);
+  if(!rec&&s.gtp.path)rec=await gtpFetch(s);
+  if(rec&&G.id===s.id){G.file=new File([rec.buf],rec.name);if(S.cur===s.id&&S.view==='song')fillSong()}
 }
 async function gtpAdd(file){
   const s=findSong(S.cur); if(!s||s.demo)return;
@@ -1980,6 +1981,7 @@ async function gtpAdd(file){
   catch(e){const n=e&&e.name||'';toast(n==='QuotaExceededError'?'Не хватило места на устройстве.':'Не получилось сохранить файл'+(n?' ('+n+')':'')+'.');return}
   try{await store.patch(s.id,{gtp:{name:file.name,size:file.size},updatedAt:Date.now()})}catch(e){saveErr(e);return}
   closeSheet(); await gtpLoad(findSong(s.id)); fillSong(); toast('GTP-файл добавлен');
+  if(ghOn())gtpUpload(s.id);
 }
 function gtpDownload(f){const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000)}
 /* iOS opens a file in another app only through the share sheet: pick Guitar Pro there */
@@ -1988,7 +1990,7 @@ function gtpOpen(){
   if(!G.file){
     sheet.innerHTML=`<div class="panel" role="dialog" aria-label="GTP-файл">
       <div class="panel-top"><h2 class="ptitle">GTP-файл</h2><button class="btn" data-act="close">Закрыть</button></div>
-      <p class="hint">${trackCan()?`Файл «${esc(s.gtp.name)}» добавлен на другом устройстве. Файлы хранятся там, куда их добавили: выберите его и здесь.`:'GTP-файлы открываются в приложении с экрана «Домой».'}</p>
+      <p class="hint">${!trackCan()?'GTP-файлы открываются в приложении с экрана «Домой».':s.gtp.path&&!ghOn()?`Файл «${esc(s.gtp.name)}» хранится на GitHub. Подключите синхронизацию с GitHub (Песни → внизу), и он скачается сам.`:s.gtp.path?`Не получилось скачать «${esc(s.gtp.name)}» с GitHub. Проверьте интернет и откройте песню снова, или выберите файл вручную.`:`Файл «${esc(s.gtp.name)}» добавлен на другом устройстве и ещё не загружен на GitHub. На том устройстве нажмите Песни → «Синхронизировать сейчас», или выберите файл здесь.`}</p>
       ${trackCan()?`<div class="menu">${gtpPicker('Выбрать GTP-файл')}</div>`:''}</div>`;
     sheet.hidden=false; return;
   }
@@ -2002,7 +2004,8 @@ function gtpOpen(){
 async function gtpRemove(btn){
   if(btn.dataset.sure!=='1'){btn.dataset.sure='1';btn.lastChild.textContent='Точно удалить GTP-файл?';return}
   const s=findSong(S.cur); if(!s)return;
-  await fileDel('gtp',s.id); G.file=null;
+  const ghPath=s.gtp&&s.gtp.path;
+  await fileDel('gtp',s.id); G.file=null; gtpGhDelete(ghPath);
   try{await store.patch(s.id,{gtp:null,updatedAt:Date.now()})}catch(e){saveErr(e)}
   closeSheet(); fillSong(); toast('GTP-файл удалён');
 }
@@ -2076,6 +2079,48 @@ function gpProfile(btn){
   if(AT.api){AT.api.settings.display.staveProfile=AT.profile==='Tab'?alphaTab.StaveProfile.Tab:alphaTab.StaveProfile.Default;AT.api.updateSettings();AT.api.render()}
 }
 function gpMetro(btn){if(!AT.api)return;const on=btn.getAttribute('aria-pressed')!=='true';AT.api.metronomeVolume=on?1:0;btn.setAttribute('aria-pressed',String(on))}
+
+/* ---------- Guitar Pro files also live in the GitHub repository (gtp/<song id>.<ext>), so every device gets them ---------- */
+function bufToB64(buf){const u=new Uint8Array(buf);let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)}
+async function ghFileSha(path){try{return (await ghFetch('/contents/'+path+'?ts='+Date.now())).sha}catch(e){if(e.status===404)return null;throw e}}
+async function ghGetRaw(path){
+  const r=await fetch('https://api.github.com/repos/'+GH.cfg.repo+'/contents/'+path+'?ts='+Date.now(),{cache:'no-store',
+    headers:{Authorization:'Bearer '+GH.cfg.token,Accept:'application/vnd.github.raw','X-GitHub-Api-Version':'2022-11-28'}});
+  if(!r.ok){const e=new Error('github '+r.status);e.status=r.status;throw e}
+  return r.arrayBuffer();
+}
+const gtpBusy=new Set();
+async function gtpUpload(id,quiet){
+  if(!ghOn()||gtpBusy.has(id))return false;
+  const s=findSong(id),rec=await fileGet('gtp',id); if(!s||!s.gtp||!rec)return false;
+  gtpBusy.add(id);
+  try{
+    const ext=((rec.name||'').split('.').pop()||'gp').toLowerCase().replace(/[^a-z0-9]/g,'')||'gp';
+    const path='gtp/'+id+'.'+ext,sha=await ghFileSha(path);
+    await ghFetch('/contents/'+path,{method:'PUT',body:JSON.stringify({message:'Песенник: GTP «'+(s.title||'')+'»',content:bufToB64(rec.buf),...(sha?{sha}:{})})});
+    const cur=findSong(id); if(cur&&cur.gtp)await store.patch(id,{gtp:{...cur.gtp,path},updatedAt:Date.now()});
+    if(!quiet)toast('GTP-файл сохранён на GitHub');
+    return true;
+  }catch(e){if(!quiet)toast('Не удалось загрузить GTP-файл на GitHub: '+ghErrText(e));return false}
+  finally{gtpBusy.delete(id)}
+}
+async function gtpFetch(s){
+  if(!ghOn()||!s.gtp||!s.gtp.path||navigator.onLine===false)return null;
+  try{
+    const buf=await ghGetRaw(s.gtp.path);
+    const rec={buf,name:s.gtp.name,size:buf.byteLength,added:Date.now()};
+    await filePut('gtp',s.id,rec); return rec;
+  }catch(e){toast('Не удалось скачать GTP-файл с GitHub: '+(e.status?ghErrText(e):'нет связи'));return null}
+}
+async function gtpGhDelete(path){
+  if(!ghOn()||!path)return;
+  try{const sha=await ghFileSha(path);if(sha)await ghFetch('/contents/'+path,{method:'DELETE',body:JSON.stringify({message:'Песенник: GTP удалён',sha})})}catch{}
+}
+/* after a sync: upload Guitar Pro files that so far live only on this device */
+async function gtpPending(){
+  if(!ghOn())return;
+  for(const s of S.songs.filter(x=>x.gtp&&!x.gtp.path)){if(await fileGet('gtp',s.id))await gtpUpload(s.id,true)}
+}
 
 /* ---------- tags ---------- */
 const DEFAULT_TAGS=['костёр','медленные','разучиваю'];
@@ -2256,7 +2301,7 @@ function renderSong(id,keepScroll){
     <div id="videobox"></div>
   </div>`;
   fillSong(); renderTools();
-  if(G.id!==id&&!s.demo)gtpLoad(s);
+  if((G.id!==id||(!G.file&&s.gtp&&s.gtp.path&&!G.fetching))&&!s.demo){G.fetching=true;gtpLoad(s).finally(()=>{G.fetching=false})}
   if(TR.id!==id&&!s.demo)trackLoad(s);
   else if(TR.id===id){const m=Array.isArray(s.marks)?s.marks:[];if(!TR.marking&&JSON.stringify(m)!==JSON.stringify(TR.marks)){TR.marks=m.slice();renderTools()}}
   document.body.classList.add('has-tools');
@@ -2818,6 +2863,7 @@ async function ghSync(report){
       catch(e){if((e.status===409||e.status===422)&&attempt<2)continue;throw e}  // changed on another device meanwhile: merge again
     }
     GH.cfg.last=Date.now(); lsSet('sb.gh',JSON.stringify(GH.cfg)); ghStatus('',false);
+    setTimeout(gtpPending,0);
     if(report){const n=S.songs.length,m=S.songs.filter(x=>Array.isArray(x.marks)&&x.marks.some(v=>v!=null)).length;
       toast('Синхронизировано с GitHub: '+n+' '+plural(n,'песня','песни','песен')+(m?', с разметкой: '+m:''))}
   }catch(e){ghStatus(ghErrText(e),true)}
