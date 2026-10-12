@@ -2013,8 +2013,9 @@ async function gtpRemove(btn){
 const gtpPicker=label=>`<label class="btn" for="gtp-file">${ICON.dia}${label}</label><input type="file" id="gtp-file" class="vh">`;
 function gtpMenu(s){
   if(s.demo||!trackCan())return '';
-  if(!s.gtp)return gtpPicker('Добавить GTP-файл');
-  return gtpPicker(G.file?'Заменить GTP-файл':'Выбрать GTP-файл')+(G.file?`<button class="btn danger" data-act="gtp-del">${ICON.trash}<span>Удалить GTP-файл</span></button>`:'');
+  const fromGh=ghOn()?`<button class="btn" data-act="gtp-gh">${ICON.dia}Выбрать GTP с GitHub</button>`:'';
+  if(!s.gtp)return gtpPicker('Добавить GTP-файл')+fromGh;
+  return gtpPicker(G.file?'Заменить GTP-файл':'Выбрать GTP-файл')+fromGh+(G.file?`<button class="btn danger" data-act="gtp-del">${ICON.trash}<span>Удалить GTP-файл</span></button>`:'');
 }
 
 /* ---------- playing a Guitar Pro file inside the songbook: alphaTab, bundled next to the app in alphatab/ ---------- */
@@ -2080,14 +2081,31 @@ function gpProfile(btn){
 }
 function gpMetro(btn){if(!AT.api)return;const on=btn.getAttribute('aria-pressed')!=='true';AT.api.metronomeVolume=on?1:0;btn.setAttribute('aria-pressed',String(on))}
 
-/* ---------- Guitar Pro files also live in the GitHub repository (gtp/<song id>.<ext>), so every device gets them ---------- */
+/* ---------- Guitar Pro files also live in the GitHub repository, named after the song: gtp/<artist> - <title>.<ext>
+   so a song deleted and added again finds its file by name ---------- */
 function bufToB64(buf){const u=new Uint8Array(buf);let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)}
-async function ghFileSha(path){try{return (await ghFetch('/contents/'+path+'?ts='+Date.now())).sha}catch(e){if(e.status===404)return null;throw e}}
+const encPath=p=>p.split('/').map(encodeURIComponent).join('/');
+async function ghFileSha(path){try{return (await ghFetch('/contents/'+encPath(path)+'?ts='+Date.now())).sha}catch(e){if(e.status===404)return null;throw e}}
 async function ghGetRaw(path){
-  const r=await fetch('https://api.github.com/repos/'+GH.cfg.repo+'/contents/'+path+'?ts='+Date.now(),{cache:'no-store',
+  const r=await fetch('https://api.github.com/repos/'+GH.cfg.repo+'/contents/'+encPath(path)+'?ts='+Date.now(),{cache:'no-store',
     headers:{Authorization:'Bearer '+GH.cfg.token,Accept:'application/vnd.github.raw','X-GitHub-Api-Version':'2022-11-28'}});
   if(!r.ok){const e=new Error('github '+r.status);e.status=r.status;throw e}
   return r.arrayBuffer();
+}
+function gtpSlug(s){
+  const base=[s.artist,s.title].map(x=>(x||'').trim()).filter(Boolean).join(' - ')||s.id;
+  return base.toLowerCase().replace(/[\\/:*?"<>|#%\u0000-\u001f]/g,'').replace(/\s+/g,' ').trim().slice(0,90)||s.id;
+}
+const gtpExt=name=>((name||'').split('.').pop()||'gp').toLowerCase().replace(/[^a-z0-9]/g,'')||'gp';
+const gtpPathFor=(s,name)=>'gtp/'+gtpSlug(s)+'.'+gtpExt(name);
+const gtpBase=name=>name.toLowerCase().replace(/\.[^.]+$/,'');
+/* the files in gtp/, listed at most once a minute */
+async function gtpList(force){
+  if(!ghOn())return [];
+  if(!force&&GH.gtpList&&Date.now()-GH.gtpListAt<60000)return GH.gtpList;
+  try{const r=await ghFetch('/contents/gtp?ts='+Date.now());GH.gtpList=Array.isArray(r)?r.filter(x=>x.type==='file').map(x=>({name:x.name,path:x.path,size:x.size})):[]}
+  catch(e){GH.gtpList=e.status===404?[]:(GH.gtpList||[])}
+  GH.gtpListAt=Date.now(); return GH.gtpList;
 }
 const gtpBusy=new Set();
 async function gtpUpload(id,quiet){
@@ -2095,10 +2113,11 @@ async function gtpUpload(id,quiet){
   const s=findSong(id),rec=await fileGet('gtp',id); if(!s||!s.gtp||!rec)return false;
   gtpBusy.add(id);
   try{
-    const ext=((rec.name||'').split('.').pop()||'gp').toLowerCase().replace(/[^a-z0-9]/g,'')||'gp';
-    const path='gtp/'+id+'.'+ext,sha=await ghFileSha(path);
-    await ghFetch('/contents/'+path,{method:'PUT',body:JSON.stringify({message:'Песенник: GTP «'+(s.title||'')+'»',content:bufToB64(rec.buf),...(sha?{sha}:{})})});
+    const path=gtpPathFor(s,rec.name),old=s.gtp.path,sha=await ghFileSha(path);
+    await ghFetch('/contents/'+encPath(path),{method:'PUT',body:JSON.stringify({message:'Песенник: GTP «'+(s.title||'')+'»',content:bufToB64(rec.buf),...(sha?{sha}:{})})});
     const cur=findSong(id); if(cur&&cur.gtp)await store.patch(id,{gtp:{...cur.gtp,path},updatedAt:Date.now()});
+    if(old&&old!==path)gtpGhDelete(old); // the file used to be named by the song's number
+    GH.gtpList=null;
     if(!quiet)toast('GTP-файл сохранён на GitHub');
     return true;
   }catch(e){if(!quiet)toast('Не удалось загрузить GTP-файл на GitHub: '+ghErrText(e));return false}
@@ -2114,12 +2133,41 @@ async function gtpFetch(s){
 }
 async function gtpGhDelete(path){
   if(!ghOn()||!path)return;
-  try{const sha=await ghFileSha(path);if(sha)await ghFetch('/contents/'+path,{method:'DELETE',body:JSON.stringify({message:'Песенник: GTP удалён',sha})})}catch{}
+  try{const sha=await ghFileSha(path);if(sha)await ghFetch('/contents/'+encPath(path),{method:'DELETE',body:JSON.stringify({message:'Песенник: GTP удалён',sha})})}catch{}
+  GH.gtpList=null;
 }
-/* after a sync: upload Guitar Pro files that so far live only on this device */
+/* a song without a GTP file picks up the one named after it */
+async function gtpAutoAttach(s,list){
+  if(!ghOn()||!s||s.demo||s.gtp||navigator.onLine===false)return false;
+  list=list||await gtpList();
+  const slug=gtpSlug(s),hit=list.find(f=>gtpBase(f.name)===slug);
+  if(!hit)return false;
+  await store.patch(s.id,{gtp:{name:hit.name,size:hit.size,path:hit.path},updatedAt:Date.now()});
+  return true;
+}
+/* after a sync: upload files that live only here, rename ones still named by number, attach files to re-added songs */
 async function gtpPending(){
   if(!ghOn())return;
-  for(const s of S.songs.filter(x=>x.gtp&&!x.gtp.path)){if(await fileGet('gtp',s.id))await gtpUpload(s.id,true)}
+  for(const s of S.songs.filter(x=>x.gtp&&(!x.gtp.path||x.gtp.path!==gtpPathFor(x,x.gtp.name)))){if(await fileGet('gtp',s.id))await gtpUpload(s.id,true)}
+  const list=await gtpList(true); let n=0;
+  for(const s of S.songs.filter(x=>!x.gtp))if(await gtpAutoAttach(s,list))n++;
+  if(n)toast('GTP-файлы подключены к песням: '+n);
+}
+/* pick any file from gtp/ by hand, e.g. one left from a deleted song */
+async function gtpPickGh(){
+  sheet.innerHTML=`<div class="panel" role="dialog" aria-label="GTP-файлы на GitHub"><div class="panel-top"><h2 class="ptitle">GTP на GitHub</h2><button class="btn" data-act="close">Закрыть</button></div><p class="hint">Загружаю список…</p></div>`;
+  sheet.hidden=false;
+  const list=await gtpList(true);
+  const box=sheet.querySelector('.panel'); if(!box)return;
+  box.innerHTML=`<div class="panel-top"><h2 class="ptitle">GTP на GitHub</h2><button class="btn" data-act="close">Закрыть</button></div>
+    ${list.length?`<div class="menu">${list.map(f=>`<button class="btn" data-act="gtp-attach" data-p="${esc(f.path)}" data-n="${esc(f.name)}" data-z="${f.size||0}">${ICON.dia}<span>${esc(f.name)}</span></button>`).join('')}</div>`
+      :'<p class="hint">В репозитории пока нет GTP-файлов.</p>'}`;
+}
+async function gtpAttach(btn){
+  const s=findSong(S.cur); if(!s)return;
+  try{await store.patch(s.id,{gtp:{name:btn.dataset.n,size:+btn.dataset.z||0,path:btn.dataset.p},updatedAt:Date.now()})}catch(e){saveErr(e);return}
+  await fileDel('gtp',s.id); G.id=null; closeSheet();
+  await gtpLoad(findSong(s.id)); fillSong(); toast('GTP-файл подключён');
 }
 
 /* ---------- tags ---------- */
@@ -2302,6 +2350,7 @@ function renderSong(id,keepScroll){
   </div>`;
   fillSong(); renderTools();
   if((G.id!==id||(!G.file&&s.gtp&&s.gtp.path&&!G.fetching))&&!s.demo){G.fetching=true;gtpLoad(s).finally(()=>{G.fetching=false})}
+  if(!s.gtp&&!s.demo&&G.autoId!==id){G.autoId=id;gtpAutoAttach(s).then(ok=>{if(ok&&S.cur===id){G.id=null;gtpLoad(findSong(id)).then(()=>{fillSong();toast('Нашёл GTP-файл для этой песни на GitHub')})}})}
   if(TR.id!==id&&!s.demo)trackLoad(s);
   else if(TR.id===id){const m=Array.isArray(s.marks)?s.marks:[];if(!TR.marking&&JSON.stringify(m)!==JSON.stringify(TR.marks)){TR.marks=m.slice();renderTools()}}
   document.body.classList.add('has-tools');
@@ -2698,6 +2747,8 @@ document.addEventListener('click',e=>{
   else if(a==='gp-profile')gpProfile(b);
   else if(a==='gtp-dl'){if(G.file)gtpDownload(G.file);else gtpOpen()}
   else if(a==='gtp-del')gtpRemove(b);
+  else if(a==='gtp-gh')gtpPickGh();
+  else if(a==='gtp-attach')gtpAttach(b);
   else if(a==='v-play')vToggle();
   else if(a==='v-reset')vReset();
   else if(a==='t-mark')markStart();
