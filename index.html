@@ -466,8 +466,9 @@ body.stage .video{display:none}
 .mk-btns .mk-main{flex:1;font-size:17px}
 .menu label.btn{justify-content:flex-start;min-height:48px}
 .menu .hint{margin:2px 2px 0}
-.gtpbtn{display:inline-flex;align-items:center;gap:5px;border:0;cursor:pointer;background:var(--accent);color:var(--on-accent);font:800 13px var(--f-body);letter-spacing:.06em}
-.gtpbtn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2}
+.gtpname{display:flex;align-items:center;gap:8px;margin:4px 0 0;font:600 15px var(--f-mono);color:var(--fg);word-break:break-all}
+.gtpname svg{width:18px;height:18px;flex:0 0 auto;fill:none;stroke:var(--accent);stroke-width:1.8}
+.gtpbtn{font-weight:700}
 .tagbar{display:flex;flex-wrap:wrap;gap:6px;margin-block:2px 6px}
 .tagbar:empty{display:none}
 .tchip{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:6px 12px;font:500 14px var(--f-body);display:inline-flex;align-items:center;gap:6px}
@@ -1948,7 +1949,7 @@ async function gtpLoad(s){
   G.id=s.id; G.file=null;
   if(!trackCan()||!s.gtp)return;
   const rec=await fileGet('gtp',s.id);
-  if(rec&&G.id===s.id)G.file=new File([rec.buf],rec.name,{type:'application/octet-stream'});
+  if(rec&&G.id===s.id)G.file=new File([rec.buf],rec.name);
 }
 async function gtpAdd(file){
   const s=findSong(S.cur); if(!s||s.demo)return;
@@ -2167,6 +2168,7 @@ function renderSong(id,keepScroll){
     </div>
     <div class="strip" id="strip"></div>
     <div class="sheet-body" id="body" style="--fs:${S.stage?S.sfs:S.fs}px"></div>
+    <div id="gtpbox"></div>
     <div id="videobox"></div>
   </div>`;
   fillSong(); renderTools();
@@ -2197,6 +2199,12 @@ function fillSong(){
   bodyEl.innerHTML=html||'<div class="ln ly">Текст песни пока пустой.</div>';
   bodyEl.classList.toggle('plain',plain);
   document.getElementById('strip').hidden=plain;
+  const gb=document.getElementById('gtpbox'); if(gb)gb.innerHTML=s.gtp?`<section class="video gtpsec">
+    <h3 class="sec-h">Табулатура Guitar Pro</h3>
+    <p class="gtpname">${ICON.dia}<span>${esc(s.gtp.name)}</span></p>
+    <div class="vlinks"><button class="btn primary gtpbtn" data-act="gtp-open">GTP · Открыть в Guitar Pro</button><button class="btn" data-act="gtp-dl">Скачать файл</button></div>
+    <p class="hint">В меню «Поделиться» выберите Guitar Pro. Если его нет в ряду приложений, пролистайте ряд вправо и нажмите «Ещё», либо нажмите «Сохранить в Файлы» и откройте файл из Guitar Pro.</p>
+  </section>`:'';
   const vb=document.getElementById('videobox'); if(vb&&vb.dataset.v!==(s.video||'')){vb.dataset.v=s.video||'';vb.innerHTML=videoHtml(s)}
   document.getElementById('strip').innerHTML=seen.map(n=>{
     const v=getVoicings(n).list[0];
@@ -2205,7 +2213,6 @@ function fillSong(){
   (s.tags||[]).forEach(t=>meta.push(`<button class="pill tagpill" data-act="tagfilter" data-t="${esc(t)}">${esc(t)}</button>`));
   if(+s.capo)meta.push(`<span class="pill">Каподастр: ${+s.capo} лад</span>`);
   if(S.shift)meta.push(`<span class="pill">Тональность сдвинута на ${S.shift>0?'+':''}${S.shift}</span>`);
-  if(s.gtp)meta.unshift(`<button class="pill gtpbtn" data-act="gtp-open" aria-label="Открыть GTP-файл ${esc(s.gtp.name)}">${ICON.dia}GTP</button>`);
   if(s.track)meta.push(`<span class="pill">Минус: ${fmtTime(s.track.dur)}</span>`);
   const nMarks=Array.isArray(s.marks)?s.marks.filter(x=>x!=null).length:0;
   if(nMarks)meta.push(`<span class="pill">Разметка: ${nMarks} ${plural(nMarks,'строка','строки','строк')}</span>`);
@@ -2554,6 +2561,7 @@ document.addEventListener('click',e=>{
   else if(a==='import')renderImport();
   else if(a==='t-play')trackToggle();
   else if(a==='gtp-open')gtpOpen();
+  else if(a==='gtp-dl'){if(G.file)gtpDownload(G.file);else gtpOpen()}
   else if(a==='gtp-del')gtpRemove(b);
   else if(a==='v-play')vToggle();
   else if(a==='v-reset')vReset();
