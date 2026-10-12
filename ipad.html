@@ -513,7 +513,7 @@ function trkStop(){
 function trkInit(s){
   trkStop(); TRK.id=s.id; TRK.marks=(s.marks&&s.marks.length?s.marks:[]).slice();
   renderMinus(s);
-  idbGet(s.id,function(rec){if(rec&&TRK.id===s.id&&S.cur===s.id){trkUse(rec);renderTools();renderMinus(s)}});
+  idbGet(s.id,function(rec){if(rec&&TRK.id===s.id&&S.cur===s.id){TRK.stale=!!(s.track&&s.track.path&&rec.dur!=null&&s.track.dur!=null&&rec.dur!==s.track.dur);trkUse(rec);renderTools();renderMinus(s)}});
 }
 function trkUse(rec){
   TRK.url=URL.createObjectURL(new Blob([rec.buf],{type:rec.type||'audio/mp4'}));
@@ -539,13 +539,42 @@ function trkAdd(file){
 }
 function renderMinus(s,msg){
   var el=$('minus'); if(!el)return;
-  var h='<div class="set"><h3>Минус</h3>';
-  if(TRK.el)h+='<p class="note">Минус на этом iPad'+(TRK.name?': '+esc(TRK.name):'')+'. Играйте его кнопкой ▶ внизу, '+(hasMarks()?'текст пойдёт по разметке.':'текст плавно пойдёт за ним.')+'</p>';
-  else if(s.track)h+='<p class="note">Минус «'+esc(s.track.name)+'» добавлен на айфоне: файлы минусов хранятся там, куда их добавили.'+(hasMarks()?' Разметка есть: кнопка ▶ «по разметке» внизу ведёт текст без звука.':'')+'</p>';
+  var h='<div class="set"><h3>Минус</h3>',sent=s.track&&s.track.path;
+  if(TRK.el){
+    h+='<p class="note">Минус на этом iPad'+(TRK.name?': '+esc(TRK.name):'')+'. Играйте его кнопкой ▶ внизу, '+(hasMarks()?'текст пойдёт по разметке.':'текст плавно пойдёт за ним.')+'</p>';
+    if(sent&&TRK.stale)h+='<p class="note">На айфоне минус заменили новым.</p><button class="btn primary" data-act="m-dl">Скачать новую версию</button>';
+  }
+  else if(sent)h+='<p class="note">Минус «'+esc(s.track.name)+'» отправлен с айфона. Скачайте его один раз: дальше он будет играть и без интернета.</p><button class="btn primary" data-act="m-dl">Скачать минус</button>';
+  else if(s.track)h+='<p class="note">Минус «'+esc(s.track.name)+'» есть на айфоне. Чтобы он был и здесь, на айфоне в этой песне нажмите «⋯» → «Отправить минус на iPad».'+(hasMarks()?' А пока кнопка ▶ «по разметке» внизу ведёт текст без звука.':'')+'</p>';
   else if(hasMarks())h+='<p class="note">Есть разметка строк: кнопка ▶ «по разметке» внизу ведёт текст без звука.</p>';
-  h+='<label class="btn" for="m-file">'+(TRK.el?'Заменить минус':'Добавить минус с этого iPad')+'</label><input type="file" id="m-file" accept="audio/*" class="vh">';
-  if(msg)h+='<p class="msg">'+esc(msg)+'</p>';
+  h+='<p class="msg" id="m-prog">'+esc(msg||'')+'</p>';
   el.innerHTML=h+'</div>';
+}
+/* download a minus sent from the iPhone and keep it on this iPad */
+function trkDownload(){
+  var s=find(S.cur); if(!s||!s.track||!s.track.path)return;
+  var c=ghCfg(); if(!c){renderMinus(s,'Подключите GitHub внизу списка песен.');return}
+  var x=new XMLHttpRequest();
+  x.open('GET','https://api.github.com/repos/'+c.repo+'/contents/'+s.track.path.split('/').map(encodeURIComponent).join('/')+'?ts='+Date.now());
+  x.responseType='arraybuffer';
+  x.setRequestHeader('Authorization','token '+c.token);
+  x.setRequestHeader('Accept','application/vnd.github.v3.raw');
+  x.onprogress=function(e){var p=$('m-prog');if(p)p.textContent='Скачиваю минус… '+(e.lengthComputable?Math.round(e.loaded*100/e.total)+'%':Math.round(e.loaded/1024)+' КБ')};
+  x.onload=function(){
+    if(x.status!==200){renderMinus(s,x.status===401?'GitHub не принял токен. Подключите GitHub заново внизу списка песен.':'Не удалось скачать минус (ошибка '+x.status+').');return}
+    var ext=s.track.path.split('.').pop().toLowerCase();
+    var type={m4a:'audio/mp4',mp3:'audio/mpeg',wav:'audio/wav',aac:'audio/aac',aif:'audio/aiff',aiff:'audio/aiff'}[ext]||'audio/mp4';
+    var rec={buf:x.response,type:type,name:s.track.name,path:s.track.path,dur:s.track.dur};
+    idbPut(s.id,rec,function(ok){
+      if(S.cur!==s.id)return;
+      trkStop(); TRK.id=s.id; TRK.marks=(s.marks&&s.marks.length?s.marks:[]).slice(); TRK.stale=false;
+      trkUse(rec); renderTools();
+      renderMinus(s,ok?'Минус скачан и сохранён на iPad.':'Минус скачан, но сохранить его на iPad не получилось: он будет играть, пока открыт песенник.');
+    });
+  };
+  x.onerror=function(){renderMinus(s,'Нет связи с GitHub. Попробуйте, когда будет интернет.')};
+  x.send();
+  var p=$('m-prog'); if(p)p.textContent='Скачиваю минус…';
 }
 function trkTime(){return TRK.el?TRK.el.currentTime:(TRK.v?(Date.now()-TRK.vStart)/1000:TRK.vPaused)}
 function trkPlaying(){return TRK.el?!TRK.el.paused:TRK.v}
@@ -740,6 +769,7 @@ document.addEventListener('click',function(e){
   else if(a==='gp-metro')gpMetro(b);
   else if(a==='gp-profile')gpProfile(b);
   else if(a==='m-play')mPlay();
+  else if(a==='m-dl')trkDownload();
   else if(a==='v-play')vToggle();
   else if(a==='v-reset')vReset();
   else if(a==='chord')openChord(b.getAttribute('data-c'));

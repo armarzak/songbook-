@@ -1886,12 +1886,15 @@ async function trackAdd(file){
     toast(n==='QuotaExceededError'?'Не хватило места на устройстве для этого файла.':'Не получилось сохранить минус'+(n?' ('+n+')':'')+'. Напишите мне этот текст.');
     return;
   }
+  const sentPath=s.track&&s.track.path;
   try{await store.patch(s.id,{track:{name:file.name,dur:Math.round(dur)},updatedAt:Date.now()})}catch(e){saveErr(e);return}
   closeSheet(); await trackLoad(findSong(s.id)); toast('Минус добавлен');
+  if(sentPath&&ghOn())trackSend(s.id);
 }
 async function trackRemove(btn){
   if(btn.dataset.sure!=='1'){btn.dataset.sure='1';btn.lastChild.textContent='Точно удалить минус?';return}
   const s=findSong(S.cur); if(!s)return;
+  if(s.track&&s.track.path)ghDeletePath(s.track.path);
   trackStop(); await trackDelete(s.id);
   try{await store.patch(s.id,{track:null,updatedAt:Date.now()})}catch(e){saveErr(e)}
   closeSheet(); renderTools(); toast('Минус удалён');
@@ -1956,6 +1959,7 @@ function trackMenu(s){
   }
   const marked=TR.marks.filter(x=>x!=null).length;
   return `<button class="btn" data-act="t-mark">${ICON.metro}${marked?'Разметить строки заново':'Разметить строки под минус'}</button>`+add+
+    (ghOn()?(s.track&&s.track.path?`<button class="btn" data-act="t-unsend">${ICON.share}Убрать минус с GitHub</button><p class="hint">Минус отправлен на GitHub: на iPad его можно скачать в этой песне.</p>`:`<button class="btn" data-act="t-send">${ICON.share}Отправить минус на iPad</button>`):'')+
     `<button class="btn danger" data-act="t-del">${ICON.trash}<span>Удалить минус</span></button>`+
     `<p class="hint">${marked?'Размечено строк: '+marked+'. Текущая строка подсвечивается и сама встаёт на место.':'Без разметки текст просто плавно идёт за минусом от начала до конца. С разметкой каждая строка подсвечивается точно в своё время.'}</p>`;
 }
@@ -2168,6 +2172,32 @@ async function gtpAttach(btn){
   try{await store.patch(s.id,{gtp:{name:btn.dataset.n,size:+btn.dataset.z||0,path:btn.dataset.p},updatedAt:Date.now()})}catch(e){saveErr(e);return}
   await fileDel('gtp',s.id); G.id=null; closeSheet();
   await gtpLoad(findSong(s.id)); fillSong(); toast('GTP-файл подключён');
+}
+
+/* ---------- send a minus to the iPad through the GitHub repository: only for songs where it is asked for ---------- */
+async function ghDeletePath(path){
+  if(!ghOn()||!path)return;
+  try{const sha=await ghFileSha(path);if(sha)await ghFetch('/contents/'+encPath(path),{method:'DELETE',body:JSON.stringify({message:'Песенник: минус убран с GitHub',sha})})}catch{}
+}
+async function trackSend(id){
+  const s=findSong(id),rec=await trackGet(id); if(!s||!s.track||!rec||!ghOn())return;
+  if((rec.size||0)>95*1024*1024){toast('Минус больше 95 МБ: GitHub такие файлы не принимает.');return}
+  closeSheet(); toast('Отправляю минус на GitHub…');
+  try{
+    const buf=rec.buf||await rec.blob.arrayBuffer();
+    const ext=((rec.name||s.track.name||'').split('.').pop()||'m4a').toLowerCase().replace(/[^a-z0-9]/g,'')||'m4a';
+    const path='tracks/'+gtpSlug(s)+'.'+ext,old=s.track.path,sha=await ghFileSha(path);
+    await ghFetch('/contents/'+encPath(path),{method:'PUT',body:JSON.stringify({message:'Песенник: минус «'+(s.title||'')+'» для iPad',content:bufToB64(buf),...(sha?{sha}:{})})});
+    const cur=findSong(id); if(cur&&cur.track)await store.patch(id,{track:{...cur.track,path},updatedAt:Date.now()});
+    if(old&&old!==path)ghDeletePath(old);
+    toast('Минус отправлен. На iPad откройте эту песню и нажмите «Скачать минус».');
+  }catch(e){toast('Не удалось отправить минус: '+ghErrText(e))}
+}
+async function trackUnsend(){
+  const s=findSong(S.cur); if(!s||!s.track||!s.track.path)return;
+  closeSheet(); await ghDeletePath(s.track.path);
+  const {path,...rest}=s.track;
+  try{await store.patch(s.id,{track:rest,updatedAt:Date.now()});toast('Минус убран с GitHub')}catch(e){saveErr(e)}
 }
 
 /* ---------- tags ---------- */
@@ -2738,6 +2768,8 @@ document.addEventListener('click',e=>{
   else if(a==='tuner-toggle'){TU.on?tunerStop():tunerStart()}
   else if(a==='import')renderImport();
   else if(a==='t-play')trackToggle();
+  else if(a==='t-send')trackSend(S.cur);
+  else if(a==='t-unsend')trackUnsend();
   else if(a==='gtp-open')gtpOpen();
   else if(a==='gp-open')gpOpen();
   else if(a==='gp-close')gpClose();
