@@ -469,6 +469,27 @@ body.stage .video{display:none}
 .gtpname{display:flex;align-items:center;gap:8px;margin:4px 0 0;font:600 15px var(--f-mono);color:var(--fg);word-break:break-all}
 .gtpname svg{width:18px;height:18px;flex:0 0 auto;fill:none;stroke:var(--accent);stroke-width:1.8}
 .gtpbtn{font-weight:700}
+.gtpbtn svg{width:15px;height:15px;fill:currentColor;stroke:none}
+.gpview{position:fixed;inset:0;z-index:85;display:flex;flex-direction:column;background:var(--bg)}
+.gp-top{display:flex;align-items:center;gap:8px;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px;background:var(--bar);border-bottom:1px solid var(--line)}
+.gp-title{flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gp-top select{width:auto;max-width:42%;padding:6px 8px;font-size:14px}
+/* the score is drawn black on white in every theme, like printed music */
+.gp-wrap{flex:1;overflow:auto;position:relative;background:#FFFFFF;color:#000000;-webkit-overflow-scrolling:touch}
+.gp-msg{margin:0;padding:24px 16px;text-align:center;color:#555555;font-size:15px}
+.gp-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));background:var(--bar);border-top:1px solid var(--line)}
+.gp-bar .btn svg{fill:currentColor;stroke:none;width:16px;height:16px}
+.gp-bar .tt{font:600 13px var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.gp-speed{display:flex;align-items:center;gap:6px;flex:1 1 180px;min-width:0}
+.gp-speed input{flex:1;min-width:60px;padding:0;border:0;background:transparent;accent-color:var(--accent)}
+.gp-speed b{font:600 13px var(--f-mono);min-width:42px}
+#gp-metro[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+body.gp-on{overflow:hidden}
+body.gp-on .tools{visibility:hidden}
+.at-cursor-bar{background:rgba(255,200,0,.22)}
+.at-selection div{background:rgba(64,64,255,.1)}
+.at-cursor-beat{background:rgba(26,87,174,.85);width:3px}
+.at-highlight *{fill:#1A57AE;stroke:#1A57AE}
 .tagbar{display:flex;flex-wrap:wrap;gap:6px;margin-block:2px 6px}
 .tagbar:empty{display:none}
 .tchip{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:6px 12px;font:500 14px var(--f-body);display:inline-flex;align-items:center;gap:6px}
@@ -1993,6 +2014,69 @@ function gtpMenu(s){
   return gtpPicker(G.file?'Заменить GTP-файл':'Выбрать GTP-файл')+(G.file?`<button class="btn danger" data-act="gtp-del">${ICON.trash}<span>Удалить GTP-файл</span></button>`:'');
 }
 
+/* ---------- playing a Guitar Pro file inside the songbook: alphaTab, bundled next to the app in alphatab/ ---------- */
+const AT={api:null,loading:null,profile:lsGet('sb.gpprofile')||'Tab'};
+function loadAlphaTab(){
+  if(window.alphaTab)return Promise.resolve();
+  if(!AT.loading)AT.loading=loadScript('alphatab/alphaTab.min.js').catch(e=>{AT.loading=null;throw e});
+  return AT.loading;
+}
+function gpMsg(t){const m=document.getElementById('gp-msg');if(m){m.textContent=t;m.hidden=!t}}
+async function gpOpen(){
+  if(!G.file){gtpOpen();return}
+  stopAuto(); metroStop(); if(TR.el)TR.el.pause();
+  gpClose();
+  const ov=document.createElement('div'); ov.id='gpview'; ov.className='gpview'; ov.setAttribute('role','dialog'); ov.setAttribute('aria-label','Проигрыватель табулатуры');
+  ov.innerHTML=`<div class="gp-top">
+      <button class="btn icon" data-act="gp-close" aria-label="Закрыть проигрыватель">✕</button>
+      <div class="gp-title" id="gp-title">${esc(G.file.name)}</div>
+      <select id="gp-track" aria-label="Дорожка" hidden></select>
+    </div>
+    <div class="gp-wrap" id="gp-wrap"><p class="gp-msg" id="gp-msg">Загружаю табулатуру…</p><div id="gp-at"></div></div>
+    <div class="gp-bar">
+      <button class="btn icon" data-act="gp-play" id="gp-play" disabled aria-label="Играть">${ICON.play}</button>
+      <button class="btn icon" data-act="gp-stop" aria-label="В начало">■</button>
+      <span class="tt" id="gp-time">0:00 / 0:00</span>
+      <label class="gp-speed" for="gp-speed"><span class="cap">Темп</span><input type="range" id="gp-speed" min="25" max="150" step="5" value="100"><b id="gp-speed-l">100%</b></label>
+      <button class="btn" data-act="gp-metro" id="gp-metro" aria-pressed="false">Метроном</button>
+      <button class="btn" data-act="gp-profile" id="gp-profile">${AT.profile==='Tab'?'Ноты + табы':'Только табы'}</button>
+    </div>`;
+  document.body.appendChild(ov); document.body.classList.add('gp-on');
+  try{await loadAlphaTab()}catch{gpMsg('Не удалось загрузить проигрыватель. Откройте песенник один раз при включённом интернете.');return}
+  if(!document.getElementById('gpview'))return;
+  const api=new alphaTab.AlphaTabApi(document.getElementById('gp-at'),{
+    core:{fontDirectory:'alphatab/font/',useWorkers:false,engine:'svg'},
+    display:{scale:innerWidth<600?0.75:1,layoutMode:'Page',staveProfile:AT.profile},
+    player:{enablePlayer:true,soundFont:'alphatab/soundfont/sonivox.sf2',scrollElement:document.getElementById('gp-wrap'),
+      enableCursor:true,enableUserInteraction:true,outputMode:'WebAudioScriptProcessor'}
+  });
+  AT.api=api;
+  api.scoreLoaded.on(score=>{
+    const t=document.getElementById('gp-title'); if(t)t.textContent=[score.title,score.artist].filter(Boolean).join(' — ')||G.file.name;
+    const sel=document.getElementById('gp-track');
+    if(sel){sel.innerHTML=score.tracks.map((tr,i)=>`<option value="${i}">${esc(tr.name||('Дорожка '+(i+1)))}</option>`).join('');sel.hidden=score.tracks.length<2}
+  });
+  api.renderFinished.on(()=>gpMsg(''));
+  api.playerReady.on(()=>{const b=document.getElementById('gp-play');if(b)b.disabled=false});
+  api.playerStateChanged.on(e=>{const b=document.getElementById('gp-play');if(!b)return;const on=e.state===1;b.innerHTML=on?ICON.pause:ICON.play;b.setAttribute('aria-label',on?'Пауза':'Играть')});
+  api.playerPositionChanged.on(e=>{const el=document.getElementById('gp-time');if(el)el.textContent=fmtTime(e.currentTime/1000)+' / '+fmtTime(e.endTime/1000)});
+  api.error.on(e=>gpMsg('Не получилось открыть файл: '+((e&&e.message)||'неизвестная ошибка')+'. Попробуйте «Открыть в Guitar Pro».'));
+  try{api.load(new Uint8Array(await G.file.arrayBuffer()))}catch(e){gpMsg('Не получилось прочитать файл.')}
+}
+function gpClose(){
+  if(AT.api){try{AT.api.stop()}catch{};try{AT.api.destroy()}catch{};AT.api=null}
+  const ov=document.getElementById('gpview'); if(ov)ov.remove();
+  document.body.classList.remove('gp-on');
+}
+function gpPlay(){if(!AT.api)return;unlockAudio(6*3600);AT.api.playPause()}
+function gpTrack(i){const a=AT.api;if(a&&a.score&&a.score.tracks[i])a.renderTracks([a.score.tracks[i]])}
+function gpProfile(btn){
+  AT.profile=AT.profile==='Tab'?'Default':'Tab'; lsSet('sb.gpprofile',AT.profile);
+  btn.textContent=AT.profile==='Tab'?'Ноты + табы':'Только табы';
+  if(AT.api){AT.api.settings.display.staveProfile=AT.profile==='Tab'?alphaTab.StaveProfile.Tab:alphaTab.StaveProfile.Default;AT.api.updateSettings();AT.api.render()}
+}
+function gpMetro(btn){if(!AT.api)return;const on=btn.getAttribute('aria-pressed')!=='true';AT.api.metronomeVolume=on?1:0;btn.setAttribute('aria-pressed',String(on))}
+
 /* ---------- tags ---------- */
 const DEFAULT_TAGS=['костёр','медленные','разучиваю'];
 const ED={tags:[]};
@@ -2202,8 +2286,8 @@ function fillSong(){
   const gb=document.getElementById('gtpbox'); if(gb)gb.innerHTML=s.gtp?`<section class="video gtpsec">
     <h3 class="sec-h">Табулатура Guitar Pro</h3>
     <p class="gtpname">${ICON.dia}<span>${esc(s.gtp.name)}</span></p>
-    <div class="vlinks"><button class="btn primary gtpbtn" data-act="gtp-dl">GTP · Открыть в Guitar Pro</button></div>
-    <p class="hint">Файл скачается, после этого нажмите «Открыть в приложении Guitar Pro».</p>
+    <div class="vlinks">${trackCan()?`<button class="btn primary gtpbtn" data-act="gp-open">${ICON.play}Играть в песеннике</button>`:''}<button class="btn${trackCan()?'':' primary'} gtpbtn" data-act="gtp-dl">GTP · Открыть в Guitar Pro</button></div>
+    <p class="hint">«Играть в песеннике» показывает табулатуру с бегущим курсором и звуком. «Открыть в Guitar Pro» скачивает файл, после этого нажмите «Открыть в приложении Guitar Pro».</p>
   </section>`:'';
   const vb=document.getElementById('videobox'); if(vb&&vb.dataset.v!==(s.video||'')){vb.dataset.v=s.video||'';vb.innerHTML=videoHtml(s)}
   document.getElementById('strip').innerHTML=seen.map(n=>{
@@ -2527,7 +2611,7 @@ function tick(t){
 }
 async function startScroll(){S.scroll.on=true;lastT=null;acc=0;raf=requestAnimationFrame(tick);
   try{wake=await navigator.wakeLock.request('screen')}catch{wake=null}}
-function stopScroll(){if(document.body.classList.contains('vfull-on'))videoExit();tunerStop();metroStop();trackStop();stopAuto()}
+function stopScroll(){gpClose();if(document.body.classList.contains('vfull-on'))videoExit();tunerStop();metroStop();trackStop();stopAuto()}
 function stopAuto(){S.scroll.on=false;cancelAnimationFrame(raf);if(wake){wake.release().catch(()=>{});wake=null}}
 
 /* ---------- events ---------- */
@@ -2561,6 +2645,12 @@ document.addEventListener('click',e=>{
   else if(a==='import')renderImport();
   else if(a==='t-play')trackToggle();
   else if(a==='gtp-open')gtpOpen();
+  else if(a==='gp-open')gpOpen();
+  else if(a==='gp-close')gpClose();
+  else if(a==='gp-play')gpPlay();
+  else if(a==='gp-stop'){if(AT.api)AT.api.stop()}
+  else if(a==='gp-metro')gpMetro(b);
+  else if(a==='gp-profile')gpProfile(b);
   else if(a==='gtp-dl'){if(G.file)gtpDownload(G.file);else gtpOpen()}
   else if(a==='gtp-del')gtpRemove(b);
   else if(a==='v-play')vToggle();
@@ -2636,6 +2726,7 @@ document.addEventListener('change',e=>{
   if(e.target.id==='imp-file'&&e.target.files&&e.target.files[0]){importBackup(e.target.files[0]);e.target.value=''}
   if(e.target.id==='track-file'&&e.target.files&&e.target.files[0]){trackAdd(e.target.files[0]);e.target.value=''}
   if(e.target.id==='gtp-file'&&e.target.files&&e.target.files[0]){gtpAdd(e.target.files[0]);e.target.value=''}
+  if(e.target.id==='gp-track')gpTrack(+e.target.value);
   if(e.target.id==='imp-pdf'&&e.target.files&&e.target.files[0]){importPdf(e.target.files[0]);e.target.value=''}
 });
 let impT;
@@ -2644,12 +2735,14 @@ document.addEventListener('input',e=>{
   if(id==='search'){S.q=e.target.value;fillList()}
   else if(id==='speed'){S.scroll.speed=+e.target.value;lsSet('sb.speed',S.scroll.speed)}
   else if(id==='m-bpm')metroSet(+e.target.value);
+  else if(id==='gp-speed'){const v=+e.target.value;if(AT.api)AT.api.playbackSpeed=v/100;const l=document.getElementById('gp-speed-l');if(l)l.textContent=v+'%'}
   else if(id==='t-seek'&&TR.el){TR.seeking=Date.now();TR.el.currentTime=+e.target.value/10;TR.cur=-2}
   else if(id==='imp-src'){clearTimeout(impT);impT=setTimeout(fillImport,250)}
   else if(id==='se-name'){document.getElementById('se-err').textContent='';fillShapeEditor()}
   else if(id==='se-frets'){const f=parseFretsText(e.target.value);if(f){SE.frets=f;const p=f.filter(x=>x>0);if(p.length){const mx=Math.max(...p),mn=Math.min(...p);if(mx>SE.base+4||mn<SE.base)SE.base=mx>5?mn:1}fillShapeEditor()}}
 });
 document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&document.getElementById('gpview')){gpClose();return}
   if(e.key==='Escape'&&document.body.classList.contains('vfull-on'))videoExit();
   if(e.key==='Escape'&&!sheet.hidden)closeSheet();
   const g=e.target.closest&&e.target.closest('g.key');
