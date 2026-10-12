@@ -2063,7 +2063,7 @@ async function gpOpen(){
   api.playerReady.on(()=>{const b=document.getElementById('gp-play');if(b)b.disabled=false});
   api.playerStateChanged.on(e=>{const b=document.getElementById('gp-play');if(!b)return;const on=e.state===1;b.innerHTML=on?ICON.pause:ICON.play;b.setAttribute('aria-label',on?'Пауза':'Играть')});
   api.playerPositionChanged.on(e=>{const el=document.getElementById('gp-time');if(el)el.textContent=fmtTime(e.currentTime/1000)+' / '+fmtTime(e.endTime/1000)});
-  api.error.on(e=>gpMsg('Не получилось открыть файл: '+((e&&e.message)||'неизвестная ошибка')+'. Попробуйте «Открыть в Guitar Pro».'));
+  api.error.on(e=>gpMsg('Не получилось открыть файл: '+((e&&e.message)||'неизвестная ошибка')+'. Откройте этот файл в приложении Guitar Pro из «Файлов».'));
   try{api.load(new Uint8Array(await G.file.arrayBuffer()))}catch(e){gpMsg('Не получилось прочитать файл.')}
 }
 function gpClose(){
@@ -2331,8 +2331,8 @@ function fillSong(){
   const gb=document.getElementById('gtpbox'); if(gb)gb.innerHTML=s.gtp?`<section class="video gtpsec">
     <h3 class="sec-h">Табулатура Guitar Pro</h3>
     <p class="gtpname">${ICON.dia}<span>${esc(s.gtp.name)}</span></p>
-    <div class="vlinks">${trackCan()?`<button class="btn primary gtpbtn" data-act="gp-open">${ICON.play}Играть в песеннике</button>`:''}<button class="btn${trackCan()?'':' primary'} gtpbtn" data-act="gtp-dl">GTP · Открыть в Guitar Pro</button></div>
-    <p class="hint">«Играть в песеннике» показывает табулатуру с бегущим курсором и звуком. «Открыть в Guitar Pro» скачивает файл, после этого нажмите «Открыть в приложении Guitar Pro».</p>
+    <div class="vlinks">${trackCan()?`<button class="btn primary gtpbtn" data-act="gp-open">${ICON.play}Играть в песеннике</button>`:''}</div>
+    <p class="hint">Табулатура с бегущим курсором и звуком.</p>
   </section>`:'';
   const vb=document.getElementById('videobox'); if(vb&&vb.dataset.v!==(s.video||'')){vb.dataset.v=s.video||'';vb.innerHTML=videoHtml(s)}
   document.getElementById('strip').innerHTML=seen.map(n=>{
