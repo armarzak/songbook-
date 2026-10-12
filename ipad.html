@@ -592,6 +592,8 @@ function trkTools(){
 
 /* ---------- Guitar Pro files: downloaded from the GitHub repository, kept on this iPad, played with alphaTab 1.0.1 (ES5) ---------- */
 var GP={api:null,ctx:null,silent:null,profile:lsGet('ip.gpprofile')||'tab'};
+/* full addresses: alphaTab hands its file to a background worker, which cannot resolve a relative path */
+var BASE_URL=location.href.replace(/[?#].*$/,'').replace(/[^/]*$/,'');
 /* iOS 9 Safari only knows webkitAudioContext and keeps it silent until a tap: give it the standard name and remember it */
 (function(){
   var W=window.webkitAudioContext,O=window.AudioContext;
@@ -670,9 +672,9 @@ function gpShow(s,buf){
     if(!$('gpview'))return;
     gpMsg('Рисую табулатуру…');
     var api=new alphaTab.AlphaTabApi($('gp-at'),{
-      core:{scriptFile:'alphatab/legacy/alphaTab.min.js',fontDirectory:'alphatab/font/'},
+      core:{scriptFile:BASE_URL+'alphatab/legacy/alphaTab.min.js',fontDirectory:BASE_URL+'alphatab/font/'},
       display:{layoutMode:alphaTab.LayoutMode.Page,staveProfile:GP.profile==='tab'?alphaTab.StaveProfile.Tab:alphaTab.StaveProfile.Default,scale:0.8},
-      player:{enablePlayer:true,soundFont:'alphatab/soundfont/sonivox.sf2',scrollElement:$('gp-wrap'),enableCursor:true}
+      player:{enablePlayer:true,soundFont:BASE_URL+'alphatab/soundfont/sonivox.sf2',scrollElement:$('gp-wrap'),enableCursor:true}
     });
     GP.api=api;
     api.scoreLoaded.on(function(score){
