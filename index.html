@@ -2202,8 +2202,8 @@ function fillSong(){
   const gb=document.getElementById('gtpbox'); if(gb)gb.innerHTML=s.gtp?`<section class="video gtpsec">
     <h3 class="sec-h">Табулатура Guitar Pro</h3>
     <p class="gtpname">${ICON.dia}<span>${esc(s.gtp.name)}</span></p>
-    <div class="vlinks"><button class="btn primary gtpbtn" data-act="gtp-open">GTP · Открыть в Guitar Pro</button><button class="btn" data-act="gtp-dl">Скачать файл</button></div>
-    <p class="hint">В меню «Поделиться» выберите Guitar Pro. Если его нет в ряду приложений, пролистайте ряд вправо и нажмите «Ещё», либо нажмите «Сохранить в Файлы» и откройте файл из Guitar Pro.</p>
+    <div class="vlinks"><button class="btn primary gtpbtn" data-act="gtp-dl">GTP · Открыть в Guitar Pro</button></div>
+    <p class="hint">Файл скачается, после этого нажмите «Открыть в приложении Guitar Pro».</p>
   </section>`:'';
   const vb=document.getElementById('videobox'); if(vb&&vb.dataset.v!==(s.video||'')){vb.dataset.v=s.video||'';vb.innerHTML=videoHtml(s)}
   document.getElementById('strip').innerHTML=seen.map(n=>{
