@@ -383,6 +383,8 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 .gauge .needle{stroke:var(--p-needle);stroke-width:2.5;stroke-linecap:round;transition:stroke .2s}
 .t-status{font-weight:600;min-height:1.5em;color:var(--t-col);text-align:center}
 .t-strings{display:flex;gap:8px;margin-top:4px}
+.t-level{width:min(260px,70%);height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.t-level i{display:block;height:100%;width:0;background:var(--t-col,var(--accent));transition:width .08s linear}
 .t-strings span{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font:700 16px var(--f-body);background:var(--sunk);color:var(--muted);position:relative;transition:background .2s,color .2s}
 .t-strings span sub{position:absolute;bottom:3px;right:7px;font-size:9px;font-weight:600}
 .t-strings span.on{background:var(--t-col);color:var(--surface)}
@@ -1277,9 +1279,10 @@ function scSave(){lsSet('sb.sc',JSON.stringify(scState));fillScales()}
 /* ---------- chord sound: Karplus–Strong plucked strings, strummed low to high ---------- */
 let AC=null,acOut=null,ringing=[],progTimers=[];
 const pluckCache=new Map();
+function setSession(t){try{if(navigator.audioSession&&navigator.audioSession.type!==t)navigator.audioSession.type=t}catch{}}
 function audioCtx(){
+  if(!TU.on)setSession('playback'); // iOS 17+: ignore the ring/silent switch (but never while the tuner needs the mic)
   if(!AC){
-    try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch{} // iOS 17+: ignore the ring/silent switch
     AC=new (window.AudioContext||window.webkitAudioContext)();
     const comp=AC.createDynamicsCompressor(),out=AC.createGain();
     out.gain.value=0.9; comp.connect(out); out.connect(AC.destination); acOut=comp;
@@ -1402,6 +1405,7 @@ function renderTuner(){
     <div class="tuner" id="tuner" data-state="idle">
       <div class="tpanel">${gaugeSvg()}</div>
       <div class="t-status" id="t-status">${inClaude?'':'Нажмите «Включить» и сыграйте одну струну'}</div>
+      <div class="t-level" aria-label="Громкость микрофона"><i id="t-lvl"></i></div>
       <div class="t-strings" id="t-strings">${GUITAR.map((g,i)=>`<span data-i="${i}">${g.n}<sub>${6-i}</sub></span>`).join('')}</div>
       <div class="actions" style="justify-content:center">
         <button class="btn primary" id="t-btn" data-act="tuner-toggle">Включить</button>
@@ -1430,6 +1434,7 @@ function micHelp(kind){
   }
   else if(kind==='NotFoundError')h='<p>Айфон не нашёл микрофон. Если подключены наушники без микрофона, отключите их и попробуйте снова.</p>'+retry;
   else if(kind==='NotReadableError'||kind==='AbortError')h='<p>Микрофон занят: возможно, идёт звонок или запись в другом приложении. Завершите её и попробуйте снова.</p>'+retry;
+  else if(kind==='silent')h='<p>Микрофон включён, но звука от него нет. Так бывает, если в это время что-то играет или идёт звонок. Нажмите «Выключить», полностью закройте песенник (смахните вверх в списке приложений), откройте снова, сразу перейдите в «Тюнер» и нажмите «Включить».</p>';
   else if(kind==='unsupported')h='<p>Этот браузер не даёт доступ к микрофону. Откройте песенник в Safari или с экрана «Домой».</p>';
   else h=`<p>Не получилось включить микрофон (${esc(String(kind))}).</p>`+retry;
   el.innerHTML=`<div class="verdict">${h}</div>`;
@@ -1438,6 +1443,10 @@ function micHelp(kind){
 function tunerStart(){
   if(!window.SONGBOOK_OFFLINE&&window.claude){micHelp('claude');return}
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){micHelp('unsupported');return}
+  // the chord sounds switch iOS to "playback only", which silences the microphone: switch to recording first
+  try{if(TR.el)TR.el.pause();if(mediaEl)mediaEl.pause()}catch{}
+  if(AC&&AC.state==='running')AC.suspend().catch(()=>{});
+  setSession('play-and-record');
   let ctx;
   try{ctx=new (window.AudioContext||window.webkitAudioContext)();ctx.resume().catch(()=>{})}catch(e){micHelp(e&&e.name);return}
   micHelp(null); tunerMsg('Запрашиваю микрофон…');
@@ -1445,19 +1454,32 @@ function tunerStart(){
   navigator.mediaDevices.getUserMedia(want)
     .catch(e=>e&&(e.name==='OverconstrainedError'||e.name==='TypeError')?navigator.mediaDevices.getUserMedia({audio:true}):Promise.reject(e))
     .then(stream=>{
-      if(ctx.state!=='running')ctx.resume().catch(()=>{});
-      const src=ctx.createMediaStreamSource(stream),an=ctx.createAnalyser(),mute=ctx.createGain();
-      an.fftSize=4096; mute.gain.value=0;
-      src.connect(an); an.connect(mute); mute.connect(ctx.destination); // Safari only processes nodes that reach the output
-      Object.assign(TU,{on:true,ctx,stream,an,buf:new Float32Array(an.fftSize),hist:[],frame:0,last:null});
+      Object.assign(TU,{on:true,stream,hist:[],frame:0,last:null,peak:0,heardAt:performance.now(),startAt:performance.now(),retried:false,deaf:false});
+      tunerWire(ctx);
       const b=document.getElementById('t-btn'); if(b)b.textContent='Выключить';
       tunerMsg('Сыграйте одну струну');
       TU.raf=requestAnimationFrame(tunerLoop);
     },e=>{
       try{ctx.close()}catch{}
+      setSession('playback');
       tunerMsg('Микрофон не включён');
       micHelp((e&&e.name)||'unknown');
     });
+}
+/* microphone → analyser → muted output (Safari only processes nodes that reach the output) */
+function tunerWire(ctx){
+  if(ctx.state!=='running')ctx.resume().catch(()=>{});
+  const src=ctx.createMediaStreamSource(TU.stream),an=ctx.createAnalyser(),mute=ctx.createGain();
+  an.fftSize=4096; mute.gain.value=0;
+  src.connect(an); an.connect(mute); mute.connect(ctx.destination);
+  Object.assign(TU,{ctx,an,buf:new Float32Array(an.fftSize)});
+}
+/* iOS sometimes hands an engine made before the mic was opened only zeros: rebuild it once */
+function tunerRewire(){
+  TU.retried=true;
+  try{TU.ctx.close()}catch{}
+  try{tunerWire(new (window.AudioContext||window.webkitAudioContext)())}catch{}
+  TU.startAt=performance.now();
 }
 function tunerStop(){
   if(!TU.on)return;
@@ -1465,14 +1487,16 @@ function tunerStop(){
   try{TU.stream.getTracks().forEach(t=>t.stop())}catch{}
   try{TU.ctx.close()}catch{}
   TU.ctx=TU.stream=TU.an=null;
+  setSession('playback');
   const b=document.getElementById('t-btn'); if(b)b.textContent='Включить';
   const el=document.getElementById('tuner'); if(el)el.dataset.state='idle';
+  const lv=document.getElementById('t-lvl'); if(lv)lv.style.width='0';
   tunerMsg('Тюнер выключен');
 }
 /* YIN pitch detection on one frame of samples */
 function detectPitch(buf,sr){
   let rms=0; for(let i=0;i<buf.length;i++)rms+=buf[i]*buf[i];
-  if(Math.sqrt(rms/buf.length)<0.008)return null;
+  if(Math.sqrt(rms/buf.length)<0.003)return null;
   const W=buf.length>>1,maxLag=Math.min(W-1,Math.floor(sr/60)),minLag=Math.floor(sr/1200);
   const d=new Float32Array(maxLag+1);
   for(let tau=1;tau<=maxLag;tau++){let s=0;for(let i=0;i<W;i++){const x=buf[i]-buf[i+tau];s+=x*x}d[tau]=s}
@@ -1490,6 +1514,16 @@ function tunerLoop(){
   if(TU.frame%60===0&&TU.ctx.state!=='running')TU.ctx.resume().catch(()=>{}); // iOS can pause the engine after a call or notification
   if(TU.frame++%3===0){
     TU.an.getFloatTimeDomainData(TU.buf);
+    let pk=0; for(let i=0;i<TU.buf.length;i+=4){const v=Math.abs(TU.buf[i]);if(v>pk)pk=v}
+    TU.peak=Math.max(pk,TU.peak*0.85);
+    const lv=document.getElementById('t-lvl'); if(lv)lv.style.width=Math.min(100,Math.round(Math.sqrt(TU.peak)*140))+'%';
+    const now=performance.now();
+    if(pk>0.0005)TU.heardAt=now;
+    else if(now-TU.heardAt>2500&&now-TU.startAt>2500){
+      if(!TU.retried){tunerRewire();return}
+      if(!TU.deaf){TU.deaf=true;tunerMsg('Микрофон не даёт звука');micHelp('silent')}
+    }
+    if(TU.deaf&&pk>0.0005){TU.deaf=false;micHelp(null);tunerMsg('Сыграйте одну струну')}
     const f=detectPitch(TU.buf,TU.ctx.sampleRate);
     if(f&&f>60&&f<1200){TU.hist.push(f);if(TU.hist.length>5)TU.hist.shift();TU.lastAt=performance.now()}
     else if(performance.now()-TU.lastAt>600)TU.hist=[];
@@ -1794,7 +1828,16 @@ async function trackLoad(s){
   trackStop(); TR.id=s.id; TR.marks=Array.isArray(s.marks)?s.marks.slice():[];
   if(S.view==='song')renderTools();
   if(!trackCan()||!s.track)return;
-  const rec=await trackGet(s.id);
+  let rec=await trackGet(s.id);
+  if(!rec&&s.track.path&&ghOn()&&navigator.onLine!==false){
+    try{
+      const buf=await ghGetRaw(s.track.path);
+      const ext=(s.track.path.split('.').pop()||'').toLowerCase();
+      rec={buf,type:AUDIO_TYPES[ext]||'audio/mp4',name:s.track.name,size:buf.byteLength,added:Date.now()};
+      try{await trackPut(s.id,rec)}catch{}
+      if(S.cur===s.id)toast('Минус скачан с GitHub');
+    }catch{}
+  }
   if(!rec||S.cur!==s.id||TR.id!==s.id)return;
   const a=new Audio(); TR.url=URL.createObjectURL(rec.blob||new Blob([rec.buf],{type:rec.type||'audio/mp4'}));
   a.preload='auto'; a.setAttribute('playsinline',''); a.src=TR.url;
@@ -1867,6 +1910,43 @@ function vToggle(){
   renderTools();
 }
 function vReset(){TR.vOn=false;TR.vPaused=0;cancelAnimationFrame(TR.raf);TR.raf=0;TR.cur=-1;lineHL(-1,'cur');renderTools()}
+const AUDIO_TYPES={m4a:'audio/mp4',mp3:'audio/mpeg',wav:'audio/wav',aac:'audio/aac',aif:'audio/aiff',aiff:'audio/aiff'};
+/* After the app was removed and installed again: pick all minus files at once, they go back to their songs by name */
+async function trackRestore(files){
+  const want=new Map(); // file name → songs that use it
+  S.songs.forEach(x=>{if(x.track&&x.track.name){const k=x.track.name.toLowerCase();if(!want.has(k))want.set(k,[]);want.get(k).push(x)}});
+  let put=0,skip=0; toast('Восстанавливаю минусы…');
+  try{if(navigator.storage&&navigator.storage.persist)await navigator.storage.persist()}catch{}
+  for(const file of files){
+    const songs=want.get(file.name.toLowerCase());
+    if(!songs){skip++;continue}
+    const ext=(file.name.split('.').pop()||'').toLowerCase();
+    let buf; try{buf=await file.arrayBuffer()}catch{skip++;continue}
+    for(const x of songs){
+      try{await trackPut(x.id,{buf,type:file.type||AUDIO_TYPES[ext]||'audio/mp4',name:file.name,size:file.size,added:Date.now()});put++}
+      catch(e){toast(e&&e.name==='QuotaExceededError'?'Не хватило места на устройстве.':'Не получилось сохранить «'+file.name+'».');fillRestore();return}
+    }
+  }
+  toast(put?('Минусы на месте: '+put+(skip?'. Не подошли по имени: '+skip:'')):'Ни один файл не совпал по имени с минусами в песнях.');
+  fillRestore();
+  const cur=S.cur&&findSong(S.cur); if(cur&&S.view==='song')trackLoad(cur);
+}
+/* songs whose minus is known but missing on this device */
+async function fillRestore(){
+  const el=document.getElementById('restore'); if(!el)return;
+  if(!trackCan()){el.hidden=true;return}
+  const withTrack=S.songs.filter(x=>x.track&&x.track.name);
+  const missing=[];
+  for(const x of withTrack)if(!(await trackGet(x.id)))missing.push(x);
+  if(!document.getElementById('restore'))return;
+  el.hidden=false;
+  el.innerHTML=`<h3 class="sec-h">Минусы</h3>
+    <p class="sec-p">${!withTrack.length?'Минусов пока нет. Их добавляют в песне: «⋯» → «Добавить минус».'
+      :missing.length?`На этом устройстве нет ${missing.length} из ${withTrack.length}: ${missing.slice(0,6).map(x=>'«'+esc(x.track.name)+'»').join(', ')}${missing.length>6?' и другие':''}. Нажмите «Вернуть минусы» и выделите в «Файлах» сразу все эти файлы: песенник сам разложит их по песням по имени, разметка уже на месте.`
+      :`Все минусы (${withTrack.length}) на этом устройстве.`}</p>
+    ${missing.length?'<div class="actions" style="justify-content:flex-start"><label class="btn primary" for="restore-file">Вернуть минусы</label><input type="file" id="restore-file" class="vh" multiple accept="audio/*,.m4a,.mp3,.wav,.aac,.aif,.aiff"></div>':''}
+    <p class="sec-p">Минусы хранятся в самом приложении. Не удаляйте иконку с экрана «Домой», чтобы обновить песенник: вместе с ней iOS стирает минусы. Для обновления есть кнопка ниже.</p>`;
+}
 async function trackAdd(file){
   const s=findSong(S.cur); if(!s||s.demo)return;
   if(file.size>150*1024*1024){toast('Файл больше 150 МБ. Сожмите его в m4a или mp3.');return}
@@ -1876,7 +1956,7 @@ async function trackAdd(file){
   URL.revokeObjectURL(url);
   if(dur<0){toast('Этот файл не воспроизводится на айфоне. Подойдут m4a, mp3, wav или aac.');return}
   const ext=(file.name.split('.').pop()||'').toLowerCase();
-  const type=file.type||({m4a:'audio/mp4',mp3:'audio/mpeg',wav:'audio/wav',aac:'audio/aac',aif:'audio/aiff',aiff:'audio/aiff'}[ext])||'audio/mp4';
+  const type=file.type||AUDIO_TYPES[ext]||'audio/mp4';
   try{if(navigator.storage&&navigator.storage.persist)await navigator.storage.persist()}catch{}
   try{
     const buf=await file.arrayBuffer();
@@ -2268,6 +2348,7 @@ function renderList(){
       <div class="skins" id="skins"></div>
     </section>
     <section class="backup" id="sync"></section>
+    <section class="backup" id="restore" hidden></section>
     <section class="backup">
       <h3 class="sec-h">Резервная копия</h3>
       <p class="sec-p">Один файл со всеми песнями и вашими схемами. Через него песни переносятся между облачной и офлайн-версией песенника или на новый телефон.</p>
@@ -2277,10 +2358,26 @@ function renderList(){
         <input type="file" id="imp-file" class="vh" accept=".json,application/json">
       </div>
     </section>
+    ${window.SONGBOOK_OFFLINE?`<section class="backup">
+      <h3 class="sec-h">Обновление</h3>
+      <p class="sec-p">Новая версия песенника загружается этой кнопкой. Песни, минусы и разметка остаются. Иконку удалять не нужно.</p>
+      <div class="actions" style="justify-content:flex-start"><button class="btn" data-act="app-update">Обновить песенник</button><span class="sec-p" id="app-ver"></span></div>
+    </section>`:''}
   </div>`;
-  fillList(); fillSkins(); fillSync();
+  fillList(); fillSkins(); fillSync(); fillRestore(); fillVer();
 }
 
+/* ---------- app update without reinstalling ---------- */
+async function fillVer(){
+  const el=document.getElementById('app-ver'); if(!el||!window.caches)return;
+  try{const k=(await caches.keys()).find(x=>/^songbook-v\d+$/.test(x));if(k)el.textContent='Версия '+k.replace('songbook-v','')}catch{}
+}
+async function appUpdate(){
+  if(navigator.onLine===false){toast('Нет интернета. Обновить можно, когда он появится.');return}
+  toast('Загружаю новую версию…');
+  try{const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(r)await r.update()}catch{}
+  location.reload();
+}
 /* ---------- themes ---------- */
 /* Swatches depict each theme's own colors, so they use fixed values on purpose. */
 const SKINS=[
@@ -2810,6 +2907,7 @@ document.addEventListener('click',e=>{
   else if(a==='tag-toggle'){const t=b.dataset.t;ED.tags=ED.tags.includes(t)?ED.tags.filter(x=>x!==t):[...ED.tags,t];fillTagpick()}
   else if(a==='tag-add')addTag();
   else if(a==='export')exportBackup();
+  else if(a==='app-update')appUpdate();
   else if(a==='gh-connect')ghConnect();
   else if(a==='gh-sync')ghSync(true);
   else if(a==='gh-off')ghOff(b);
@@ -2853,6 +2951,7 @@ document.addEventListener('change',e=>{
   if(e.target.id==='sc-type'){scState.type=e.target.value;scState.pos=0;scSave()}
   if(e.target.id==='imp-file'&&e.target.files&&e.target.files[0]){importBackup(e.target.files[0]);e.target.value=''}
   if(e.target.id==='track-file'&&e.target.files&&e.target.files[0]){trackAdd(e.target.files[0]);e.target.value=''}
+  if(e.target.id==='restore-file'&&e.target.files&&e.target.files.length){trackRestore([...e.target.files]);e.target.value=''}
   if(e.target.id==='gtp-file'&&e.target.files&&e.target.files[0]){gtpAdd(e.target.files[0]);e.target.value=''}
   if(e.target.id==='gp-track')gpTrack(+e.target.value);
   if(e.target.id==='imp-pdf'&&e.target.files&&e.target.files[0]){importPdf(e.target.files[0]);e.target.value=''}
