@@ -513,6 +513,14 @@ body.stage .tools:hover,body.stage .tools:focus-within{opacity:1}
 .stage-tools{justify-content:center}
 .stage-tools .grp{box-shadow:0 2px 10px var(--shadow)}
 .backup{margin-top:28px;padding-top:6px;border-top:1px solid var(--line)}
+details.fold{margin-top:28px;border-top:1px solid var(--line)}
+details.fold>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;padding:14px 2px;min-height:44px;font-family:var(--f-display);font-weight:500;font-size:15px;color:var(--fg);-webkit-tap-highlight-color:transparent}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::after{content:'';width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-3px) rotate(45deg);transition:transform .2s;flex:none}
+details.fold[open]>summary::after{transform:translateY(2px) rotate(-135deg)}
+details.fold>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+details.fold>.backup:first-of-type{margin-top:0;border-top:0;padding-top:0}
+details.fold>.backup{margin-top:18px}
 label.btn{cursor:pointer}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .sec-h{font-family:var(--f-display);font-weight:500;font-size:15px;margin:14px 0 4px}
@@ -2343,12 +2351,13 @@ function renderList(){
     <div class="listctl" id="sortseg"></div>
     <ul class="songs" id="songs"></ul>
     <p class="note" id="note"></p>
-    <section class="backup">
-      <h3 class="sec-h">Оформление</h3>
+    <details class="fold" data-fold="skins"${lsGet('sb.fold.skins')==='1'?' open':''}>
+      <summary>Оформление</summary>
       <div class="skins" id="skins"></div>
-    </section>
+    </details>
+    <details class="fold" data-fold="data"${lsGet('sb.fold.data')==='1'?' open':''}>
+      <summary>Синхронизация и резервная копия</summary>
     <section class="backup" id="sync"></section>
-    <section class="backup" id="restore" hidden></section>
     <section class="backup">
       <h3 class="sec-h">Резервная копия</h3>
       <p class="sec-p">Один файл со всеми песнями и вашими схемами. Через него песни переносятся между облачной и офлайн-версией песенника или на новый телефон.</p>
@@ -2358,6 +2367,8 @@ function renderList(){
         <input type="file" id="imp-file" class="vh" accept=".json,application/json">
       </div>
     </section>
+    </details>
+    <section class="backup" id="restore" hidden></section>
     ${window.SONGBOOK_OFFLINE?`<section class="backup">
       <h3 class="sec-h">Обновление</h3>
       <p class="sec-p">Новая версия песенника загружается этой кнопкой. Песни, минусы и разметка остаются. Иконку удалять не нужно.</p>
@@ -2365,6 +2376,7 @@ function renderList(){
     </section>`:''}
   </div>`;
   fillList(); fillSkins(); fillSync(); fillRestore(); fillVer();
+  document.querySelectorAll('details.fold').forEach(d=>d.addEventListener('toggle',()=>lsSet('sb.fold.'+d.dataset.fold,d.open?'1':'0')));
 }
 
 /* ---------- app update without reinstalling ---------- */
