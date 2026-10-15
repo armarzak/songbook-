@@ -403,6 +403,9 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 .seg.vt button[aria-pressed="true"]{color:var(--accent)}
 .seg.vt svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .listctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-block:2px 4px}
+/* sort stays pinned under the header while the list scrolls */
+#sortseg{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--barh,61px));z-index:9;margin-inline:-16px;padding:6px 16px;background:var(--bar);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+#sortseg.stuck{border-bottom:1px solid var(--line)}
 .listctl:empty{display:none}
 .listctl .cap{font-size:12px;color:var(--muted)}
 .listctl .seg button{padding:5px 10px;font-size:12.5px}
@@ -1605,6 +1608,20 @@ function openChartChord(name){
 /* ---------- favourites, recent, sorting ---------- */
 const RECENT=(()=>{try{return JSON.parse(lsGet('sb.recent')||'[]')}catch{return []}})(); // this device only
 function pushRecent(id){const i=RECENT.indexOf(id);if(i>=0)RECENT.splice(i,1);RECENT.unshift(id);RECENT.length=Math.min(RECENT.length,12);lsSet('sb.recent',JSON.stringify(RECENT))}
+/* the sort bar sits right under the header (its height varies with the buttons) and gets a line once it is pinned */
+function pinSort(){
+  const bar=document.querySelector('.bar'),el=document.getElementById('sortseg'); if(!bar||!el)return;
+  const fit=()=>document.documentElement.style.setProperty('--barh',bar.offsetHeight+'px'); fit();
+  if(pinSort.ro)pinSort.ro.disconnect();
+  if(window.ResizeObserver){pinSort.ro=new ResizeObserver(fit);pinSort.ro.observe(bar)}
+  removeEventListener('resize',pinSort.fit); pinSort.fit=fit; addEventListener('resize',fit);
+  if(window.IntersectionObserver){
+    if(pinSort.io)pinSort.io.disconnect();
+    const probe=document.createElement('div'); probe.style.cssText='height:1px;margin-bottom:-1px'; el.before(probe);
+    pinSort.io=new IntersectionObserver(([e])=>el.classList.toggle('stuck',!e.isIntersecting&&e.boundingClientRect.top<innerHeight/2),{rootMargin:'-'+(bar.getBoundingClientRect().bottom+1)+'px 0px 0px 0px'});
+    pinSort.io.observe(probe);
+  }
+}
 function fillSortseg(){
   const el=document.getElementById('sortseg'); if(!el)return;
   if(S.songs.length<2){el.innerHTML='';return}
@@ -2375,7 +2392,7 @@ function renderList(){
       <div class="actions" style="justify-content:flex-start"><button class="btn" data-act="app-update">Обновить песенник</button><span class="sec-p" id="app-ver"></span></div>
     </section>`:''}
   </div>`;
-  fillList(); fillSkins(); fillSync(); fillRestore(); fillVer();
+  fillList(); fillSkins(); fillSync(); fillRestore(); fillVer(); pinSort();
   document.querySelectorAll('details.fold').forEach(d=>d.addEventListener('toggle',()=>lsSet('sb.fold.'+d.dataset.fold,d.open?'1':'0')));
 }
 
