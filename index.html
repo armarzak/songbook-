@@ -2796,6 +2796,12 @@ function renderSong(id,keepScroll){
   document.body.classList.add('has-tools');
   SCR.scrollTo(0,y);
 }
+/* Songsterr's own search with the artist and title filled in */
+function songsterrBtn(s){
+  if(!s||s.demo)return '';
+  const q=[s.artist,s.title].map(x=>(x||'').trim()).filter(Boolean).join(' ');
+  return q?`<a class="btn" href="https://www.songsterr.com/?pattern=${encodeURIComponent(q)}" target="_blank" rel="noopener">${ICON.dia}Songsterr</a>`:'';
+}
 function fillSong(){
   const s=findSong(S.cur); if(!s)return;
   const flats=usesFlats(s.body),seen=[];
@@ -2817,11 +2823,16 @@ function fillSong(){
   bodyEl.innerHTML=html||'<div class="ln ly">Текст песни пока пустой.</div>';
   bodyEl.classList.toggle('plain',plain);
   document.getElementById('strip').hidden=plain;
+  const ss=songsterrBtn(s);
   const gb=document.getElementById('gtpbox'); if(gb)gb.innerHTML=s.gtp?`<section class="video gtpsec">
     <h3 class="sec-h">Табулатура Guitar Pro</h3>
     <p class="gtpname">${ICON.dia}<span>${esc(s.gtp.name)}</span></p>
-    <div class="vlinks">${trackCan()?`<button class="btn primary gtpbtn" data-act="gp-open">${ICON.play}GTP</button>`:''}</div>
+    <div class="vlinks">${trackCan()?`<button class="btn primary gtpbtn" data-act="gp-open">${ICON.play}GTP</button>`:''}${ss}</div>
     <p class="hint">Табулатура с бегущим курсором и звуком.</p>
+  </section>`:ss?`<section class="video gtpsec">
+    <h3 class="sec-h">Табулатура</h3>
+    <div class="vlinks">${ss}</div>
+    <p class="hint">Откроет поиск этой песни на Songsterr.</p>
   </section>`:'';
   const vb=document.getElementById('videobox'); if(vb&&vb.dataset.v!==(s.video||'')){vb.dataset.v=s.video||'';vb.innerHTML=videoHtml(s)}
   document.getElementById('strip').innerHTML=seen.map(n=>{
