@@ -1,9 +1,9 @@
 CACHE MANIFEST
-# ipad v10
+# ipad v11
 
 CACHE:
 ipad.html
-icon-180.png
+fire-180.png
 alphatab/legacy/alphaTab.min.js
 alphatab/font/Bravura.woff
 alphatab/soundfont/sonivox.sf2
