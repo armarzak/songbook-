@@ -619,16 +619,28 @@ input.mono{font-family:var(--f-mono)}
           <path class="fc-fl f3" d="M172 282 C160 282 156 272 160 263 C163 267 166 266 167 262 C169 252 174 245 179 240 C181 252 188 258 188 268 C188 277 181 282 172 282 Z" stroke="#FFF3B0" stroke-width="2" fill="rgba(255,243,176,.28)"/>
         </g>
         <g fill="#FFE066"><rect class="sp s1" x="168" y="210" width="3" height="3"/><rect class="sp s2" x="184" y="200" width="2.5" height="2.5"/><rect class="sp s3" x="158" y="218" width="2" height="2"/><rect class="sp s4" x="176" y="190" width="3" height="3"/></g>
-        <!-- neon guitar -->
-        <g class="fc-guitar" fill="none" stroke="#00F0FF" stroke-linejoin="round" stroke-linecap="round"><g transform="translate(286 298) rotate(-16) scale(.84)">
-          <path d="M0 -150 C-24 -150 -36 -132 -32 -114 C-29 -100 -40 -94 -46 -82 C-58 -58 -50 -18 0 -14 C50 -18 58 -58 46 -82 C40 -94 29 -100 32 -114 C36 -132 24 -150 0 -150 Z" stroke-width="3.2" fill="rgba(0,240,255,.07)"/>
-          <circle cx="0" cy="-96" r="12" stroke="#FF3D81" stroke-width="2.6"/>
-          <line x1="-13" y1="-44" x2="13" y2="-44" stroke-width="3"/>
-          <path d="M-5 -150 L-5 -262 M5 -150 L5 -262" stroke-width="2.6"/>
-          <path d="M-6 -262 L-10 -300 L10 -300 L6 -262" stroke-width="2.6"/>
-          <g stroke="#B8FBFF" stroke-width=".8" opacity=".8"><line x1="-2.5" y1="-44" x2="-2.5" y2="-262"/><line x1="0" y1="-44" x2="0" y2="-262"/><line x1="2.5" y1="-44" x2="2.5" y2="-262"/></g>
-          <g fill="#FF3D81" stroke="none"><circle cx="-14" cy="-272" r="2.6"/><circle cx="-14" cy="-288" r="2.6"/><circle cx="14" cy="-272" r="2.6"/><circle cx="14" cy="-288" r="2.6"/></g>
+        <!-- neon guitar: cutaway body drawn on like a neon tube, with a light running round the outline -->
+        <g class="fc-guitar" fill="none" stroke-linejoin="round" stroke-linecap="round"><g transform="translate(286 298) rotate(-16) scale(.84)">
+          <path class="gt-body" pathLength="1" d="M0 -14 C40 -14 58 -38 52 -70 C49 -86 36 -94 37 -108 C38 -120 34 -132 24 -136 C16 -139 12 -132 8 -128 L6 -150 L-6 -150 C-22 -152 -38 -140 -36 -120 C-35 -106 -48 -96 -52 -76 C-60 -40 -42 -14 0 -14 Z" stroke="#00F0FF" stroke-width="3.4" fill="rgba(0,240,255,.07)"/>
+          <path class="gt-inner" pathLength="1" transform="translate(0 -80) scale(.84) translate(0 80)" d="M0 -14 C40 -14 58 -38 52 -70 C49 -86 36 -94 37 -108 C38 -120 34 -132 24 -136 C16 -139 12 -132 8 -128 L6 -150 L-6 -150 C-22 -152 -38 -140 -36 -120 C-35 -106 -48 -96 -52 -76 C-60 -40 -42 -14 0 -14 Z" stroke="#FF3D81" stroke-width="1.4"/>
+          <path class="gt-run" pathLength="1" d="M0 -14 C40 -14 58 -38 52 -70 C49 -86 36 -94 37 -108 C38 -120 34 -132 24 -136 C16 -139 12 -132 8 -128 L6 -150 L-6 -150 C-22 -152 -38 -140 -36 -120 C-35 -106 -48 -96 -52 -76 C-60 -40 -42 -14 0 -14 Z" stroke="#FFFFFF" stroke-width="3.6"/>
+          <circle class="gt-hole" cx="0" cy="-100" r="13" stroke="#FF3D81" stroke-width="2.6"/>
+          <circle cx="0" cy="-100" r="17" stroke="#00F0FF" stroke-width="1" opacity=".7"/>
+          <path d="M-15 -46 Q0 -40 15 -46" stroke="#00F0FF" stroke-width="3"/>
+          <!-- neck with frets, angled headstock -->
+          <path class="gt-neck" pathLength="1" d="M-5.5 -150 L-5 -262 M5.5 -150 L5 -262" stroke="#00F0FF" stroke-width="2.6"/>
+          <g stroke="#00F0FF" stroke-width="1.2" opacity=".85"><line x1="-5.5" y1="-166" x2="5.5" y2="-166"/><line x1="-5.4" y1="-182" x2="5.4" y2="-182"/><line x1="-5.3" y1="-197" x2="5.3" y2="-197"/><line x1="-5.2" y1="-211" x2="5.2" y2="-211"/><line x1="-5.1" y1="-224" x2="5.1" y2="-224"/><line x1="-5" y1="-236" x2="5" y2="-236"/><line x1="-5" y1="-248" x2="5" y2="-248"/></g>
+          <g fill="#FF3D81" stroke="none"><circle cx="0" cy="-189" r="1.6"/><circle cx="0" cy="-217" r="1.6"/><circle cx="0" cy="-242" r="1.6"/></g>
+          <path class="gt-head" d="M-5 -262 L-12 -298 Q-2 -310 12 -300 L5 -262" stroke="#FF3D81" stroke-width="2.6" fill="rgba(255,61,129,.12)"/>
+          <g fill="#00F0FF" stroke="none"><circle cx="-15" cy="-274" r="2.4"/><circle cx="-16" cy="-286" r="2.4"/><circle cx="15" cy="-276" r="2.4"/><circle cx="15" cy="-289" r="2.4"/></g>
+          <!-- strings: they shiver as if strummed -->
+          <g class="gt-str" stroke="#E8FDFF" stroke-width=".7"><line x1="-3" y1="-44" x2="-3" y2="-262"/><line x1="-1" y1="-44" x2="-1" y2="-262"/><line x1="1" y1="-44" x2="1" y2="-262"/><line x1="3" y1="-44" x2="3" y2="-262"/></g>
         </g></g>
+        <!-- music notes flying up from the guitar -->
+        <g class="fc-notes" font-family="system-ui,-apple-system,sans-serif" font-size="22" stroke="none">
+          <text class="nt n1" x="300" y="200" fill="#00F0FF">♪</text><text class="nt n2" x="318" y="190" fill="#FF3D81">♫</text>
+          <text class="nt n3" x="292" y="196" fill="#FFE14D">♪</text><text class="nt n4" x="312" y="204" fill="#2BFF88">♬</text>
+        </g>
       </svg>
       <div class="fc-title" data-t="FIRE CHORDS">FIRE CHORDS</div>
     </div>
@@ -666,6 +678,23 @@ input.mono{font-family:var(--f-mono)}
 #fc-splash .fc-art{width:min(62vw,260px);height:auto;overflow:visible}
 #fc-splash .fc-logs,#fc-splash .fc-guitar{-webkit-filter:drop-shadow(0 0 3px #00F0FF) drop-shadow(0 0 12px rgba(0,240,255,.6));filter:drop-shadow(0 0 3px #00F0FF) drop-shadow(0 0 12px rgba(0,240,255,.6))}
 #fc-splash .fc-fire{-webkit-filter:drop-shadow(0 0 3px #FF3D81) drop-shadow(0 0 12px rgba(255,61,129,.6));filter:drop-shadow(0 0 3px #FF3D81) drop-shadow(0 0 12px rgba(255,61,129,.6))}
+#fc-splash .gt-body,#fc-splash .gt-neck{stroke-dasharray:1 1;stroke-dashoffset:1;animation:gtDraw 1.1s .5s ease-out forwards}
+#fc-splash .gt-inner{stroke-dasharray:1 1;stroke-dashoffset:1;animation:gtDraw 1.1s .9s ease-out forwards}
+#fc-splash .gt-head,#fc-splash .gt-hole{opacity:0;animation:fcNeonOn .9s 1.1s steps(1) forwards}
+#fc-splash .gt-run{stroke-dasharray:.07 .93;stroke-dashoffset:1;opacity:0;-webkit-filter:drop-shadow(0 0 4px #fff);filter:drop-shadow(0 0 4px #fff);animation:gtRun 1.8s 1.6s linear infinite}
+#fc-splash .gt-str{animation:gtStrum 1.6s 1.7s ease-out infinite}
+#fc-splash .nt{opacity:0;animation:ntFly 2.4s ease-out infinite;-webkit-filter:drop-shadow(0 0 4px currentColor);filter:drop-shadow(0 0 4px currentColor)}
+#fc-splash .n1{fill:#00F0FF;color:#00F0FF;animation-delay:1.7s}#fc-splash .n2{color:#FF3D81;animation-delay:2.2s;animation-name:ntFly2}
+#fc-splash .n3{color:#FFE14D;animation-delay:2.7s}#fc-splash .n4{color:#2BFF88;animation-delay:3.1s;animation-name:ntFly2}
+#fc-splash .fc-strike i{animation:ringHit .8s ease-out infinite}
+#fc-splash .fc-strike i:nth-child(2){animation-delay:.32s}#fc-splash .fc-strike i:nth-child(3){animation-delay:.16s}#fc-splash .fc-strike i:nth-child(4){animation-delay:.48s}#fc-splash .fc-strike i:nth-child(5){animation-delay:.64s}
+@keyframes gtDraw{to{stroke-dashoffset:0}}
+@keyframes gtRun{0%{stroke-dashoffset:1;opacity:1}100%{stroke-dashoffset:0;opacity:1}}
+@keyframes gtStrum{0%{transform:translateX(0)}4%{transform:translateX(1px)}8%{transform:translateX(-.9px)}12%{transform:translateX(.6px)}16%{transform:translateX(-.4px)}20%,100%{transform:translateX(0)}}
+@keyframes ntFly{0%{opacity:0;transform:translate(0,0) rotate(0)}15%{opacity:1}100%{opacity:0;transform:translate(26px,-110px) rotate(18deg)}}
+@keyframes ntFly2{0%{opacity:0;transform:translate(0,0) rotate(0)}15%{opacity:1}100%{opacity:0;transform:translate(-14px,-120px) rotate(-16deg)}}
+@keyframes ringHit{0%{box-shadow:0 0 14px var(--c),inset 0 0 8px var(--c);background:rgba(255,255,255,.25)}60%,100%{box-shadow:0 0 5px var(--c);background:transparent}}
+@keyframes fcNeonOn{0%{opacity:0}10%{opacity:1}14%{opacity:.15}22%{opacity:1}26%{opacity:.3}34%{opacity:1}100%{opacity:1}}
 #fc-splash .fc-fl{transform-box:fill-box;-webkit-transform-origin:50% 100%;transform-origin:50% 100%}
 #fc-splash .f1{animation:fcFlick1 .9s ease-in-out infinite alternate}
 #fc-splash .f2{animation:fcFlick2 .7s ease-in-out infinite alternate}
@@ -689,7 +718,6 @@ input.mono{font-family:var(--f-mono)}
 @keyframes fcSpark2{0%{opacity:0;transform:translate(0,0)}15%{opacity:1}100%{opacity:0;transform:translate(-18px,-80px)}}
 @keyframes fcGlitchA{0%{clip-path:inset(0 0 100% 0)}8%{clip-path:inset(10% 0 55% 0);transform:translate(-6px,0)}12%{clip-path:inset(60% 0 8% 0);transform:translate(-2px,0)}16%{clip-path:inset(0 0 100% 0)}60%{clip-path:inset(35% 0 40% 0);transform:translate(-5px,0)}63%{clip-path:inset(0 0 100% 0)}}
 @keyframes fcGlitchB{0%{clip-path:inset(0 0 100% 0)}9%{clip-path:inset(50% 0 20% 0);transform:translate(6px,0)}13%{clip-path:inset(15% 0 70% 0);transform:translate(3px,0)}17%{clip-path:inset(0 0 100% 0)}61%{clip-path:inset(70% 0 5% 0);transform:translate(5px,0)}64%{clip-path:inset(0 0 100% 0)}}
-@media (prefers-reduced-motion:reduce){#fc-splash *,#fc-splash *::before,#fc-splash *::after{animation-duration:.01s!important;animation-delay:0s!important;animation-iteration-count:1!important}#fc-splash .sp,#fc-splash .gem{display:none}}
 </style>
 <script>
 /* splash shows once per launch, about 4 s; a tap skips it */
@@ -697,11 +725,10 @@ input.mono{font-family:var(--f-mono)}
   var el=document.getElementById('fc-splash'); if(!el)return;
   var seen=false; try{seen=sessionStorage.getItem('fc.splash')==='1';sessionStorage.setItem('fc.splash','1')}catch(e){}
   if(seen){el.parentNode.removeChild(el);return}
-  var quick=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
   var done=false;
   function hide(){if(done)return;done=true;el.classList.add('out');setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el)},550)}
   el.addEventListener('click',hide);
-  setTimeout(hide,quick?1200:4000);
+  setTimeout(hide,4200);
 })();
 </script>
 
