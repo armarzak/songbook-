@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Песенник">
+<meta name="apple-mobile-web-app-title" content="Fire Chords">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>Песенник для iPad</title>
+<title>Fire Chords для iPad</title>
 <!--
   A lightweight songbook for old iPads (iOS 9, Safari 9): plain ES5, flexbox without gap,
   no service worker (AppCache keeps it offline), data pulled read-only from the GitHub sync file.
@@ -407,7 +407,7 @@ function firstChord(s){
 function renderList(msg){
   stopScroll(); trkStop(); gpClose(); S.cur=null; tools.className='tools hidden';
   var c=ghCfg(),last=c&&c.last?new Date(c.last):null;
-  app.innerHTML='<div class="bar"><div class="bar-in"><div class="brand grow">Мой песенник</div>'+
+  app.innerHTML='<div class="bar"><div class="bar-in"><div class="brand grow">Fire Chords</div>'+
     (c?'<button class="btn" data-act="pull">Обновить</button>':'')+
     '<button class="btn" data-act="dark">'+(S.dark?'Светлая':'Тёмная')+'</button></div></div>'+
     '<div class="wrap"><input id="q" type="search" placeholder="Поиск по названию или исполнителю" value="'+esc(S.q)+'"><div class="tagbar" id="tagbar"></div>'+

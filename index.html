@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Песенник">
+<meta name="apple-mobile-web-app-title" content="Fire Chords">
 <meta name="theme-color" content="#F1F2EE" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111312" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.json">
@@ -15,7 +15,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script>window.SONGBOOK_OFFLINE=true</script>
 </head>
-<body><title>Мой песенник</title>
+<body><title>Fire Chords</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap">
@@ -559,11 +559,141 @@ input.mono{font-family:var(--f-mono)}
 
 .toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(70px + env(safe-area-inset-top,0px));z-index:60;background:var(--fg);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px)}
 
+/* page turn: a snapshot of the old screen turns away like a book page, revealing the new one */
+.pturn{position:fixed;inset:0;z-index:60;overflow:hidden;pointer-events:none;background:var(--bg);-webkit-backface-visibility:hidden;backface-visibility:hidden;will-change:transform;box-shadow:0 0 40px rgba(0,0,0,.35)}
+.pturn>.pt-in{position:absolute;left:0;right:0;top:0}
+.pturn>.pt-shade{position:absolute;inset:0;opacity:0}
+.pturn.fwd{transform-origin:0 50%;animation:ptFwd .5s cubic-bezier(.4,.1,.6,1) forwards}
+.pturn.back{transform-origin:100% 50%;animation:ptBack .5s cubic-bezier(.4,.1,.6,1) forwards}
+.pturn.fwd>.pt-shade{background:linear-gradient(90deg,rgba(0,0,0,.05),rgba(0,0,0,.45));animation:ptShade .5s forwards}
+.pturn.back>.pt-shade{background:linear-gradient(270deg,rgba(0,0,0,.05),rgba(0,0,0,.45));animation:ptShade .5s forwards}
+@keyframes ptFwd{from{transform:perspective(1800px) rotateY(0)}to{transform:perspective(1800px) rotateY(-92deg)}}
+@keyframes ptBack{from{transform:perspective(1800px) rotateY(0)}to{transform:perspective(1800px) rotateY(92deg)}}
+@keyframes ptShade{to{opacity:1}}
 @media (prefers-reduced-motion:no-preference){
   .panel{animation:up .18s ease-out}
   @keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
 }
 </style>
+
+<!-- Opening splash: a campfire with a guitar leaning beside it. Night-scene colors are fixed on purpose (same in every theme). -->
+<div id="fc-splash" aria-hidden="true">
+  <svg class="fc-art" viewBox="0 0 400 360" role="img">
+    <defs>
+      <radialGradient id="fcGlow" cx="50%" cy="50%" r="50%">
+        <stop offset="0" stop-color="#FF8A2A" stop-opacity=".55"/>
+        <stop offset=".45" stop-color="#E2471B" stop-opacity=".18"/>
+        <stop offset="1" stop-color="#E2471B" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="fcWood" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#F0A25A"/>
+        <stop offset=".45" stop-color="#C46A2B"/>
+        <stop offset="1" stop-color="#6E3212"/>
+      </linearGradient>
+      <linearGradient id="fcLog" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#7A4524"/>
+        <stop offset="1" stop-color="#3B1E0E"/>
+      </linearGradient>
+      <linearGradient id="fcOuter" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0" stop-color="#E8361A"/><stop offset="1" stop-color="#FF6A1A" stop-opacity=".85"/>
+      </linearGradient>
+      <linearGradient id="fcMid" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0" stop-color="#FF7A1A"/><stop offset="1" stop-color="#FFB13B"/>
+      </linearGradient>
+      <linearGradient id="fcCore" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0" stop-color="#FFF4C2"/><stop offset="1" stop-color="#FFD34D"/>
+      </linearGradient>
+    </defs>
+    <!-- stars -->
+    <g class="fc-stars" fill="#FFE9C7">
+      <circle cx="40" cy="40" r="1.4"/><circle cx="96" cy="78" r="1"/><circle cx="150" cy="26" r="1.6"/>
+      <circle cx="248" cy="52" r="1.1"/><circle cx="318" cy="30" r="1.5"/><circle cx="362" cy="92" r="1"/>
+      <circle cx="70" cy="132" r="1"/><circle cx="340" cy="150" r="1.2"/>
+    </g>
+    <!-- warm light on the ground -->
+    <ellipse class="fc-glow" cx="170" cy="292" rx="190" ry="150" fill="url(#fcGlow)"/>
+    <ellipse cx="190" cy="318" rx="170" ry="18" fill="#000" opacity=".45"/>
+    <!-- guitar leaning on the right -->
+    <g class="fc-guitar"><g transform="translate(300 318) rotate(-16) scale(.86)">
+      <path d="M-5 -128 L-5 -262 L5 -262 L5 -128 Z" fill="#3A2214"/>
+      <path d="M-9 -262 L9 -262 L11 -300 L-11 -300 Z" fill="#2A170D"/>
+      <g fill="#E9D6A8"><circle cx="-14" cy="-270" r="3"/><circle cx="-14" cy="-286" r="3"/><circle cx="14" cy="-270" r="3"/><circle cx="14" cy="-286" r="3"/></g>
+      <path d="M0 -150 C-24 -150 -36 -132 -32 -114 C-29 -100 -40 -94 -46 -82 C-58 -58 -50 -18 0 -14 C50 -18 58 -58 46 -82 C40 -94 29 -100 32 -114 C36 -132 24 -150 0 -150 Z" fill="url(#fcWood)" stroke="#2A1206" stroke-width="2.5"/>
+      <circle cx="0" cy="-96" r="12" fill="#1A0C05"/>
+      <circle cx="0" cy="-96" r="15" fill="none" stroke="#2A1206" stroke-width="1.5" opacity=".6"/>
+      <rect x="-14" y="-46" width="28" height="6" rx="2" fill="#2A1206"/>
+      <g stroke="#FFF1CF" stroke-width=".8" opacity=".75"><line x1="-3" y1="-43" x2="-3" y2="-262"/><line x1="-1" y1="-43" x2="-1" y2="-262"/><line x1="1" y1="-43" x2="1" y2="-262"/><line x1="3" y1="-43" x2="3" y2="-262"/></g>
+      <path d="M-46 -82 C-58 -58 -50 -18 0 -14" fill="none" stroke="#FFB45E" stroke-width="2" opacity=".55"/>
+    </g></g>
+    <!-- logs -->
+    <g class="fc-logs">
+      <g transform="rotate(-14 170 304)"><rect x="104" y="294" width="132" height="20" rx="10" fill="url(#fcLog)"/><ellipse cx="232" cy="304" rx="6" ry="10" fill="#C98A52"/><ellipse cx="232" cy="304" rx="3" ry="5" fill="#8A5530"/></g>
+      <g transform="rotate(14 170 304)"><rect x="104" y="294" width="132" height="20" rx="10" fill="url(#fcLog)"/><ellipse cx="108" cy="304" rx="6" ry="10" fill="#C98A52"/><ellipse cx="108" cy="304" rx="3" ry="5" fill="#8A5530"/></g>
+    </g>
+    <!-- flames -->
+    <g class="fc-fire">
+      <path class="fc-fl f1" d="M170 302 C122 302 112 260 132 228 C140 246 150 250 152 240 C150 214 160 186 182 160 C178 190 196 204 204 222 C210 206 210 196 206 184 C230 210 236 250 222 278 C214 294 196 302 170 302 Z" fill="url(#fcOuter)"/>
+      <path class="fc-fl f2" d="M170 302 C138 302 132 274 144 252 C150 262 158 262 160 254 C160 234 168 218 182 202 C182 224 196 234 200 250 C204 242 206 236 204 228 C218 246 220 270 210 286 C204 296 190 302 170 302 Z" fill="url(#fcMid)"/>
+      <path class="fc-fl f3" d="M171 302 C152 302 148 286 154 274 C158 280 162 278 164 272 C166 260 172 250 180 242 C182 258 192 266 194 278 C196 292 186 302 171 302 Z" fill="url(#fcCore)"/>
+    </g>
+    <!-- sparks -->
+    <g class="fc-sparks" fill="#FFC861">
+      <circle class="sp s1" cx="168" cy="230" r="2"/><circle class="sp s2" cx="182" cy="220" r="1.6"/><circle class="sp s3" cx="158" cy="236" r="1.4"/>
+      <circle class="sp s4" cx="176" cy="210" r="2.2"/><circle class="sp s5" cx="190" cy="232" r="1.3"/><circle class="sp s6" cx="162" cy="214" r="1.7"/>
+    </g>
+  </svg>
+  <div class="fc-title">Fire Chords</div>
+  <div class="fc-sub">песни у костра</div>
+</div>
+<style>
+#fc-splash{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px;
+  background:radial-gradient(120% 80% at 50% 62%,#3A160A 0%,#170A07 48%,#060407 100%);transition:opacity .45s ease,visibility .45s;cursor:pointer}
+#fc-splash.out{opacity:0;visibility:hidden}
+#fc-splash .fc-art{width:min(86vw,380px);height:auto;overflow:visible}
+#fc-splash .fc-title{font:700 clamp(30px,9vw,44px)/1.1 "Unbounded",system-ui,-apple-system,sans-serif;letter-spacing:.01em;
+  background:linear-gradient(180deg,#FFE7A3 0%,#FFB13B 45%,#F0531F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 18px rgba(255,120,40,.45));opacity:0;transform:translateY(12px);animation:fcRise .7s .75s cubic-bezier(.2,.8,.2,1) forwards}
+#fc-splash .fc-sub{font:500 15px/1.4 "Onest",system-ui,-apple-system,sans-serif;color:#E8B98A;letter-spacing:.18em;text-transform:uppercase;opacity:0;animation:fcFade .7s 1.15s ease forwards}
+#fc-splash .fc-fire{transform-box:fill-box;transform-origin:50% 100%;animation:fcGrow .6s cubic-bezier(.2,.9,.3,1.2) both}
+#fc-splash .fc-fl{transform-box:fill-box;transform-origin:50% 100%}
+#fc-splash .f1{animation:fcFlick1 .9s ease-in-out infinite alternate}
+#fc-splash .f2{animation:fcFlick2 .7s ease-in-out infinite alternate}
+#fc-splash .f3{animation:fcFlick3 .55s ease-in-out infinite alternate}
+#fc-splash .fc-glow{transform-box:fill-box;transform-origin:50% 50%;animation:fcPulse 1.3s ease-in-out infinite alternate}
+#fc-splash .fc-guitar{opacity:0;animation:fcGuitar .8s .3s cubic-bezier(.2,.8,.2,1) forwards}
+#fc-splash .fc-logs{animation:fcFade .4s both}
+#fc-splash .fc-stars circle{animation:fcTwinkle 1.6s ease-in-out infinite alternate}
+#fc-splash .fc-stars circle:nth-child(2n){animation-delay:.6s}
+#fc-splash .fc-stars circle:nth-child(3n){animation-delay:1.1s}
+#fc-splash .sp{opacity:0;animation:fcSpark 1.6s ease-out infinite}
+#fc-splash .s2{animation-delay:.3s}#fc-splash .s3{animation-delay:.6s}#fc-splash .s4{animation-delay:.9s}#fc-splash .s5{animation-delay:1.2s}#fc-splash .s6{animation-delay:.45s;animation-duration:1.9s}
+@keyframes fcGrow{from{transform:scale(.1,0)}to{transform:none}}
+@keyframes fcFlick1{0%{transform:scale(1,1) skewX(0)}50%{transform:scale(1.04,.94) skewX(2deg)}100%{transform:scale(.97,1.06) skewX(-3deg)}}
+@keyframes fcFlick2{0%{transform:scale(1,1) skewX(0)}100%{transform:scale(1.05,.92) skewX(4deg)}}
+@keyframes fcFlick3{0%{transform:scale(1,1)}100%{transform:scale(.92,1.1) skewX(-4deg)}}
+@keyframes fcPulse{from{opacity:.75;transform:scale(.96)}to{opacity:1;transform:scale(1.04)}}
+@keyframes fcGuitar{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:none}}
+@keyframes fcRise{to{opacity:1;transform:none}}
+@keyframes fcFade{from{opacity:0}to{opacity:1}}
+@keyframes fcTwinkle{from{opacity:.25}to{opacity:1}}
+@keyframes fcSpark{0%{opacity:0;transform:translate(0,0)}15%{opacity:1}100%{opacity:0;transform:translate(14px,-120px)}}
+#fc-splash .s2,#fc-splash .s5{animation-name:fcSpark2}
+@keyframes fcSpark2{0%{opacity:0;transform:translate(0,0)}15%{opacity:1}100%{opacity:0;transform:translate(-18px,-110px)}}
+@media (prefers-reduced-motion:reduce){#fc-splash *{animation-duration:.01s!important;animation-delay:0s!important;animation-iteration-count:1!important}#fc-splash .sp{display:none}}
+</style>
+<script>
+/* splash shows once per launch, about 2.6 s; a tap skips it */
+(function(){
+  var el=document.getElementById('fc-splash'); if(!el)return;
+  var seen=false; try{seen=sessionStorage.getItem('fc.splash')==='1';sessionStorage.setItem('fc.splash','1')}catch(e){}
+  if(seen){el.remove();return}
+  var quick=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var done=false;
+  function hide(){if(done)return;done=true;el.classList.add('out');setTimeout(function(){el.remove()},500)}
+  el.addEventListener('click',hide);
+  setTimeout(hide,quick?900:2600);
+})();
+</script>
 
 <div id="app"></div>
 <div id="tools" class="tools" hidden></div>
@@ -1144,7 +1274,7 @@ function cofSvg(){
 function renderCircle(){
   stopScroll(); S.view='circle'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
-  <header class="bar"><div class="bar-in"><div class="brand">Мой песенник</div></div></header>
+  <header class="bar"><div class="bar-in"><div class="brand">Fire Chords</div></div></header>
   <div class="wrap">
     ${tabsHtml('circle')}
     <div class="cof-wrap"><div id="cof-svg"></div><div id="cof-info" class="cof-info"></div></div>
@@ -1253,7 +1383,7 @@ function fretboardSvg(){
 function renderScales(){
   stopScroll(); S.view='scales'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
-  <header class="bar"><div class="bar-in"><div class="brand">Мой песенник</div></div></header>
+  <header class="bar"><div class="bar-in"><div class="brand">Fire Chords</div></div></header>
   <div class="wrap wide">
     ${tabsHtml('scales')}
     <div class="sc-ctrl">
@@ -1410,7 +1540,7 @@ function renderTuner(){
   stopScroll(); S.view='tuner'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
   const inClaude=!window.SONGBOOK_OFFLINE&&window.claude;
   app.innerHTML=`
-  <header class="bar"><div class="bar-in"><div class="brand">Мой песенник</div></div></header>
+  <header class="bar"><div class="bar-in"><div class="brand">Fire Chords</div></div></header>
   <div class="wrap">
     ${tabsHtml('tuner')}
     <div class="tuner" id="tuner" data-state="idle">
@@ -1570,7 +1700,7 @@ function renderChart(){
   stopScroll(); S.view='chart'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
   <header class="bar"><div class="bar-in">
-    <div class="brand">Мой песенник</div>
+    <div class="brand">Fire Chords</div>
     <button class="btn primary" data-act="new-shape">${ICON.plus}Своя схема</button>
   </div></header>
   <div class="wrap wide">
@@ -2357,7 +2487,7 @@ function renderList(){
   stopScroll(); S.view='list'; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
   <header class="bar"><div class="bar-in">
-    <div class="brand">Мой песенник</div>
+    <div class="brand">Fire Chords</div>
     <button class="btn" data-act="import">Импорт</button>
     <button class="btn primary" data-act="new">${ICON.plus}Песня</button>
   </div></header>
@@ -2475,6 +2605,20 @@ function fillList(){
 }
 function plural(n,a,b,c){const m=n%10,h=n%100;return m===1&&h!==11?a:m>=2&&m<=4&&(h<10||h>=20)?b:c}
 
+/* freeze the current screen into a snapshot and turn it away like a page ('fwd' into a song, 'back' to the list) */
+function pageTurn(dir){
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  try{
+    const y=scrollY,snap=document.createElement('div'),inner=app.cloneNode(true);
+    snap.className='pturn '+dir; inner.className='pt-in'; inner.removeAttribute('id');
+    inner.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));
+    inner.style.transform='translateY('+(-y)+'px)';
+    const bar=inner.querySelector('.bar'); if(bar){bar.style.position='absolute';bar.style.top=y+'px';bar.style.left='0';bar.style.right='0'}
+    const shade=document.createElement('div'); shade.className='pt-shade';
+    snap.append(inner,shade); document.body.appendChild(snap);
+    const done=()=>snap.remove(); snap.addEventListener('animationend',e=>{if(e.target===snap)done()}); setTimeout(done,900);
+  }catch{}
+}
 function renderSong(id,keepScroll){
   const s=findSong(id); if(!s){renderList();return}
   const y=keepScroll?scrollY:0;
@@ -2956,8 +3100,8 @@ document.addEventListener('click',e=>{
   else if(a==='se-fret'){const i=+b.dataset.s,f=+b.dataset.f;SE.frets[i]=SE.frets[i]===f?0:f;fillShapeEditor()}
   else if(a==='se-base'){SE.base=Math.min(15,Math.max(1,SE.base+ +b.dataset.d));fillShapeEditor()}
   else if(a==='se-save')saveShape();
-  else if(a==='cchord')openChartChord(b.dataset.c);  else if(a==='open')renderSong(b.dataset.id);
-  else if(a==='home'){S.cur=null;renderList()}
+  else if(a==='cchord')openChartChord(b.dataset.c);  else if(a==='open'){pageTurn('fwd');renderSong(b.dataset.id)}
+  else if(a==='home'){pageTurn('back');S.cur=null;renderList()}
   else if(a==='edit')renderEditor(S.cur);
   else if(a==='cancel'){S.cur&&findSong(S.cur)?renderSong(S.cur):renderList()}
   else if(a==='save')doSave(S.cur&&S.cur!=='demo'?S.cur:null);
