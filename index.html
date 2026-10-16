@@ -319,6 +319,10 @@ body:has(.tabbar) .wrap{padding-bottom:calc(84px + env(safe-area-inset-bottom,0p
 .fb .dot{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .fb .dot:hover circle{stroke-width:3}
 .fb .dot.hit circle{animation:hit .35s ease-out}
+.fb .dot.sounding{opacity:1}
+.fb .dot.sounding circle{fill:var(--accent);stroke:var(--accent);transform-box:fill-box;transform-origin:center;animation:sounding .3s ease-out}
+.fb .dot.sounding text{fill:var(--on-accent)}
+@keyframes sounding{0%{transform:scale(1.4)}100%{transform:scale(1)}}
 @keyframes hit{0%{stroke-width:7}100%{stroke-width:2}}
 .pos .btn svg{fill:currentColor;stroke:none;width:14px;height:14px}
 @media (prefers-reduced-motion:reduce){.fb .dot.hit circle{animation:none}}
@@ -371,8 +375,15 @@ body:has(.tabbar) .wrap{padding-bottom:calc(84px + env(safe-area-inset-bottom,0p
 .cchip .cn{font:700 15px var(--f-mono);color:var(--chord)}
 .cchip.harm{border-style:dashed}
 .progs{display:flex;flex-direction:column;gap:8px}
-.prog{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
-.prog .arr{color:var(--muted);font-size:13px}
+.prog{display:flex;flex-wrap:nowrap;align-items:center;gap:3px}
+.prog .arr{color:var(--muted);font-size:11px;flex:none}
+.prog .cchip{flex:1 1 0;min-width:0}
+.prog .cchip .cplay{min-width:0;flex:1;padding:4px 2px 4px 4px}
+.prog .cchip .cdia{width:18px}
+.prog .cchip .cdia svg{width:11px;height:11px}
+.prog .cchip .cn{font-size:13px;white-space:nowrap}
+.prog .cchip .rn{font-size:10px}
+.prog .pplay{width:30px;height:30px;margin-right:2px}
 .tuner{display:flex;flex-direction:column;align-items:center;gap:6px;padding-block:8px 20px;--t-col:var(--muted)}
 .tuner[data-state="ok"]{--t-col:var(--good)}
 .tuner[data-state="near"]{--t-col:var(--accent)}
@@ -1561,10 +1572,24 @@ function playScale(){
   const ctx=audioCtx(),{rpc,notes}=scaleData(),m0=40+((rpc-4)%12+12)%12;
   const seq=[...notes.map(x=>m0+x.semi),m0+12];
   unlockAudio(seq.length*0.32+2);
-  whenRunning(ctx,()=>{silence(ctx);const t0=ctx.currentTime+0.05;seq.forEach((m,k)=>pluckAt(ctx,m,t0+k*0.32))});
+  whenRunning(ctx,()=>{
+    silence(ctx);const t0=ctx.currentTime+0.05;seq.forEach((m,k)=>pluckAt(ctx,m,t0+k*0.32));
+    const lead=Math.max(0,(t0-ctx.currentTime)*1000);
+    seq.forEach((m,k)=>progTimers.push(setTimeout(()=>scaleLight(m),lead+k*320)));
+    progTimers.push(setTimeout(()=>scaleLight(null),lead+seq.length*320+500));
+  });
+}
+/* light every place on the fretboard where the sounding note is, and keep it in view */
+function scaleLight(m){
+  document.querySelectorAll('.fb .dot.sounding').forEach(d=>d.classList.remove('sounding'));
+  if(m==null)return;
+  const ds=[...document.querySelectorAll('.fb .dot[data-m="'+m+'"]')];
+  ds.forEach(d=>d.classList.add('sounding'));
+  const sc=document.getElementById('fb-scroll'),d=ds.find(x=>!x.classList.contains('dim'))||ds[0];
+  if(sc&&d){const r=d.getBoundingClientRect(),sr=sc.getBoundingClientRect();if(r.left<sr.left+24||r.right>sr.right-24)sc.scrollLeft+=r.left-sr.left-sr.width/2}
 }
 function playChord(name){const v=getVoicings(name).list[0];if(v)playFrets(v.frets);return !!v}
-function stopProg(){progTimers.forEach(clearTimeout);progTimers=[];document.querySelectorAll('.cchip.playing').forEach(e=>e.classList.remove('playing'))}
+function stopProg(){progTimers.forEach(clearTimeout);progTimers=[];scaleLight(null);document.querySelectorAll('.cchip.playing').forEach(e=>e.classList.remove('playing'))}
 function playProg(btn,names){
   stopProg();
   const chips=[...btn.parentElement.querySelectorAll('.cchip')];
