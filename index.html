@@ -141,7 +141,7 @@ body.has-tools .wrap{padding-block-end:120px}
 .bar-in{max-width:760px;margin:0 auto;padding:10px 16px;display:flex;gap:8px;align-items:center;min-height:60px}
 .bar-title{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .brand{flex:1;display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-weight:700;font-size:19px;letter-spacing:-.01em}
-.brand .logo{width:28px;height:28px;flex:none;filter:drop-shadow(0 1px 4px rgba(255,61,129,.35))}
+.brand .logo{width:28px;height:28px;flex:none}
 
 .btn{font:500 15px var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:8px 13px;min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .btn.primary{background:var(--accent);color:var(--on-accent);border-color:transparent;font-weight:600}
@@ -606,7 +606,7 @@ input.mono{font-family:var(--f-mono)}
   </div>
   <div class="fc-horizon"></div>
   <div class="fc-scan"></div>
-  <div class="fc-top"><div class="fc-title" data-t="FIRE CHORDS">FIRE CHORDS</div></div>
+  <div class="fc-top"><svg class="fc-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--accent)" d="M12 1.2C5.9 1.2 2.5 3.9 2.5 8.3c0 5.8 4.9 11.6 9.5 14.5 4.6-2.9 9.5-8.7 9.5-14.5 0-4.4-3.4-7.1-9.5-7.1z"/><path fill="var(--on-accent)" d="M12.1 5.2c.9 2.4 3.9 3.8 3.9 7.5 0 2.6-1.8 4.6-4 4.6s-4-1.9-4-4.3c0-1.9 1-3.1 2.1-3.8 0 1.5.6 2.4 1.5 2.6-.6-2.3-.4-4.6.5-6.6z"/></svg><div class="fc-title" data-t="FIRE CHORDS">FIRE CHORDS</div></div>
   <div class="fc-fly">
     <div class="fc-hover">
       <svg class="fc-art" viewBox="100 140 240 160">
@@ -677,6 +677,8 @@ input.mono{font-family:var(--f-mono)}
   -webkit-transform-origin:50% 100%;transform-origin:50% 100%;animation:fcFlyIn 1.5s cubic-bezier(.15,.75,.25,1) both}
 #fc-splash .fc-hover{display:flex;flex-direction:column;align-items:center;gap:6px;animation:fcHover 2.4s 1.4s ease-in-out infinite}
 #fc-splash .fc-top{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 9vh);display:flex;justify-content:center;z-index:4;opacity:0;animation:fcNeonOn 1s .6s steps(1) forwards}
+#fc-splash .fc-top{align-items:center;gap:12px}
+#fc-splash .fc-logo{width:clamp(42px,12vw,58px);height:auto;flex:none;-webkit-filter:drop-shadow(0 0 10px var(--accent));filter:drop-shadow(0 0 10px var(--accent))}
 #fc-splash .fc-art{width:min(70vw,300px);height:auto;overflow:visible}
 #fc-splash .fc-logs,#fc-splash .fc-guitar{-webkit-filter:drop-shadow(0 0 3px #00F0FF) drop-shadow(0 0 12px rgba(0,240,255,.6));filter:drop-shadow(0 0 3px #00F0FF) drop-shadow(0 0 12px rgba(0,240,255,.6))}
 #fc-splash .fc-fire{-webkit-filter:drop-shadow(0 0 3px #FF3D81) drop-shadow(0 0 12px rgba(255,61,129,.6));filter:drop-shadow(0 0 3px #FF3D81) drop-shadow(0 0 12px rgba(255,61,129,.6))}
@@ -724,6 +726,8 @@ input.mono{font-family:var(--f-mono)}
 <script>
 /* splash shows once per launch, about 4 s; a tap skips it */
 (function(){
+  /* the theme is set here already so the logo on the splash has the theme's color (Midnight unless another was chosen) */
+  try{var sk=localStorage.getItem('sb.skin');if(localStorage.getItem('sb.skin.mid')!=='1'||!sk)sk='midnight';if(sk!=='auto')document.documentElement.setAttribute('data-skin',sk)}catch(e){document.documentElement.setAttribute('data-skin','midnight')}
   var el=document.getElementById('fc-splash'); if(!el)return;
   var seen=false; try{seen=sessionStorage.getItem('fc.splash')==='1';sessionStorage.setItem('fc.splash','1')}catch(e){}
   if(seen){el.parentNode.removeChild(el);return}
@@ -1141,9 +1145,8 @@ function lsGet(k){try{return localStorage.getItem(k)}catch{return null}}
 function lsSet(k,v){try{localStorage.setItem(k,v)}catch{}}
 let toastT;
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2800)}
-/* app logo: a guitar pick with a flame cut out of it (brand colors, same in every theme) */
-const LOGO='<svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="lgFire" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB800"/><stop offset=".55" stop-color="#FF3D81"/><stop offset="1" stop-color="#9D1DFF"/></linearGradient></defs>'+
-  '<path fill="url(#lgFire)" fill-rule="evenodd" d="M12 1.5C6.2 1.5 2.8 4.1 2.8 8.4 2.8 14 7.6 19.6 12 22.5 16.4 19.6 21.2 14 21.2 8.4 21.2 4.1 17.8 1.5 12 1.5ZM12 6C12.9 8.3 15.8 9.6 15.8 13 15.8 15.4 14.1 17.2 12 17.2S8.2 15.4 8.2 13.2C8.2 11.5 9.2 10.4 10.2 9.8 10.2 11.2 10.8 12 11.6 12.2 11.1 10.1 11.2 7.9 12 6Z"/></svg>';
+/* app logo: a guitar pick with a flame, two colors taken from the theme (accent + its contrast color) */
+const LOGO='<svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--accent)" d="M12 1.2C5.9 1.2 2.5 3.9 2.5 8.3c0 5.8 4.9 11.6 9.5 14.5 4.6-2.9 9.5-8.7 9.5-14.5 0-4.4-3.4-7.1-9.5-7.1z"/><path fill="var(--on-accent)" d="M12.1 5.2c.9 2.4 3.9 3.8 3.9 7.5 0 2.6-1.8 4.6-4 4.6s-4-1.9-4-4.3c0-1.9 1-3.1 2.1-3.8 0 1.5.6 2.4 1.5 2.6-.6-2.3-.4-4.6.5-6.6z"/></svg>';
 const ICON={
   back:'<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
   edit:'<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>',
@@ -3330,7 +3333,8 @@ function ghStart(){
 }
 
 /* ---------- boot ---------- */
-applySkin(lsGet('sb.skin')||'auto');
+if(lsGet('sb.skin.mid')!=='1'){lsSet('sb.skin','midnight');lsSet('sb.skin.mid','1')}
+applySkin(lsGet('sb.skin')||'midnight');
 renderList();
 initStore().then(st=>{
   RAW=st; store=wrapStore(st);
