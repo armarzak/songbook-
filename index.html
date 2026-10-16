@@ -132,7 +132,9 @@ html,body{background:var(--bg);color:var(--fg)}
 body{font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
 /* no double-tap zoom anywhere in the app */
 html{touch-action:manipulation}
-html,body{overscroll-behavior:none}
+/* the document never scrolls (iOS shifts fixed bottom bars when it does): <body> is the scroll area inside a still page */
+html{height:100%;overflow:hidden;box-sizing:border-box;overscroll-behavior:none}
+body{height:100%;margin:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none}
 .tools,.tabbar{-webkit-transform:translateZ(0);transform:translateZ(0)}
 *{box-sizing:border-box}
 button{font-family:inherit;cursor:pointer}
@@ -141,7 +143,7 @@ button{font-family:inherit;cursor:pointer}
 .wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:14px 32px}
 body.has-tools .wrap{padding-block-end:120px}
 
-.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--bar);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.bar{position:sticky;top:0;z-index:10;background:var(--bar);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
 .bar-in{max-width:760px;margin:0 auto;padding:10px 16px;display:flex;gap:8px;align-items:center;min-height:60px}
 .bar-title{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .brand{flex:1;display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-weight:700;font-size:19px;letter-spacing:-.01em}
@@ -431,7 +433,7 @@ body:has(.tabbar) .wrap{padding-bottom:calc(84px + env(safe-area-inset-bottom,0p
 .seg.vt svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .listctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-block:2px 4px}
 /* sort stays pinned under the header while the list scrolls */
-#sortseg{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--barh,61px));z-index:9;margin-inline:-16px;padding:6px 16px;background:var(--bar);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+#sortseg{position:sticky;top:var(--barh,61px);z-index:9;margin-inline:-16px;padding:6px 16px;background:var(--bar);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 #sortseg.stuck{border-bottom:1px solid var(--line)}
 .listctl:empty{display:none}
 .listctl .cap{font-size:12px;color:var(--muted)}
@@ -1244,6 +1246,8 @@ function loadSpeed(){
   return Math.min(SPEED_MAX,Math.max(SPEED_MIN,v));
 }
 let store=null;
+const SCR=document.body; // the scroll area (see the html/body rule in the styles)
+const scrTop=el=>SCR.scrollTop+el.getBoundingClientRect().top-SCR.getBoundingClientRect().top;
 function localStore(){
   const read=()=>{try{return JSON.parse(lsGet('sb.songs')||'[]')}catch{return []}};
   let cb=()=>{};
@@ -2170,8 +2174,8 @@ function trackFollow(){
     let i=-1; TR.marks.forEach((m,k)=>{if(m!=null&&m<=t+0.05)i=k});
     if(i!==TR.cur){TR.cur=i;lineHL(i,'cur',true)}
   }else if(d>0){
-    const el=document.scrollingElement||document.documentElement,max=el.scrollHeight-innerHeight;
-    if(max>0){const y=Math.round(max*Math.min(1,t/d));if(Math.abs(y-scrollY)>1)scrollTo(0,y)}
+    const max=SCR.scrollHeight-SCR.clientHeight;
+    if(max>0){const y=Math.round(max*Math.min(1,t/d));if(Math.abs(y-SCR.scrollTop)>1)SCR.scrollTo(0,y)}
   }
 }
 function lineHL(li,cls,scroll){
@@ -2180,7 +2184,7 @@ function lineHL(li,cls,scroll){
   const ly=document.querySelector(`.ln[data-li="${li}"]`); if(!ly)return;
   ly.classList.add(cls);
   document.querySelectorAll(`.ln[data-pli="${li}"]`).forEach(e=>e.classList.add(cls));
-  if(scroll){const top=scrollY+ly.getBoundingClientRect().top-innerHeight*0.35;scrollTo({top:Math.max(0,top),behavior:'smooth'})}
+  if(scroll){const top=scrTop(ly)-SCR.clientHeight*0.35;SCR.scrollTo({top:Math.max(0,top),behavior:'smooth'})}
 }
 function vToggle(){
   if(TR.el||!hasMarks())return;
@@ -2589,7 +2593,7 @@ async function enterStage(){
   if(S.view!=='song')return;
   S.stage=true; document.body.classList.add('stage');
   document.getElementById('body').style.setProperty('--fs',S.sfs+'px');
-  renderTools(); scrollTo(0,0);
+  renderTools(); SCR.scrollTo(0,0);
   try{const el=document.documentElement;if(el.requestFullscreen)await el.requestFullscreen({navigationUI:'hide'})}catch{}
   try{stageWake=await navigator.wakeLock.request('screen')}catch{stageWake=null}
 }
@@ -2604,7 +2608,7 @@ function exitStage(){
 /* In stage mode a tap on the lower part of the page turns forward, on the upper part back */
 function stageTap(e){
   const down=e.clientY>innerHeight*0.35, step=Math.round(innerHeight*0.8);
-  scrollBy({top:down?step:-step,behavior:'smooth'});
+  SCR.scrollBy({top:down?step:-step,behavior:'smooth'});
 }
 document.addEventListener('visibilitychange',async()=>{if(!document.hidden&&S.stage&&!stageWake){try{stageWake=await navigator.wakeLock.request('screen')}catch{}}});
 
@@ -2739,7 +2743,7 @@ function plural(n,a,b,c){const m=n%10,h=n%100;return m===1&&h!==11?a:m>=2&&m<=4&
    or the snapshot slides away to the right, uncovering the list ('back') */
 function pageTurn(dir){
   try{
-    const y=scrollY,snap=document.createElement('div'),view=document.createElement('div'),inner=app.cloneNode(true);
+    const y=SCR.scrollTop,snap=document.createElement('div'),view=document.createElement('div'),inner=app.cloneNode(true);
     snap.className='pslide'; view.className='pt-view'; inner.removeAttribute('id'); inner.className='';
     inner.querySelectorAll('[id]:not(linearGradient):not(radialGradient)').forEach(e=>e.removeAttribute('id'));
     view.appendChild(inner);
@@ -2757,7 +2761,7 @@ function pageTurn(dir){
 }
 function renderSong(id,keepScroll){
   const s=findSong(id); if(!s){renderList();return}
-  const y=keepScroll?scrollY:0;
+  const y=keepScroll?SCR.scrollTop:0;
   if(S.cur!==id){metroStop();trackStop();metroLoad(s);countInStop();S.scroll.tapPaused=false;S.scroll.speed=+s.speed?Math.min(SPEED_MAX,Math.max(SPEED_MIN,+s.speed)):loadSpeed();S.cur=id;S.shift=s.transpose||0;if(!s.demo)pushRecent(id)}
   S.view='song';
   app.innerHTML=`
@@ -2790,7 +2794,7 @@ function renderSong(id,keepScroll){
   if(TR.id!==id&&!s.demo)trackLoad(s);
   else if(TR.id===id){const m=Array.isArray(s.marks)?s.marks:[];if(!TR.marking&&JSON.stringify(m)!==JSON.stringify(TR.marks)){TR.marks=m.slice();renderTools()}}
   document.body.classList.add('has-tools');
-  scrollTo(0,y);
+  SCR.scrollTo(0,y);
 }
 function fillSong(){
   const s=findSong(S.cur); if(!s)return;
@@ -3206,7 +3210,7 @@ function fillAz(list,anchors){
     if(!l||l.dataset.l===last)return; last=l.dataset.l;
     const row=document.querySelector('#songs [data-az="'+CSS.escape(last)+'"]');
     if(row){const off=(document.querySelector('.bar')||{offsetHeight:61}).offsetHeight+((document.getElementById('sortseg')||{}).offsetHeight||0)+6;
-      scrollTo(0,row.getBoundingClientRect().top+scrollY-off)}
+      SCR.scrollTo(0,scrTop(row)-off)}
     if(!tip){tip=document.createElement('div');tip.className='az-tip';document.body.appendChild(tip)}
     tip.textContent=last;
   };
@@ -3221,9 +3225,8 @@ function fillAz(list,anchors){
 let raf=0,lastT=null,acc=0,wake=null;
 function tick(t){
   if(!S.scroll.on)return;
-  if(lastT!=null){acc+=S.scroll.speed*(t-lastT)/1000;if(acc>=1){const n=Math.floor(acc);acc-=n;scrollBy(0,n)}
-    const el=document.scrollingElement||document.documentElement;
-    if(innerHeight+scrollY>=el.scrollHeight-2){stopAuto();renderTools();return}}
+  if(lastT!=null){acc+=S.scroll.speed*(t-lastT)/1000;if(acc>=1){const n=Math.floor(acc);acc-=n;SCR.scrollBy(0,n)}
+    if(SCR.clientHeight+SCR.scrollTop>=SCR.scrollHeight-2){stopAuto();renderTools();return}}
   lastT=t;raf=requestAnimationFrame(tick);
 }
 async function startScroll(){S.scroll.on=true;lastT=null;acc=0;raf=requestAnimationFrame(tick);
@@ -3305,7 +3308,7 @@ document.addEventListener('click',e=>{
   else if(a==='stage-exit')exitStage();
   else if(a==='viewmode'){S.textOnly=b.dataset.v==='1';lsSet('sb.textonly',S.textOnly?'1':'0');document.querySelectorAll('.vt button').forEach(x=>x.setAttribute('aria-pressed',String((x.dataset.v==='1')===S.textOnly)));fillSong();renderTools()}
   else if(a==='tag'){S.tag=b.dataset.t||null;fillList()}
-  else if(a==='artist'){pageTurn('back');S.cur=null;S.tag=null;S.q=b.dataset.a;renderList();scrollTo(0,0)}
+  else if(a==='artist'){pageTurn('back');S.cur=null;S.tag=null;S.q=b.dataset.a;renderList();SCR.scrollTo(0,0)}
   else if(a==='tagfilter'){S.tag=b.dataset.t;S.q='';S.cur=null;renderList()}
   else if(a==='tag-toggle'){const t=b.dataset.t;ED.tags=ED.tags.includes(t)?ED.tags.filter(x=>x!==t):[...ED.tags,t];fillTagpick()}
   else if(a==='tag-add')addTag();
