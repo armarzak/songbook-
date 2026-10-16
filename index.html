@@ -262,8 +262,9 @@ body:has(.tabbar) .wrap{padding-bottom:calc(84px + env(safe-area-inset-bottom,0p
 .warn-line{color:var(--warn);font-weight:600}
 .link{all:unset;cursor:pointer;text-decoration:underline;text-underline-offset:2px;color:var(--warn)}
 .link:focus-visible{outline:2px solid var(--accent)}
-.chart-scroll{overflow-x:auto;margin-inline:-16px;padding-inline:16px;padding-block:6px 10px}
-.chart-grid{display:grid;grid-template-columns:repeat(11,76px);gap:10px 4px;width:max-content}
+.chart-scroll{padding-block:0 10px}
+.chart-root{font:700 16px var(--f-display);color:var(--accent);margin:18px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.chart-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 6px}
 .cell{all:unset;box-sizing:border-box;position:relative;cursor:pointer;text-align:center;border-radius:10px;padding:4px 2px 2px;border:1.5px solid transparent}
 .cell:hover{background:var(--sunk)}
 .cell:focus-visible{outline:2px solid var(--accent)}
@@ -541,8 +542,7 @@ label.btn{cursor:pointer}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .sec-h{font-family:var(--f-display);font-weight:500;font-size:15px;margin:14px 0 4px}
 .sec-p{margin:0 0 8px;color:var(--muted);font-size:14px}
-.mine-grid{display:flex;flex-wrap:wrap;gap:10px 4px;margin-bottom:6px}
-.mine-grid .cell{width:76px}
+.mine-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 6px;margin-bottom:6px}
 .steps{margin:0;padding-left:20px;color:var(--muted);font-size:14px;display:flex;flex-direction:column;gap:4px;max-width:65ch}
 .imp-src{min-height:28vh;font-size:14px}
 .imp-defs .btn{margin-top:8px}
@@ -1790,9 +1790,11 @@ function fillChart(){
     <h3 class="sec-h">Таблица</h3>`:'';
   const all=CHART.flat();
   document.getElementById('chart-sum').innerHTML=`
-    <p>Все ${all.length} схем из вашей таблицы в том же порядке. Строки идут по основной ноте, столбцы по типу аккорда. Нажмите на схему, чтобы увидеть её крупно с номерами пальцев.</p>`;
-  grid.innerHTML=all.map(v=>`<button class="cell" data-act="cchord" data-c="${esc(v.name)}" aria-label="${esc(pretty(v.name))}">
-      <span class="n">${esc(pretty(v.name))}</span>${diagram(v,true)}</button>`).join('');
+    <p>Все ${all.length} схем из вашей таблицы в том же порядке. Они сгруппированы по основной ноте, по 4 в ряд. Нажмите на схему, чтобы увидеть её крупно с номерами пальцев.</p>`;
+  const cell=v=>`<button class="cell" data-act="cchord" data-c="${esc(v.name)}" aria-label="${esc(pretty(v.name))}">
+      <span class="n">${esc(pretty(v.name))}</span>${diagram(v,true)}</button>`;
+  grid.innerHTML=CHART.map(row=>{const root=(row[0].name.match(/^[A-G][#b]?/)||[row[0].name])[0];
+    return `<h3 class="chart-root">${esc(pretty(root))}</h3><div class="chart-row">${row.map(cell).join('')}</div>`}).join('');
 }
 function openChartChord(name){
   const v=CHART_BY_NAME[name]; if(!v)return;
