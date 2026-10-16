@@ -3360,6 +3360,19 @@ function ghStart(){
 }
 
 /* ---------- boot ---------- */
+/* pinch in a song changes the text size, like the A/A buttons (the page itself never zooms) */
+(()=>{
+  let d0=0,f0=0;
+  const dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+  document.addEventListener('touchstart',e=>{if(S.view==='song'&&e.touches.length===2){d0=dist(e.touches);f0=S.stage?S.sfs:S.fs}},{passive:true});
+  document.addEventListener('touchmove',e=>{
+    if(!d0||e.touches.length!==2)return;
+    const lo=S.stage?14:12,hi=S.stage?44:26,v=Math.round(Math.min(hi,Math.max(lo,f0*dist(e.touches)/d0)));
+    if(S.stage)S.sfs=v;else S.fs=v;
+    const b=document.getElementById('body'); if(b)b.style.setProperty('--fs',v+'px');
+  },{passive:true});
+  document.addEventListener('touchend',e=>{if(d0&&e.touches.length<2){d0=0;if(S.stage)lsSet('sb.sfs',S.sfs);else lsSet('sb.fs',S.fs)}},{passive:true});
+})();
 if(lsGet('sb.skin.mid')!=='1'){lsSet('sb.skin','midnight');lsSet('sb.skin.mid','1')}
 applySkin(lsGet('sb.skin')||'midnight');
 renderList();
