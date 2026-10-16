@@ -560,13 +560,14 @@ input.mono{font-family:var(--f-mono)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(70px + env(safe-area-inset-top,0px));z-index:60;background:var(--fg);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px)}
 
 /* page turn: a snapshot of the old screen turns away like a book page, revealing the new one */
-.pturn{position:fixed;inset:0;z-index:60;overflow:hidden;pointer-events:none;background:var(--bg);-webkit-backface-visibility:hidden;backface-visibility:hidden;will-change:transform;box-shadow:0 0 40px rgba(0,0,0,.35)}
-.pturn>.pt-in{position:absolute;left:0;right:0;top:0}
-.pturn>.pt-shade{position:absolute;inset:0;opacity:0}
-.pturn.fwd{transform-origin:0 50%;animation:ptFwd .5s cubic-bezier(.4,.1,.6,1) forwards}
-.pturn.back{transform-origin:100% 50%;animation:ptBack .5s cubic-bezier(.4,.1,.6,1) forwards}
-.pturn.fwd>.pt-shade{background:linear-gradient(90deg,rgba(0,0,0,.05),rgba(0,0,0,.45));animation:ptShade .5s forwards}
-.pturn.back>.pt-shade{background:linear-gradient(270deg,rgba(0,0,0,.05),rgba(0,0,0,.45));animation:ptShade .5s forwards}
+.pturn{position:fixed;top:0;left:0;width:100%;height:100%;z-index:60;pointer-events:none;-webkit-backface-visibility:hidden;backface-visibility:hidden;box-shadow:0 0 40px rgba(0,0,0,.35)}
+.pturn>.pt-view{position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;background:var(--bg)}
+.pturn .bar{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.pturn>.pt-shade{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0}
+.pturn.fwd{-webkit-transform-origin:0 50%;transform-origin:0 50%;-webkit-animation:ptFwd .55s cubic-bezier(.4,.1,.6,1) forwards;animation:ptFwd .55s cubic-bezier(.4,.1,.6,1) forwards}
+.pturn.back{-webkit-transform-origin:100% 50%;transform-origin:100% 50%;-webkit-animation:ptBack .55s cubic-bezier(.4,.1,.6,1) forwards;animation:ptBack .55s cubic-bezier(.4,.1,.6,1) forwards}
+.pturn.fwd>.pt-shade{background:linear-gradient(90deg,rgba(0,0,0,.05),rgba(0,0,0,.45));animation:ptShade .55s forwards}
+.pturn.back>.pt-shade{background:linear-gradient(270deg,rgba(0,0,0,.05),rgba(0,0,0,.45));animation:ptShade .55s forwards}
 @keyframes ptFwd{from{transform:perspective(1800px) rotateY(0)}to{transform:perspective(1800px) rotateY(-92deg)}}
 @keyframes ptBack{from{transform:perspective(1800px) rotateY(0)}to{transform:perspective(1800px) rotateY(92deg)}}
 @keyframes ptShade{to{opacity:1}}
@@ -581,7 +582,7 @@ input.mono{font-family:var(--f-mono)}
   <svg class="fc-art" viewBox="0 0 400 360" role="img">
     <defs>
       <radialGradient id="fcGlow" cx="50%" cy="50%" r="50%">
-        <stop offset="0" stop-color="#FF8A2A" stop-opacity=".55"/>
+        <stop offset="0" stop-color="#FF8A2A" stop-opacity=".42"/>
         <stop offset=".45" stop-color="#E2471B" stop-opacity=".18"/>
         <stop offset="1" stop-color="#E2471B" stop-opacity="0"/>
       </radialGradient>
@@ -643,17 +644,15 @@ input.mono{font-family:var(--f-mono)}
     </g>
   </svg>
   <div class="fc-title">Fire Chords</div>
-  <div class="fc-sub">песни у костра</div>
 </div>
 <style>
 #fc-splash{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px;
-  background:radial-gradient(120% 80% at 50% 62%,#3A160A 0%,#170A07 48%,#060407 100%);transition:opacity .45s ease,visibility .45s;cursor:pointer}
+  background:radial-gradient(110% 70% at 50% 62%,#1C0A04 0%,#0A0403 45%,#020102 100%);transition:opacity .45s ease,visibility .45s;cursor:pointer}
 #fc-splash.out{opacity:0;visibility:hidden}
 #fc-splash .fc-art{width:min(86vw,380px);height:auto;overflow:visible}
 #fc-splash .fc-title{font:700 clamp(30px,9vw,44px)/1.1 "Unbounded",system-ui,-apple-system,sans-serif;letter-spacing:.01em;
   background:linear-gradient(180deg,#FFE7A3 0%,#FFB13B 45%,#F0531F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
   filter:drop-shadow(0 0 18px rgba(255,120,40,.45));opacity:0;transform:translateY(12px);animation:fcRise .7s .75s cubic-bezier(.2,.8,.2,1) forwards}
-#fc-splash .fc-sub{font:500 15px/1.4 "Onest",system-ui,-apple-system,sans-serif;color:#E8B98A;letter-spacing:.18em;text-transform:uppercase;opacity:0;animation:fcFade .7s 1.15s ease forwards}
 #fc-splash .fc-fire{transform-box:fill-box;transform-origin:50% 100%;animation:fcGrow .6s cubic-bezier(.2,.9,.3,1.2) both}
 #fc-splash .fc-fl{transform-box:fill-box;transform-origin:50% 100%}
 #fc-splash .f1{animation:fcFlick1 .9s ease-in-out infinite alternate}
@@ -682,7 +681,7 @@ input.mono{font-family:var(--f-mono)}
 @media (prefers-reduced-motion:reduce){#fc-splash *{animation-duration:.01s!important;animation-delay:0s!important;animation-iteration-count:1!important}#fc-splash .sp{display:none}}
 </style>
 <script>
-/* splash shows once per launch, about 2.6 s; a tap skips it */
+/* splash shows once per launch, about 3.8 s; a tap skips it */
 (function(){
   var el=document.getElementById('fc-splash'); if(!el)return;
   var seen=false; try{seen=sessionStorage.getItem('fc.splash')==='1';sessionStorage.setItem('fc.splash','1')}catch(e){}
@@ -691,7 +690,7 @@ input.mono{font-family:var(--f-mono)}
   var done=false;
   function hide(){if(done)return;done=true;el.classList.add('out');setTimeout(function(){el.remove()},500)}
   el.addEventListener('click',hide);
-  setTimeout(hide,quick?900:2600);
+  setTimeout(hide,quick?1200:3800);
 })();
 </script>
 
@@ -2605,18 +2604,23 @@ function fillList(){
 }
 function plural(n,a,b,c){const m=n%10,h=n%100;return m===1&&h!==11?a:m>=2&&m<=4&&(h<10||h>=20)?b:c}
 
-/* freeze the current screen into a snapshot and turn it away like a page ('fwd' into a song, 'back' to the list) */
+/* freeze the visible screen into a snapshot and turn it away like a book page ('fwd' into a song, 'back' to the list).
+   Only a viewport-sized window turns: Safari will not turn a full-length page in 3D. */
 function pageTurn(dir){
-  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   try{
-    const y=scrollY,snap=document.createElement('div'),inner=app.cloneNode(true);
-    snap.className='pturn '+dir; inner.className='pt-in'; inner.removeAttribute('id');
+    const y=scrollY,snap=document.createElement('div'),view=document.createElement('div'),inner=app.cloneNode(true);
+    snap.className='pturn'; view.className='pt-view'; inner.removeAttribute('id');
     inner.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));
-    inner.style.transform='translateY('+(-y)+'px)';
-    const bar=inner.querySelector('.bar'); if(bar){bar.style.position='absolute';bar.style.top=y+'px';bar.style.left='0';bar.style.right='0'}
+    view.appendChild(inner);
     const shade=document.createElement('div'); shade.className='pt-shade';
-    snap.append(inner,shade); document.body.appendChild(snap);
-    const done=()=>snap.remove(); snap.addEventListener('animationend',e=>{if(e.target===snap)done()}); setTimeout(done,900);
+    snap.appendChild(view); snap.appendChild(shade); document.body.appendChild(snap);
+    view.scrollTop=y;                       // same spot as on screen; the sticky header stays on top inside
+    snap.getBoundingClientRect();           // let Safari lay it out before the turn starts
+    snap.classList.add(dir);
+    let gone=false; const done=()=>{if(!gone){gone=true;snap.remove()}};
+    snap.addEventListener('animationend',e=>{if(e.target===snap)done()});
+    snap.addEventListener('webkitAnimationEnd',e=>{if(e.target===snap)done()});
+    setTimeout(done,1000);
   }catch{}
 }
 function renderSong(id,keepScroll){
