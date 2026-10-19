@@ -2204,7 +2204,7 @@ function vToggle(){
   if(TR.el||!hasMarks())return;
   if(TR.vOn){TR.vPaused=(performance.now()-TR.vStart)/1000;TR.vOn=false}
   else if(CI.on){countInStop()}
-  else{stopAuto();countIn(()=>{TR.vStart=performance.now()-TR.vPaused*1000;TR.vOn=true;if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow);renderTools()});return}
+  else{stopAuto();countIn(()=>{TR.vStart=performance.now()-TR.vPaused*1000;TR.vOn=true;if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow);renderTools();if(!TR.vPaused)toast('Если песня уже играет, нажмите на строку, которую сейчас поют: текст подстроится')});return}
   renderTools();
 }
 function vReset(){TR.vOn=false;TR.vPaused=0;cancelAnimationFrame(TR.raf);TR.raf=0;TR.cur=-1;lineHL(-1,'cur');renderTools()}
@@ -2335,7 +2335,7 @@ function vListen(){
   if(TR.el||!hasMarks()||TR.vOn)return;
   stopAuto(); countInStop(); TR.vPaused=0; TR.cur=-1; lineHL(-1,'cur');
   soundStart(t0=>{TR.vStart=t0;TR.vOn=true;TR.vPaused=0;if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow);renderTools();toast('Музыка пошла: текст идёт по разметке')},()=>renderTools());
-  renderTools(); toast('Жду музыку… Включите песню');
+  renderTools(); toast('Жду музыку… Включите её на другом устройстве: на этом айфоне iOS ставит музыку на паузу, когда работает микрофон');
 }
 /* tempo by ear: ~12 s through the microphone, then the beat period from the rhythm of loudness changes */
 function tempoOf(env,fps){
@@ -2376,7 +2376,7 @@ function tempoListen(){
 }
 /* marking without a file: the song plays anywhere (Yandex Music, a speaker…), the clock starts with it */
 function markBarHtml(){
-  if(TR.mv&&!TR.mt0)return `<p>Включите песню (в Яндекс Музыке или где угодно) и сразу нажмите <b>«Музыка пошла»</b>. Или нажмите <b>«По звуку»</b> заранее: песенник сам поймает начало через микрофон.</p>
+  if(TR.mv&&!TR.mt0)return `<p>Включите песню (в Яндекс Музыке или где угодно) и сразу нажмите <b>«Музыка пошла»</b>. Или нажмите <b>«По звуку»</b> заранее: песенник сам поймает начало через микрофон (только если музыка играет на другом устройстве, на этом айфоне iOS её остановит).</p>
     <div class="mk-btns"><button class="btn${LS.wait?' listen':''}" data-act="mk-sound">${MIC_SVG}${LS.wait?'Жду музыку…':'По звуку'}</button>
     <button class="btn primary mk-main" data-act="mk-go" id="mk-main">▶ Музыка пошла</button></div>
     <button class="link2" data-act="mk-cancel">Отменить разметку</button>`;
@@ -2446,7 +2446,7 @@ function markCancel(){
 }
 function trackMenu(s){
   if(s.demo)return '';
-  const mk=`<button class="btn" data-act="t-mark">${ICON.metro}${hasMarks()?'Разметить строки заново под музыку':'Разметить строки под музыку'}</button><p class="hint">Без файла: включите песню в Яндекс Музыке или где угодно и отмечайте начало каждой строки. Потом «▶ по разметке» поведёт текст как караоке.</p>`;
+  const mk=`<button class="btn" data-act="t-mark">${ICON.metro}${hasMarks()?'Разметить строки заново под музыку':'Разметить строки под музыку'}</button><p class="hint">Без файла: включите песню в Яндекс Музыке или где угодно и отмечайте начало каждой строки. Потом «▶ по разметке» поведёт текст как караоке. Если музыка играет на этом же айфоне, запустите «▶ по разметке» и нажмите на строку, которую сейчас поют: текст подстроится.</p>`;
   if(!trackCan())return mk+'<p class="hint">Минусы работают в приложении с экрана «Домой».</p>';
   const add=`<label class="btn" for="track-file">${ICON.music}${s.track&&TR.has?'Заменить минус':'Добавить минус'}</label><input type="file" id="track-file" class="vh" accept="audio/*,.m4a,.mp3,.wav,.aac,.aif,.aiff">`;
   if(!TR.has){
@@ -3420,6 +3420,12 @@ function stopAuto(){S.scroll.on=false;cancelAnimationFrame(raf);if(wake){wake.re
 let patchT;
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');
+  // "по разметке" is running: a tap on a line means "this line is being sung now"
+  if(S.view==='song'&&TR.vOn&&!TR.el&&!TR.marking&&!(b&&b.dataset.act==='chord'&&!S.stage)){
+    const ln=e.target.closest('#body .ln[data-li],#body .ln[data-pli]');
+    if(ln){const li=+(ln.dataset.li!=null?ln.dataset.li:ln.dataset.pli),t=TR.marks[li];
+      if(t!=null){TR.vStart=performance.now()-t*1000;TR.cur=-1;toast('Подстроил под строку '+(li+1));return}}
+  }
   if(S.view==='song'&&(S.scroll.on||S.scroll.tapPaused)&&e.target.closest('#body')&&!(b&&b.dataset.act==='chord'&&!S.stage)){
     if(S.scroll.on){stopAuto();S.scroll.tapPaused=true;renderTools();toast('Прокрутка на паузе. Нажмите на текст, чтобы продолжить')}
     else{S.scroll.tapPaused=false;startScroll();renderTools()}
