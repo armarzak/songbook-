@@ -2773,10 +2773,14 @@ const BRAND={
   ig:'<svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="igGrad" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#FEDA75"/><stop offset=".3" stop-color="#FA7E1E"/><stop offset=".55" stop-color="#D62976"/><stop offset=".8" stop-color="#962FBF"/><stop offset="1" stop-color="#4F5BD5"/></linearGradient></defs><rect x="5" y="5" width="30" height="30" rx="9" fill="url(#igGrad)"/><rect x="11" y="11" width="18" height="18" rx="5.5" fill="none" stroke="#fff" stroke-width="2.4"/><circle cx="20" cy="20" r="4.3" fill="none" stroke="#fff" stroke-width="2.4"/><circle cx="25.6" cy="14.4" r="1.4" fill="#fff"/></svg>',
   ya:'<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="#FFCC00"/><path d="M23.5 10.5v12.2a4.2 4.2 0 1 1-2.4-3.8v-8.4z" fill="#111"/><path d="M23.5 10.5c2.2.6 4.3 2.2 4.6 4.8-1.3-1-2.8-1.4-4.6-1.3z" fill="#111"/></svg>',
   ug:'<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="5" y="5" width="30" height="30" rx="8" fill="#111"/><text x="20" y="25.5" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="900" font-size="14" fill="#FFC600">UG</text></svg>',
+  ss:'<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="5" y="5" width="30" height="30" rx="8" fill="#F2F2F2" stroke="#D6D6D6"/><g stroke="#9A9A9A" stroke-width="1.2"><path d="M9 13h22M9 17.5h22M9 22h22M9 26.5h22"/></g><g font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="6.5" text-anchor="middle" fill="#1A1A1A"><rect x="12" y="10" width="5" height="6" fill="#F2F2F2"/><text x="14.5" y="15.3">3</text><rect x="19" y="19" width="5" height="6" fill="#F2F2F2"/><text x="21.5" y="24.4">5</text><rect x="26" y="14.5" width="5" height="6" fill="#F2F2F2"/><text x="28.5" y="19.8">7</text></g></svg>',
   tb:'<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="9" y="5" width="22" height="30" rx="5" fill="#1D1F24" stroke="#3B3F47"/><circle cx="15" cy="12" r="2.6" fill="#FFB648"/><circle cx="25" cy="12" r="2.6" fill="#FFB648"/><circle cx="20" cy="18.5" r="1.6" fill="#FF3D3D"/><rect x="13" y="23" width="14" height="8" rx="2" fill="#9AA0AA"/></svg>'
 };
 /* a song page on Ultimate Guitar (in a PDF saved from there it is printed at the bottom) */
 const UG_TAB_RE=/https?:\/\/(?:tabs|www)\.ultimate-guitar\.com\/tab\/[^\s"'<>)]+/i;
+/* iOS 17+ opens x-safari-https:// links in Safari itself, so Ultimate Guitar shows its page instead of jumping into its app */
+const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const inSafari=u=>IS_IOS&&/^https:\/\//i.test(u)?'x-safari-'+u:u;
 const isEnglishSong=s=>{const t=((s&&s.title)||'')+' '+((s&&s.artist)||'');return /[A-Za-z]/.test(t)&&!/[А-Яа-яЁё]/.test(t)};
 function songLinks(s){
   if(!s||s.demo)return '';
@@ -2791,7 +2795,8 @@ function songLinks(s){
   const igs=vids.filter(v=>v.kind==='instagram');
   igs.forEach((v,i)=>{h+=a(v.url,BRAND.ig,igs.length>1?'Instagram '+(i+1):'Instagram')});
   if(q)h+=a('https://music.yandex.ru/search?text='+encodeURIComponent(q),BRAND.ya,'Я.Музыка');
-  if(s.ugUrl||q)h+=a(s.ugUrl||'https://www.ultimate-guitar.com/search.php?search_type=title&value='+encodeURIComponent(q),BRAND.ug,'Guitar Tabs');
+  if(q)h+=a('https://www.songsterr.com/?pattern='+encodeURIComponent(q),BRAND.ss,'Songsterr');
+  if(s.ugUrl||q)h+=a(inSafari(s.ugUrl||'https://www.ultimate-guitar.com/search.php?search_type=title&value='+encodeURIComponent(q)),BRAND.ug,'Guitar Tabs');
   if(q&&isEnglishSong(s))h+=a(TONEBRIDGE_APP,BRAND.tb,'ToneBridge',` data-act="tonebridge" data-q="${esc(q)}"`);
   return h?`<div class="song-links">${h}</div>`:'';
 }
@@ -2839,12 +2844,6 @@ function renderSong(id,keepScroll){
   document.body.classList.add('has-tools');
   SCR.scrollTo(0,y);
 }
-/* Songsterr's own search with the artist and title filled in */
-function songsterrBtn(s){
-  if(!s||s.demo)return '';
-  const q=[s.artist,s.title].map(x=>(x||'').trim()).filter(Boolean).join(' ');
-  return q?`<a class="btn" href="https://www.songsterr.com/?pattern=${encodeURIComponent(q)}" target="_blank" rel="noopener">${ICON.dia}Songsterr</a>`:'';
-}
 function fillSong(){
   const s=findSong(S.cur); if(!s)return;
   const flats=usesFlats(s.body),seen=[];
@@ -2866,16 +2865,11 @@ function fillSong(){
   bodyEl.innerHTML=html||'<div class="ln ly">Текст песни пока пустой.</div>';
   bodyEl.classList.toggle('plain',plain);
   document.getElementById('strip').hidden=plain;
-  const ss=songsterrBtn(s);
   const gb=document.getElementById('gtpbox'); if(gb)gb.innerHTML=s.gtp?`<section class="video gtpsec">
     <h3 class="sec-h">Табулатура Guitar Pro</h3>
     <p class="gtpname">${ICON.dia}<span>${esc(s.gtp.name)}</span></p>
-    <div class="vlinks">${trackCan()?`<button class="btn primary gtpbtn" data-act="gp-open">${ICON.play}GTP</button>`:''}${ss}</div>
+    <div class="vlinks">${trackCan()?`<button class="btn primary gtpbtn" data-act="gp-open">${ICON.play}GTP</button>`:''}</div>
     <p class="hint">Табулатура с бегущим курсором и звуком.</p>
-  </section>`:ss?`<section class="video gtpsec">
-    <h3 class="sec-h">Табулатура</h3>
-    <div class="vlinks">${ss}</div>
-    <p class="hint">Откроет поиск этой песни на Songsterr.</p>
   </section>`:'';
   const vb=document.getElementById('videobox'); if(vb&&vb.dataset.v!==(s.video||'')){vb.dataset.v=s.video||'';vb.innerHTML=videoHtml(s)}
   document.getElementById('strip').innerHTML=seen.map(n=>{
