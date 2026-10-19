@@ -2204,7 +2204,7 @@ function vToggle(){
   if(TR.el||!hasMarks())return;
   if(TR.vOn){TR.vPaused=(performance.now()-TR.vStart)/1000;TR.vOn=false}
   else if(CI.on){countInStop()}
-  else{stopAuto();countIn(()=>{TR.vStart=performance.now()-TR.vPaused*1000;TR.vOn=true;if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow);renderTools();if(!TR.vPaused)toast('Если песня уже играет, нажмите на строку, которую сейчас поют: текст подстроится')});return}
+  else{stopAuto();TR.vStart=performance.now()-TR.vPaused*1000;TR.vOn=true;if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow);if(!TR.vPaused)toast('Если песня уже играет, нажмите на строку, которую сейчас поют: текст подстроится')} // silent on purpose: any sound from here makes iOS pause music in other apps
   renderTools();
 }
 function vReset(){TR.vOn=false;TR.vPaused=0;cancelAnimationFrame(TR.raf);TR.raf=0;TR.cur=-1;lineHL(-1,'cur');renderTools()}
