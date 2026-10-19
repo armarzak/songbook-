@@ -2148,7 +2148,6 @@ function trackTools(){
     if(!hasMarks()||TR.marking)return '';
     const t=TR.vOn?(performance.now()-TR.vStart)/1000:TR.vPaused;
     return `<div class="grp trackgrp" aria-label="Текст по разметке">
-      ${TR.vOn?'':`<button data-act="v-listen" class="${LS.on?'on listen':''}" aria-label="${LS.on?'Не ждать музыку':'Начать, когда заиграет музыка'}">${MIC_SVG}</button>`}
       <button data-act="v-play" class="${TR.vOn?'on':''}" aria-label="${TR.vOn?'Пауза':'Запустить текст по разметке'}">${TR.vOn?ICON.pause:ICON.play}</button>
       <span class="tt" id="t-time">${fmtTime(t)} / ${fmtTime(vEnd())}</span><span class="cap">по разметке</span>
       ${TR.vPaused&&!TR.vOn?'<button data-act="v-reset" aria-label="С начала">↺</button>':''}</div>`;
@@ -2204,7 +2203,7 @@ function vToggle(){
   if(TR.el||!hasMarks())return;
   if(TR.vOn){TR.vPaused=(performance.now()-TR.vStart)/1000;TR.vOn=false}
   else if(CI.on){countInStop()}
-  else{stopAuto();TR.vStart=performance.now()-TR.vPaused*1000;TR.vOn=true;if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow);if(!TR.vPaused)toast('Если песня уже играет, нажмите на строку, которую сейчас поют: текст подстроится')} // silent on purpose: any sound from here makes iOS pause music in other apps
+  else{stopAuto();TR.vStart=performance.now()-TR.vPaused*1000;TR.vOn=true;if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow)}
   renderTools();
 }
 function vReset(){TR.vOn=false;TR.vPaused=0;cancelAnimationFrame(TR.raf);TR.raf=0;TR.cur=-1;lineHL(-1,'cur');renderTools()}
@@ -2317,26 +2316,6 @@ function micFailText(k){
   if(k==='unsupported')return 'Здесь нет доступа к микрофону. Откройте песенник с экрана «Домой».';
   return 'Не получилось включить микрофон.';
 }
-/* waits for the music: first ~0.3 s measure the room, then the first loud moment counts as the start */
-function soundStart(onGo,onFail){
-  const cal=[];let floor=0,hot=0,first=0;
-  micListen((buf,sr,now)=>{
-    let e=0; for(let i=0;i<buf.length;i++)e+=buf[i]*buf[i];
-    const rms=Math.sqrt(e/buf.length),blockMs=buf.length/sr*1000;
-    if(cal.length<14){cal.push(rms);if(cal.length===14){cal.sort((a,b)=>a-b);floor=cal[7]}return}
-    if(rms>Math.max(floor*4,0.012)){if(!hot)first=now-blockMs;if(++hot>=3){micStop();onGo(first)}}
-    else hot=0;
-  },k=>{LS.wait=false;toast(micFailText(k));if(onFail)onFail()});
-  if(LS.on)LS.wait=true;
-}
-/* "по разметке" started by the music itself */
-function vListen(){
-  if(LS.on){micStop();renderTools();toast('Ожидание музыки отменено');return}
-  if(TR.el||!hasMarks()||TR.vOn)return;
-  stopAuto(); countInStop(); TR.vPaused=0; TR.cur=-1; lineHL(-1,'cur');
-  soundStart(t0=>{TR.vStart=t0;TR.vOn=true;TR.vPaused=0;if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow);renderTools();toast('Музыка пошла: текст идёт по разметке')},()=>renderTools());
-  renderTools(); toast('Жду музыку… Включите её на другом устройстве: на этом айфоне iOS ставит музыку на паузу, когда работает микрофон');
-}
 /* tempo by ear: ~12 s through the microphone, then the beat period from the rhythm of loudness changes */
 function tempoOf(env,fps){
   const n=env.length,on=new Float32Array(n);
@@ -2374,47 +2353,26 @@ function tempoListen(){
     }
   },k=>{if(btn())btn().textContent='Темп на слух';if(st())st().textContent=micFailText(k)});
 }
-/* marking without a file: the song plays anywhere (Yandex Music, a speaker…), the clock starts with it */
-function markBarHtml(){
-  if(TR.mv&&!TR.mt0)return `<p>Включите песню (в Яндекс Музыке или где угодно) и сразу нажмите <b>«Музыка пошла»</b>. Или нажмите <b>«По звуку»</b> заранее: песенник сам поймает начало через микрофон (только если музыка играет на другом устройстве, на этом айфоне iOS её остановит).</p>
-    <div class="mk-btns"><button class="btn${LS.wait?' listen':''}" data-act="mk-sound">${MIC_SVG}${LS.wait?'Жду музыку…':'По звуку'}</button>
-    <button class="btn primary mk-main" data-act="mk-go" id="mk-main">▶ Музыка пошла</button></div>
-    <button class="link2" data-act="mk-cancel">Отменить разметку</button>`;
-  return `<p>Нажимайте <b>«Строка»</b> в момент, когда начинается каждая строка. Ошиблись — «Назад».</p>
-    <div class="mk-btns"><button class="btn" data-act="mk-undo">Назад</button>
-    <button class="btn primary mk-main" data-act="mk-tap" id="mk-main">Строка ${TR.k+1} из ${TR.n}</button>
-    <button class="btn" data-act="mk-done">Готово</button></div>
-    <button class="link2" data-act="mk-cancel">Отменить разметку</button>`;
-}
-function markBarFill(){const b=document.getElementById('markbar');if(b)b.innerHTML=markBarHtml()}
-function markGo(t0){TR.mt0=t0||performance.now();LS.wait=false;markBarFill();lineHL(0,'next',true)}
-function markSound(){
-  if(LS.on){micStop();LS.wait=false;markBarFill();return}
-  soundStart(t0=>{if(TR.marking&&TR.mv&&!TR.mt0){markGo(t0);toast('Музыка пошла — отмечайте строки')}},()=>markBarFill());
-  markBarFill();
-}
-
 function markStart(){
-  closeSheet();
+  if(!TR.el)return; closeSheet();
   const n=document.querySelectorAll('.ln[data-li]').length;
   if(!n){toast('В песне нет строк текста.');return}
-  stopAuto(); exitStage(); countInStop(); micStop();
-  if(TR.vOn){TR.vOn=false;TR.vPaused=0}
-  const virt=!TR.el;
-  Object.assign(TR,{marking:true,marks:[],k:0,n,cur:-1,mv:virt,mt0:0}); lineHL(-1,'cur');
+  stopAuto(); exitStage(); countInStop();
+  Object.assign(TR,{marking:true,marks:[],k:0,n,cur:-1}); lineHL(-1,'cur');
   const bar=document.createElement('div'); bar.id='markbar'; bar.className='markbar';
-  bar.innerHTML=markBarHtml();
+  bar.innerHTML=`<p>Нажимайте <b>«Строка»</b> в момент, когда начинается каждая строка. Ошиблись — «Назад».</p>
+    <div class="mk-btns"><button class="btn" data-act="mk-undo">Назад</button>
+    <button class="btn primary mk-main" data-act="mk-tap" id="mk-main">Строка 1 из ${n}</button>
+    <button class="btn" data-act="mk-done">Готово</button></div>
+    <button class="link2" data-act="mk-cancel">Отменить разметку</button>`;
   document.body.appendChild(bar);
-  if(virt){renderTools();return}
   lineHL(0,'next',true);
   TR.el.currentTime=0;
   TR.el.play().then(()=>{if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow);renderTools()}).catch(()=>{});
 }
 function markTap(){
-  if(!TR.marking)return;
-  if(TR.mv&&!TR.mt0)return;
-  const t=TR.mv?(performance.now()-TR.mt0)/1000:TR.el?TR.el.currentTime:null; if(t==null)return;
-  TR.marks[TR.k]=Math.round(t*100)/100; TR.k++;
+  if(!TR.marking||!TR.el)return;
+  TR.marks[TR.k]=Math.round(TR.el.currentTime*100)/100; TR.k++;
   if(TR.k>=TR.n){markDone();return}
   lineHL(TR.k,'next',true); markLabel();
 }
@@ -2427,7 +2385,6 @@ function markUndo(){
 function markLabel(){const b=document.getElementById('mk-main');if(b)b.textContent='Строка '+(TR.k+1)+' из '+TR.n}
 async function markDone(){
   if(!TR.marking)return;
-  micStop(); TR.mv=false; TR.mt0=0;
   TR.marking=false; const mb=document.getElementById('markbar'); if(mb)mb.remove();
   lineHL(-1,'next'); if(TR.el)TR.el.pause();
   const s=findSong(S.cur); if(!s)return;
@@ -2439,19 +2396,17 @@ async function markDone(){
   }catch(e){saveErr(e)}
 }
 function markCancel(){
-  micStop(); TR.mv=false; TR.mt0=0;
   TR.marking=false; const mb=document.getElementById('markbar'); if(mb)mb.remove();
   lineHL(-1,'next'); if(TR.el)TR.el.pause();
   const s=findSong(S.cur); TR.marks=s&&Array.isArray(s.marks)?s.marks.slice():[];
 }
 function trackMenu(s){
   if(s.demo)return '';
-  const mk=`<button class="btn" data-act="t-mark">${ICON.metro}${hasMarks()?'Разметить строки заново под музыку':'Разметить строки под музыку'}</button><p class="hint">Без файла: включите песню в Яндекс Музыке или где угодно и отмечайте начало каждой строки. Потом «▶ по разметке» поведёт текст как караоке. Если музыка играет на этом же айфоне, запустите «▶ по разметке» и нажмите на строку, которую сейчас поют: текст подстроится.</p>`;
-  if(!trackCan())return mk+'<p class="hint">Минусы работают в приложении с экрана «Домой».</p>';
+  if(!trackCan())return '<p class="hint">Минусы работают в приложении с экрана «Домой».</p>';
   const add=`<label class="btn" for="track-file">${ICON.music}${s.track&&TR.has?'Заменить минус':'Добавить минус'}</label><input type="file" id="track-file" class="vh" accept="audio/*,.m4a,.mp3,.wav,.aac,.aif,.aiff">`;
   if(!TR.has){
     const nm=hasMarks()?TR.marks.filter(x=>x!=null).length:0;
-    return mk+add+(s.track?`<p class="hint">Минус «${esc(s.track.name)}» хранится на другом устройстве. Выберите здесь тот же файл, и текст пойдёт за ним по готовой разметке.</p>`:'')
+    return add+(s.track?`<p class="hint">Минус «${esc(s.track.name)}» хранится на другом устройстве. Выберите здесь тот же файл, и текст пойдёт за ним по готовой разметке.</p>`:'')
       +(nm?`<p class="hint">Разметка строк есть (${nm}). Без файла её можно запустить кнопкой ▶ «по разметке» в нижней панели: текст пойдёт по сохранённому таймингу без звука.</p>`:'');
   }
   const marked=TR.marks.filter(x=>x!=null).length;
@@ -3420,12 +3375,6 @@ function stopAuto(){S.scroll.on=false;cancelAnimationFrame(raf);if(wake){wake.re
 let patchT;
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');
-  // "по разметке" is running: a tap on a line means "this line is being sung now"
-  if(S.view==='song'&&TR.vOn&&!TR.el&&!TR.marking&&!(b&&b.dataset.act==='chord'&&!S.stage)){
-    const ln=e.target.closest('#body .ln[data-li],#body .ln[data-pli]');
-    if(ln){const li=+(ln.dataset.li!=null?ln.dataset.li:ln.dataset.pli),t=TR.marks[li];
-      if(t!=null){TR.vStart=performance.now()-t*1000;TR.cur=-1;toast('Подстроил под строку '+(li+1));return}}
-  }
   if(S.view==='song'&&(S.scroll.on||S.scroll.tapPaused)&&e.target.closest('#body')&&!(b&&b.dataset.act==='chord'&&!S.stage)){
     if(S.scroll.on){stopAuto();S.scroll.tapPaused=true;renderTools();toast('Прокрутка на паузе. Нажмите на текст, чтобы продолжить')}
     else{S.scroll.tapPaused=false;startScroll();renderTools()}
@@ -3434,7 +3383,7 @@ document.addEventListener('click',e=>{
   if(S.stage){
     const act=b&&b.dataset.act;
     if(!b||act==='chord'){if(!e.target.closest('#tools'))stageTap(e);return}
-    if(!['scroll','fs','stage-exit','t-play','v-play','v-reset','v-listen'].includes(act))exitStage();
+    if(!['scroll','fs','stage-exit','t-play','v-play','v-reset'].includes(act))exitStage();
   }
   if(!b){if(e.target===sheet)closeSheet();return}
   const a=b.dataset.act;
@@ -3480,9 +3429,6 @@ document.addEventListener('click',e=>{
   else if(a==='mk-undo')markUndo();
   else if(a==='mk-done')markDone();
   else if(a==='mk-cancel')markCancel();
-  else if(a==='mk-go')markGo();
-  else if(a==='mk-sound')markSound();
-  else if(a==='v-listen')vListen();
   else if(a==='m-listen')tempoListen();
   else if(a==='m-x')metroSet(M.bpm*+b.dataset.k);
   else if(a==='video-load')loadVideo(+b.dataset.i||0);
