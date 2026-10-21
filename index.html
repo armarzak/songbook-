@@ -3205,13 +3205,14 @@ function fillSong(){
   if(TR.marking)lineHL(TR.k,'next',false);
 }
 function renderTools(){
-  const sp=S.scroll;
+  const sp=S.scroll,minus=!!(TR.has&&TR.el); // a minus drives the text itself, so autoscroll is hidden then
+  if(minus&&(sp.on||CI.on)){countInStop();stopAuto()}
   if(S.stage){
     tools.innerHTML=`<div class="tools-in stage-tools">
       ${trackTools()}
-      <div class="grp scroll" aria-label="Автопрокрутка">
+      ${minus?'':`<div class="grp scroll" aria-label="Автопрокрутка">
         <button data-act="scroll" class="${sp.on?'on':''}" aria-label="${sp.on?'Остановить':'Запустить'} автопрокрутку">${sp.on?ICON.pause:ICON.play}</button>
-        <label class="speed" for="speed"><input type="range" id="speed" min="${SPEED_MIN}" max="${SPEED_MAX}" step="1" value="${sp.speed}" aria-label="Скорость прокрутки"></label></div>
+        <label class="speed" for="speed"><input type="range" id="speed" min="${SPEED_MIN}" max="${SPEED_MAX}" step="1" value="${sp.speed}" aria-label="Скорость прокрутки"></label></div>`}
       <div class="grp" aria-label="Размер текста">
         <button data-act="fs" data-d="-1" aria-label="Мельче" style="font-size:13px">A</button>
         <button data-act="fs" data-d="1" aria-label="Крупнее" style="font-size:18px">A</button></div>
@@ -3229,11 +3230,11 @@ function renderTools(){
       <button data-act="fs" data-d="1" aria-label="Крупнее" style="font-size:18px">A</button></div>
     ${trackTools()}
     <div class="grp" aria-label="Метроном"><button class="metrobtn${M.on?' on':''}" data-act="metro" aria-label="Метроном, ${M.bpm} ударов в минуту">${ICON.metro}<span class="lbl">${M.bpm}</span></button></div>
-    <div class="grp scroll" aria-label="Автопрокрутка">
+    ${minus?'':`<div class="grp scroll" aria-label="Автопрокрутка">
       <button data-act="scroll" class="${sp.on?'on':''}" aria-label="${sp.on?'Остановить':'Запустить'} автопрокрутку">${sp.on?ICON.pause:ICON.play}</button>
       <label class="speed" for="speed"><span class="cap">Медл.</span>
         <input type="range" id="speed" min="${SPEED_MIN}" max="${SPEED_MAX}" step="1" value="${sp.speed}" aria-label="Скорость прокрутки">
-        <span class="cap">Быстр.</span></label></div>
+        <span class="cap">Быстр.</span></label></div>`}
   </div>`;
   tools.hidden=false;
 }
