@@ -2272,7 +2272,7 @@ function openMetro(){
     <div class="m-row"><span class="cap">Отсчёт перед стартом</span><div class="seg" role="group" aria-label="Отсчёт перед стартом"><button data-act="ci" data-v="1" aria-pressed="${countInOn()}">Вкл</button><button data-act="ci" data-v="0" aria-pressed="${!countInOn()}">Выкл</button></div></div>
     <p class="hint" id="m-listen-st" role="status"></p>
     <p class="hint">«Темп на слух»: включите песню, песенник 12 секунд послушает её через микрофон и поставит темп. Если музыка играет на этом же телефоне, iOS может приостановить её, когда включится микрофон, тогда включите песню на другом устройстве.</p>
-    <p class="hint">Отсчёт: перед минусом и автопрокруткой метроном отсчитывает один такт в темпе песни.</p>
+    <p class="hint">Отсчёт: перед автопрокруткой метроном отсчитывает один такт в темпе песни.</p>
     <p class="hint">«Тап»: нажмите несколько раз в ритм песни, и темп подстроится. Темп и размер запоминаются для этой песни.</p>
   </div>`;
   sheet.hidden=false;
@@ -2370,6 +2370,9 @@ async function trackLoad(s){
   const a=new Audio(); TR.url=URL.createObjectURL(rec.blob||new Blob([rec.buf],{type:rec.type||'audio/mp4'}));
   a.preload='auto'; a.setAttribute('playsinline',''); a.src=TR.url;
   a.addEventListener('loadedmetadata',()=>{if(S.view==='song')renderTools()});
+  // while the minus plays, keep the line-follow loop alive (iOS can drop it; this brings it back)
+  const heal=()=>{if(TR.el===a&&!a.paused&&!TR.marking&&performance.now()-(TR.beat||0)>400){cancelAnimationFrame(TR.raf);TR.raf=requestAnimationFrame(trackFollow)}};
+  a.addEventListener('playing',heal); a.addEventListener('timeupdate',heal);
   a.addEventListener('ended',()=>{if(TR.marking)markDone();renderTools()});
   a.addEventListener('pause',()=>{if(S.view==='song')renderTools()});
   TR.el=a; TR.has=true;
@@ -2403,13 +2406,6 @@ function trackToggle(){
   if(CI.on){countInStop();renderTools();return}
   if(TR.el.paused){
     stopAuto();
-    const el=TR.el;
-    if(countInOn()&&!M.on){
-      const pos=el.currentTime; el.muted=true;
-      const p=el.play(); if(p&&p.then)p.then(()=>{el.pause();el.currentTime=pos;el.muted=false},()=>{el.muted=false});
-      countIn(()=>{if(TR.el!==el)return;el.play().then(()=>{if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow);renderTools()}).catch(()=>toast('Не получилось включить минус.'))});
-      return;
-    }
     TR.el.play().then(()=>{if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow);renderTools()}).catch(()=>toast('Не получилось включить минус. Проверьте, что файл открывается в «Файлах».'));
   }else TR.el.pause();
 }
@@ -2417,7 +2413,7 @@ function trackToggle(){
 function trackFollow(){
   const virt=!TR.el;
   if(virt?!TR.vOn:TR.el.paused){TR.raf=0;return}
-  TR.raf=requestAnimationFrame(trackFollow);
+  TR.raf=requestAnimationFrame(trackFollow); TR.beat=performance.now();
   const t=virt?(performance.now()-TR.vStart)/1000:TR.el.currentTime,d=virt?vEnd():(TR.el.duration||0);
   if(virt&&t>=d){vReset();return}
   const tm=document.getElementById('t-time'); if(tm)tm.textContent=fmtTime(t)+' / '+fmtTime(d);
