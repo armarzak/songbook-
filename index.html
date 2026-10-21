@@ -1846,12 +1846,9 @@ function renderTuner(){
       ${v==='strings'?`<label class="tu-tun"><select id="tu-tuning" aria-label="Строй">${Object.entries(TUNINGS).map(([k,t])=>`<option value="${k}"${TU.tuning===k?' selected':''}>${t.name}</option>`).join('')}</select><span>440 Гц</span></label>
       <div class="tstr" id="tstr">${tstrHtml()}</div>
       <div class="t-snote" id="t-snote"></div>`:`<div class="tpanel">${gaugeSvg()}</div>`}
-      <div class="t-status" id="t-status">${inClaude?'':'Нажмите «Включить» и сыграйте одну струну'}</div>
+      <div class="t-status" id="t-status">${inClaude?'':'Включаю микрофон…'}</div>
       <div class="t-level" aria-label="Громкость микрофона"><i id="t-lvl"></i></div>
       ${v==='chromatic'?`<div class="t-strings" id="t-strings">${GUITAR.map((g,i)=>`<span data-i="${i}">${g.n}<sub>${6-i}</sub></span>`).join('')}</div>`:''}
-      <div class="actions" style="justify-content:center">
-        <button class="btn primary" id="t-btn" data-act="tuner-toggle">Включить</button>
-      </div>
       <div class="t-help" id="t-help"></div>
     </div>`;
   app.innerHTML=`
@@ -1861,6 +1858,14 @@ function renderTuner(){
     ${tuViewSeg()}
     <div id="tuview">${v==='chords'?pcHtml():tuner}</div>
   </div>`;
+  tuAuto();
+}
+/* start listening right away (this runs inside the tap that opened the tab, which iOS needs for the microphone) */
+function tuAuto(){
+  if(S.view!=='tuner')return;
+  if(!window.SONGBOOK_OFFLINE&&window.claude){if(TU.view!=='chords')micHelp('claude');return}
+  if(TU.view==='chords'){if(!PC.on)pcToggle()}
+  else if(!TU.on)tunerStart();
 }
 function tunerMsg(t){const el=document.getElementById('t-status');if(el)el.textContent=t}
 function micHelp(kind){
@@ -2017,7 +2022,7 @@ function showPitch(p){
   const near=Math.abs(GUITAR[best].m-p.n)<=2;
   document.querySelectorAll('#t-strings span').forEach(s=>s.classList.toggle('on',near&&+s.dataset.i===best));
 }
-document.addEventListener('visibilitychange',()=>{if(document.hidden){tunerStop();if(PC.on){PC.on=false;micStop();const box=document.getElementById('tuview');if(box&&TU.view==='chords')box.innerHTML=pcHtml()}}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(S.view==='tuner')tuAuto();return}if(document.hidden){tunerStop();if(PC.on){PC.on=false;micStop();const box=document.getElementById('tuview');if(box&&TU.view==='chords')box.innerHTML=pcHtml()}}});
 function renderChart(){
   stopScroll(); S.view='chart'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
