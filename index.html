@@ -1626,28 +1626,47 @@ function pluckBuffer(ctx,midi){
   const b=ctx.createBuffer(1,len,sr); b.getChannelData(0).set(y);
   pluckCache.set(midi,b); return b;
 }
+/* recorded guitar: FluidR3 GM "acoustic guitar (steel)" by Frank Wen, CC BY 3.0 — one sample per note from E2 to D6.
+   Only the app from the home screen has them (claude.ai pages cannot fetch files); until they arrive, the synthesis plays. */
+const GS={buf:new Map(),loading:null,lo:40,hi:86};
+function guitarSamples(){
+  if(GS.loading)return GS.loading;
+  if(!window.SONGBOOK_OFFLINE||!window.fetch)return Promise.resolve();
+  let dec; try{dec=new (window.OfflineAudioContext||window.webkitOfflineAudioContext)(1,1,44100)}catch{return Promise.resolve()} // decoding without touching the phone's audio
+  const one=m=>fetch('guitar/'+m+'.mp3').then(r=>r.ok?r.arrayBuffer():Promise.reject(r.status))
+    .then(b=>new Promise((ok,no)=>{const p=dec.decodeAudioData(b,ok,no);if(p&&p.catch)p.catch(no)})).then(ab=>{GS.buf.set(m,ab)}).catch(()=>{});
+  const ms=[]; for(let m=GS.lo;m<=GS.hi;m++)ms.push(m);
+  GS.loading=(async()=>{for(let i=0;i<ms.length;i+=8)await Promise.all(ms.slice(i,i+8).map(one))})();
+  return GS.loading;
+}
+/* a note's sound: the recording when there is one (a neighbour retuned a semitone if needed), otherwise the plucked-string synthesis */
+function noteSound(ctx,midi){
+  let b=GS.buf.get(midi); if(b)return {buf:b,rate:1,rec:true};
+  for(const d of [-1,1,-2,2]){b=GS.buf.get(midi+d);if(b)return {buf:b,rate:Math.pow(2,-d/12),rec:true}}
+  return {buf:pluckBuffer(ctx,midi),rate:1,rec:false};
+}
+function ring(ctx,midi,t,vol){
+  const n=noteSound(ctx,midi),src=ctx.createBufferSource(),g=ctx.createGain();
+  src.buffer=n.buf; src.playbackRate.value=n.rate;
+  if(n.rec){g.gain.setValueAtTime(vol*2,t);g.gain.setTargetAtTime(0,t+3.4,0.45);src.connect(g);g.connect(acOut);src.start(t);src.stop(t+5.5)}
+  else{g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol*0.7,t+0.004);g.gain.setTargetAtTime(0,t+2.2,0.25);src.connect(g);g.connect(acOut);src.start(t);src.stop(t+2.8)}
+  ringing.push(g);
+}
 function silence(ctx){const t=ctx.currentTime;ringing.forEach(g=>{try{g.gain.cancelScheduledValues(t);g.gain.setTargetAtTime(0,t,0.03)}catch{}});ringing=[]}
 function playFrets(frets){
-  const ctx=audioCtx();
+  const ctx=audioCtx(); guitarSamples();
   whenRunning(ctx,()=>{
     silence(ctx);
     const t0=ctx.currentTime+0.03,open=[40,45,50,55,59,64];
-    let k=0;
+    let k=0,t=t0;
     frets.forEach((f,s)=>{
       if(f<0)return;
-      const src=ctx.createBufferSource(),g=ctx.createGain(),t=t0+k++*0.028;
-      src.buffer=pluckBuffer(ctx,open[s]+f);
-      g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.32,t+0.004);g.gain.setTargetAtTime(0,t+2.2,0.25);
-      src.connect(g);g.connect(acOut);src.start(t);src.stop(t+2.8);ringing.push(g);
+      ring(ctx,open[s]+f,t,0.62-k*0.035+Math.random()*0.05);
+      t+=0.022+Math.random()*0.012; k++;
     });
   });
 }
-function pluckAt(ctx,midi,t){
-  const src=ctx.createBufferSource(),g=ctx.createGain();
-  src.buffer=pluckBuffer(ctx,midi);
-  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.45,t+0.004);g.gain.setTargetAtTime(0,t+1.8,0.25);
-  src.connect(g);g.connect(acOut);src.start(t);src.stop(t+2.8);ringing.push(g);
-}
+function pluckAt(ctx,midi,t){guitarSamples();ring(ctx,midi,t,0.7)}
 function playNote(midi){const ctx=audioCtx();whenRunning(ctx,()=>pluckAt(ctx,midi,ctx.currentTime+0.02))}
 /* one octave up from the lowest tonic on the low E string, then back to the tonic an octave up */
 function playScale(){
@@ -2958,6 +2977,7 @@ function renderList(){
     ${window.SONGBOOK_OFFLINE?`<section class="backup">
       <h3 class="sec-h">Обновление</h3>
       <p class="sec-p">Новая версия песенника загружается этой кнопкой. Песни, минусы и разметка остаются. Иконку удалять не нужно.</p>
+      <p class="sec-p" style="font-size:12px">Звук гитары: FluidR3 GM, Frank Wen (CC BY 3.0).</p>
       <div class="actions" style="justify-content:flex-start"><button class="btn" data-act="app-update">Обновить песенник</button><span class="sec-p" id="app-ver"></span></div>
     </section>`:''}
   </div>`;
@@ -3896,6 +3916,7 @@ function ghStart(){
   },{passive:true});
   document.addEventListener('touchend',e=>{if(d0&&e.touches.length<2){d0=0;if(S.stage)lsSet('sb.sfs',S.sfs);else lsSet('sb.fs',S.fs)}},{passive:true});
 })();
+setTimeout(()=>{if(window.SONGBOOK_OFFLINE)guitarSamples()},4000);
 if(lsGet('sb.skin.mid')!=='1'){lsSet('sb.skin','midnight');lsSet('sb.skin.mid','1')}
 applySkin(lsGet('sb.skin')||'midnight');
 renderList();

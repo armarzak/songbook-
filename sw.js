@@ -1,12 +1,13 @@
-const V='songbook-v75';
+const V='songbook-v76';
 const SHELL=['./','./index.html','./manifest.json','./fire-180.png','./fire-512.png'];
+const GTR='fc-guitar-1'; // recorded guitar notes: their own cache, kept across app versions
 const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(async c=>{
   await c.addAll(SHELL);
   // the PDF reader, so PDF import also works offline; skipped quietly if the network is down
   await Promise.all(['pdf.min.js','pdf.worker.min.js'].map(f=>c.add(PDFJS+f).catch(()=>{})));
 }).then(()=>self.skipWaiting()))});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==V).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==V&&k!==GTR).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{
   const r=e.request; if(r.method!=='GET')return;
   const u=new URL(r.url);
@@ -14,6 +15,10 @@ self.addEventListener('fetch',e=>{
   if(r.mode==='navigate'){
     e.respondWith(fetch(r).then(res=>{const cp=res.clone();caches.open(V).then(c=>c.put('./index.html',cp));return res})
       .catch(()=>caches.match('./index.html')));
+    return;
+  }
+  if(u.origin===location.origin&&u.pathname.includes('/guitar/')){
+    e.respondWith(caches.open(GTR).then(c=>c.match(r).then(hit=>hit||fetch(r).then(res=>{if(res.ok)c.put(r,res.clone());return res}))));
     return;
   }
   // own files, fonts and the PDF reader: saved copy first, refresh in the background
