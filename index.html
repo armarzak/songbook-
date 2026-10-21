@@ -251,6 +251,17 @@ button.c:focus-visible{outline:2px solid var(--accent)}
 .var{background:var(--bg);border-radius:12px;padding:8px 10px 10px}
 .var .l{font-size:12px;font-weight:600;text-align:center;margin-top:4px}
 .one{padding-block:8px 4px}
+.ctones{display:flex;gap:6px;margin:2px 0 10px}
+.ctones span{min-width:34px;height:34px;padding:0 6px;border-radius:17px;display:grid;place-items:center;background:var(--accent);color:var(--on-accent);font:700 14px var(--f-body)}
+.vars{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:12px 8px}
+.var{display:flex;flex-direction:column;align-items:center;gap:2px}
+.var-play{all:unset;box-sizing:border-box;width:100%;cursor:pointer;border-radius:12px;padding:6px 2px 4px;border:1px solid var(--line);background:var(--surface)}
+.var-play:active,.var-play:hover{background:var(--sunk)}
+.var-play:focus-visible{outline:2px solid var(--accent)}
+.var-play .dia{max-width:150px}
+.snotes{display:block;width:100%;max-width:150px;margin:0 auto}
+.snotes text{fill:var(--muted);font:600 11px var(--f-body)}
+.var-lbl{font-size:11px;color:var(--muted);text-align:center}
 .one .dia{max-width:240px}
 .one .info{font:14px/1.6 var(--f-mono);color:var(--muted);text-align:center;margin-top:10px}
 .var .info{font:12px/1.5 var(--f-mono);color:var(--muted);text-align:center;margin-top:4px}
@@ -904,6 +915,7 @@ const SHAPES={
   A:{note:9,label:'Баррэ, корень на 5-й струне',s:{maj:[_,0,2,2,2,0],m:[_,0,2,2,1,0],'7':[_,0,2,0,2,0],m7:[_,0,2,0,1,0],maj7:[_,0,2,1,2,0],
     sus2:[_,0,2,2,0,0],sus4:[_,0,2,2,3,0],'6':[_,0,2,2,2,2],m6:[_,0,2,2,1,2],'9':[_,0,-1,0,0,0],add9:[_,0,2,4,2,0],'7sus4':[_,0,2,0,3,0],
     m7b5:[_,0,1,0,1,_],dim:[_,0,1,2,1,_],'5':[_,0,2,2,_,_],aug:[_,0,3,2,2,_],dim7:[_,0,1,-1,1,_]}},
+  C:{note:0,label:'Форма C',s:{maj:[_,3,2,0,1,0],'7':[_,3,2,3,1,0],maj7:[_,3,2,0,0,0],'6':[_,3,2,2,1,0],add9:[_,3,2,0,3,0],sus2:[_,3,0,0,1,_]}},
   D:{note:2,label:'Корень на 4-й струне',s:{maj:[_,_,0,2,3,2],m:[_,_,0,2,3,1],'7':[_,_,0,2,1,2],m7:[_,_,0,2,1,1],maj7:[_,_,0,2,2,2],
     dim7:[_,_,0,1,0,1],aug:[_,_,0,3,3,2]}}
 };
@@ -914,6 +926,7 @@ function shapeVoicing(root,q,key){
   let f=mk(r);
   if(off.some((o,i)=>o!=null&&f[i]<0)){r+=12;f=mk(r)}
   if(Math.max(...f)>16)return null;
+  if(key==='C'&&r>0&&Math.max(...f)-Math.min(...f.filter(x=>x>=0))>3)return null; // too wide a stretch
   return {frets:f,barre:key!=='D'&&r>0,label:r===0?'Открытая позиция':sh.label};
 }
 const OPEN_STR=[4,9,2,7,11,4];
@@ -2031,12 +2044,33 @@ function fillChart(){
   grid.innerHTML=CHART.map(row=>{const root=(row[0].name.match(/^[A-G][#b]?/)||[row[0].name])[0];
     return `<h3 class="chart-root">${esc(pretty(root))}</h3><div class="chart-row">${row.map(cell).join('')}</div>`}).join('');
 }
+/* every playable position of a chord: the user's own / table one first, then the open shape and the movable E, A, D, C shapes up the neck */
+function allVoicings(name){
+  const c=parseChord(name); if(!c)return [];
+  const {q}=normQ(c.q),out=[],seen=new Set(),add=v=>{if(!v)return;const k=v.frets.join();if(!seen.has(k)){seen.add(k);out.push(v)}};
+  if(CHART_BY_NAME[name])add(CHART_BY_NAME[name]);
+  getVoicings(name).list.forEach(add);
+  const o=OPEN[c.root+':'+q]; if(o)add({frets:o,barre:false,label:'Открытая позиция'});
+  const low=v=>{const p=v.frets.filter(x=>x>0);return p.length?Math.min(...p):0};
+  ['E','A','D','C'].map(k=>shapeVoicing(c.root,q,k)).filter(Boolean).sort((x,y)=>low(x)-low(y)).forEach(add);
+  return out.slice(0,6);
+}
+/* note names under the six strings, lined up with the diagram */
+function stringNotes(v,flats){
+  const N=flats?NFL:NS;
+  return `<svg class="snotes" viewBox="0 0 194 16" aria-hidden="true">${v.frets.map((x,i)=>x<0?'':`<text x="${34+i*28}" y="12" text-anchor="middle">${N[(OPEN_STR[i]+x)%12].replace('b','♭').replace('#','♯')}</text>`).join('')}</svg>`;
+}
 function openChartChord(name){
-  const v=CHART_BY_NAME[name]; if(!v)return;
-  const info=chordInfo(v,name);
-  sheet.innerHTML=`<div class="panel" role="dialog" aria-label="Схема ${esc(pretty(name))}">
-    <div class="panel-top"><h2>${esc(pretty(name))}</h2>${playBtn(`data-act="play-frets" data-f="${v.frets.join(',')}"`)}<button class="btn" data-act="close">Закрыть</button></div>
-    <div class="one">${diagram({...v})}<div class="info">Ноты: ${esc(info.notes)}<br>Лады: ${esc(info.frets)}</div></div>
+  const list=allVoicings(name); if(!list.length)return;
+  const c=parseChord(name),flats=/^[A-H]b/.test(name),N=flats?NFL:NS;
+  const tones=[...new Set(list[0].frets.map((x,i)=>x<0?null:(OPEN_STR[i]+x)%12).filter(x=>x!=null))].sort((a,b)=>((a-c.root+12)%12)-((b-c.root+12)%12));
+  sheet.innerHTML=`<div class="panel" role="dialog" aria-label="Схемы ${esc(pretty(name))}">
+    <div class="panel-top"><h2>${esc(pretty(name))}</h2><button class="btn" data-act="close">Закрыть</button></div>
+    <div class="ctones">${tones.map(pc=>`<span>${N[pc].replace('b','♭').replace('#','♯')}</span>`).join('')}</div>
+    <div class="vars">${list.map(v=>`<div class="var">
+      <button class="var-play" data-act="play-frets" data-f="${v.frets.join(',')}" aria-label="Сыграть: ${esc(v.frets.map(x=>x<0?'×':x).join(' '))}">${diagram({...v})}${stringNotes(v,flats)}</button>
+      <span class="var-lbl">${esc(v.label||'Из таблицы')}</span></div>`).join('')}</div>
+    <p class="hint">Нажмите на схему, чтобы услышать её.</p>
   </div>`;
   sheet.hidden=false;
 }
