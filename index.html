@@ -1787,7 +1787,8 @@ function fftInPlace(re,im){
 /* one look at the sound: which of the chord's notes are there, and is anything else ringing */
 function pcAnalyze(buf,sr,v){
   const N=buf.length; let e=0; for(let i=N-4096;i<N;i++)e+=buf[i]*buf[i];
-  if(Math.sqrt(e/4096)<0.006)return {quiet:true};
+  const lvl=Math.sqrt(e/4096); PC.floor=Math.min(0.004,PC.floor==null?Math.min(lvl,0.0008):lvl<PC.floor?PC.floor*0.8+lvl*0.2:PC.floor*0.998+lvl*0.002);
+  if(lvl<Math.max(0.0012,PC.floor*2.5))return {quiet:true};
   const re=new Float32Array(N),im=new Float32Array(N);
   for(let i=0;i<N;i++)re[i]=buf[i]*(0.5-0.5*Math.cos(2*Math.PI*i/(N-1)));
   fftInPlace(re,im);
@@ -1829,7 +1830,7 @@ function pcShow(r){
 function pcToggle(){
   if(PC.on){PC.on=false;micStop();const box=document.getElementById('tuview');if(box)box.innerHTML=pcHtml();return}
   const N=16384,ring=new Float32Array(N); let blocks=0;
-  PC.on=true; PC.hist=[];
+  PC.on=true; PC.hist=[]; PC.floor=null;
   micListen((b,sr)=>{
     ring.copyWithin(0,b.length); ring.set(b,N-b.length);
     if(++blocks<8||blocks%6)return;
@@ -1897,11 +1898,11 @@ function tunerStart(){
   let ctx;
   try{ctx=new (window.AudioContext||window.webkitAudioContext)();ctx.resume().catch(()=>{})}catch(e){micHelp(e&&e.name);return}
   micHelp(null); tunerMsg('Запрашиваю микрофон…');
-  const want={audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}};
+  const want={audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:true}};
   navigator.mediaDevices.getUserMedia(want)
     .catch(e=>e&&(e.name==='OverconstrainedError'||e.name==='TypeError')?navigator.mediaDevices.getUserMedia({audio:true}):Promise.reject(e))
     .then(stream=>{
-      Object.assign(TU,{on:true,stream,hist:[],frame:0,last:null,peak:0,heardAt:performance.now(),startAt:performance.now(),retried:false,deaf:false});
+      Object.assign(TU,{on:true,stream,hist:[],frame:0,last:null,floor:null,peak:0,heardAt:performance.now(),startAt:performance.now(),retried:false,deaf:false});
       tunerWire(ctx);
       const b=document.getElementById('t-btn'); if(b)b.textContent='Выключить';
       tunerMsg('Сыграйте одну струну');
@@ -1941,9 +1942,9 @@ function tunerStop(){
   tunerMsg('Тюнер выключен');
 }
 /* YIN pitch detection on one frame of samples */
-function detectPitch(buf,sr){
+function detectPitch(buf,sr,gate){
   let rms=0; for(let i=0;i<buf.length;i++)rms+=buf[i]*buf[i];
-  if(Math.sqrt(rms/buf.length)<0.003)return null;
+  if(Math.sqrt(rms/buf.length)<(gate||0.0008))return null;
   const W=buf.length>>1,maxLag=Math.min(W-1,Math.floor(sr/60)),minLag=Math.floor(sr/1200);
   const d=new Float32Array(maxLag+1);
   for(let tau=1;tau<=maxLag;tau++){let s=0;for(let i=0;i<W;i++){const x=buf[i]-buf[i+tau];s+=x*x}d[tau]=s}
@@ -1963,7 +1964,7 @@ function tunerLoop(){
     TU.an.getFloatTimeDomainData(TU.buf);
     let pk=0; for(let i=0;i<TU.buf.length;i+=4){const v=Math.abs(TU.buf[i]);if(v>pk)pk=v}
     TU.peak=Math.max(pk,TU.peak*0.85);
-    const lv=document.getElementById('t-lvl'); if(lv)lv.style.width=Math.min(100,Math.round(Math.sqrt(TU.peak)*140))+'%';
+    const lv=document.getElementById('t-lvl'); if(lv)lv.style.width=Math.min(100,Math.round(Math.sqrt(TU.peak)*220))+'%';
     const now=performance.now();
     if(pk>0.0005)TU.heardAt=now;
     else if(now-TU.heardAt>2500&&now-TU.startAt>2500){
@@ -1971,7 +1972,11 @@ function tunerLoop(){
       if(!TU.deaf){TU.deaf=true;tunerMsg('Микрофон не даёт звука');micHelp('silent')}
     }
     if(TU.deaf&&pk>0.0005){TU.deaf=false;micHelp(null);tunerMsg('Сыграйте одну струну')}
-    const f=detectPitch(TU.buf,TU.ctx.sampleRate);
+    // room noise level, followed slowly; a string counts once it is clearly above it
+    let ss=0; for(let i=0;i<TU.buf.length;i+=2)ss+=TU.buf[i]*TU.buf[i];
+    const rms=Math.sqrt(ss/(TU.buf.length/2));
+    TU.floor=Math.min(0.004,TU.floor==null?Math.min(rms,0.0005):rms<TU.floor?TU.floor*0.8+rms*0.2:TU.floor*0.999+rms*0.001); // drops fast, rises very slowly, never above a quiet room
+    const f=detectPitch(TU.buf,TU.ctx.sampleRate,Math.max(0.0006,TU.floor*2.2));
     if(f&&f>60&&f<1200){TU.hist.push(f);if(TU.hist.length>5)TU.hist.shift();TU.lastAt=performance.now()}
     else if(performance.now()-TU.lastAt>600)TU.hist=[];
     if(TU.hist.length>=2){
@@ -2511,7 +2516,7 @@ function micListen(onBlock,onFail){
   setSession('play-and-record');
   let ctx; try{ctx=new (window.AudioContext||window.webkitAudioContext)();ctx.resume().catch(()=>{})}catch(e){onFail(e&&e.name);return}
   LS.on=true; LS.ctx=ctx;
-  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}})
+  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:true}})
     .catch(e=>e&&(e.name==='OverconstrainedError'||e.name==='TypeError')?navigator.mediaDevices.getUserMedia({audio:true}):Promise.reject(e))
     .then(stream=>{
       if(!LS.on||LS.ctx!==ctx){stream.getTracks().forEach(t=>t.stop());return}
