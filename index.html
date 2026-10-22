@@ -3121,6 +3121,7 @@ function songLinks(s){
   const igs=vids.filter(v=>v.kind==='instagram');
   igs.forEach((v,i)=>{h+=a(v.url,BRAND.ig,igs.length>1?'Instagram '+(i+1):'Instagram')});
   if(q)h+=a('https://www.youtube.com/results?search_query='+encodeURIComponent(q+' guitar lesson'),BRAND.yts,'Уроки').replace('class="slink"','class="slink find"');
+  if(q)h+=a('https://www.youtube.com/results?search_query='+encodeURIComponent(q+' fingerstyle'),BRAND.yts,'Fingerstyle').replace('class="slink"','class="slink find"');
   if(q)h+=a('https://music.yandex.ru/search?text='+encodeURIComponent(q),BRAND.ya,'Я.Музыка');
   if(q)h+=a('https://www.songsterr.com/?pattern='+encodeURIComponent(q),BRAND.ss,'Songsterr');
   if(s.ugUrl||q)h+=a(inSafari(s.ugUrl||'https://www.ultimate-guitar.com/search.php?search_type=title&value='+encodeURIComponent(q)),BRAND.ug,'Guitar Tabs');
