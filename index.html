@@ -2390,7 +2390,7 @@ async function trackLoad(s){
   if(S.view==='song')renderTools();
 }
 function trackStop(){
-  if(TR.marking&&TR.k>0&&TR.id&&store){const now=Date.now(),o=TR.wordMode?wordMarksOut():{marks:TR.marks.slice(0,TR.k),wmarks:null};store.patch(TR.id,{marks:o.marks,wmarks:o.wmarks,marksAt:now,updatedAt:now}).catch(()=>{})}
+  if(TR.marking&&TR.k>0&&TR.id&&store){const now=Date.now(),o=TR.wordMode?wordMarksOut():TR.from?markMerged():{marks:TR.marks.slice(0,TR.k),wmarks:null};store.patch(TR.id,{marks:o.marks,wmarks:o.wmarks,marksAt:now,updatedAt:now}).catch(()=>{})}
   wordClear(); TR.wordMode=false;
   if(TR.el){try{TR.el.pause();TR.el.removeAttribute('src');TR.el.load()}catch{}}
   if(TR.url)URL.revokeObjectURL(TR.url);
@@ -2653,24 +2653,47 @@ function wordMarksOut(){
   return {marks,wmarks:wm};
 }
 
-function markStart(mode){
-  if(!TR.el)return; closeSheet();
+/* pick the line to continue marking from: the next tap on a lyric line starts the marking there */
+function markPick(){
+  if(!TR.el)return; closeSheet(); stopAuto(); exitStage(); TR.pick=true;
+  const old=document.getElementById('markbar'); if(old)old.remove();
+  const bar=document.createElement('div'); bar.id='markbar'; bar.className='markbar';
+  bar.innerHTML='<p><b>Нажмите на строку</b>, с которой продолжить разметку. Минус начнёт играть чуть раньше неё. Остальная разметка останется.</p><button class="link2" data-act="mk-pickcancel">Отмена</button>';
+  document.body.appendChild(bar);
+}
+function markPickCancel(){TR.pick=false;const mb=document.getElementById('markbar');if(mb)mb.remove()}
+/* merged result when marking started from a line: new times for the re-marked lines, old ones elsewhere */
+function markMerged(){
+  const s=findSong(TR.id||S.cur)||{},old=(Array.isArray(s.marks)?s.marks:[]).slice(),from=TR.from||0;
+  const marks=old.slice(); for(let j=from;j<TR.k;j++)marks[j]=TR.marks[j];
+  for(let j=0;j<marks.length;j++)if(marks[j]===undefined)marks[j]=null;
+  while(marks.length&&marks[marks.length-1]==null)marks.pop();
+  let wm=Array.isArray(s.wmarks)?s.wmarks.slice():null;
+  if(wm){for(let j=from;j<TR.k;j++)wm[j]=null; if(!wm.some(a=>Array.isArray(a)&&a.some(x=>x!=null)))wm=null}
+  return {marks,wmarks:wm};
+}
+function markStart(mode,from){
+  if(!TR.el)return; closeSheet(); TR.pick=false;
+  const pb=document.getElementById('markbar'); if(pb)pb.remove();
   const n=document.querySelectorAll('.ln[data-li]').length;
   if(!n){toast('В песне нет строк текста.');return}
   stopAuto(); exitStage(); countInStop();
   wordClear();
   const byWords=mode==='words',seq=byWords?wordSeq():null;
   if(byWords&&!seq.length){toast('В песне нет слов для разметки.');return}
-  Object.assign(TR,{marking:true,marks:[],k:0,n:byWords?seq.length:n,cur:-1,wordMode:byWords,wSeq:seq,wm:[],wLineNow:-1}); lineHL(-1,'cur');
+  const part=!byWords&&from>0&&from<n,s0=findSong(S.cur)||{},old=Array.isArray(s0.marks)?s0.marks:[];
+  Object.assign(TR,{marking:true,marks:part?old.slice(0,from):[],k:part?from:0,from:part?from:0,n:byWords?seq.length:n,cur:-1,wordMode:byWords,wSeq:seq,wm:[],wLineNow:-1}); lineHL(-1,'cur');
   const bar=document.createElement('div'); bar.id='markbar'; bar.className='markbar';
   bar.innerHTML=`<p>${byWords?'Нажимайте <b>«Слово»</b> в момент, когда начинается каждое слово (следующее обведено). Ошиблись — «Назад».':'Нажимайте <b>«Строка»</b> в момент, когда начинается каждая строка. Ошиблись — «Назад».'}</p>
     <div class="mk-btns"><button class="btn" data-act="mk-undo">Назад</button>
-    <button class="btn primary mk-main" data-act="mk-tap" id="mk-main">${byWords?'Слово 1 из '+seq.length:'Строка 1 из '+n}</button>
+    <button class="btn primary mk-main" data-act="mk-tap" id="mk-main">${byWords?'Слово 1 из '+seq.length:'Строка '+(TR.k+1)+' из '+n}</button>
     <button class="btn" data-act="mk-done">Готово</button></div>
     <button class="link2" data-act="mk-cancel">Отменить разметку</button>`;
   document.body.appendChild(bar);
-  if(byWords)wordNext(); else lineHL(0,'next',true);
-  TR.el.currentTime=0;
+  if(byWords)wordNext(); else lineHL(TR.k,'next',true);
+  // from a chosen line: a few seconds before it (its old mark, or the previous marked line)
+  let t0=0; if(part){const prev=old.slice(0,from).filter(x=>x!=null).pop();t0=old[from]!=null?old[from]-3:prev!=null?prev:0}
+  TR.el.currentTime=Math.max(0,t0);
   TR.el.play().then(()=>{if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow);renderTools()}).catch(()=>{});
 }
 function markTap(){
@@ -2693,6 +2716,7 @@ function markUndo(){
     if(TR.el)TR.el.currentTime=Math.max(0,(pt||0)-0.3);
     TR.wLineNow=-1; wordNext(); markLabel(); return;
   }
+  if(TR.k<=(TR.from||0))return;
   TR.k--; TR.marks.length=TR.k;
   if(TR.el)TR.el.currentTime=Math.max(0,(TR.k?TR.marks[TR.k-1]:0)-0.5);
   lineHL(TR.k,'next',true); markLabel();
@@ -2705,7 +2729,7 @@ async function markDone(){
   const s=findSong(S.cur); if(!s)return;
   document.querySelectorAll('.w.wnext').forEach(e=>e.classList.remove('wnext'));
   const byWords=TR.wordMode; TR.wordMode=false;
-  const out=byWords?wordMarksOut():{marks:TR.marks.slice(0,TR.k),wmarks:null},marks=out.marks;
+  const out=byWords?wordMarksOut():TR.from?markMerged():{marks:TR.marks.slice(0,TR.k),wmarks:null},marks=out.marks; TR.from=0;
   try{
     const now=Date.now(); await store.patch(s.id,{marks,wmarks:out.wmarks,marksAt:now,updatedAt:now}); TR.marks=marks; TR.wLine=-1; if(S.view==='song')renderTools();
     toast(marks.length?'Разметка сохранена: '+(byWords?'по словам, ':'')+marks.filter(x=>x!=null).length+' '+plural(marks.filter(x=>x!=null).length,'строка','строки','строк')+(ghOn()?'. Отправляю на GitHub…':''):'Разметка очищена');
@@ -2713,6 +2737,7 @@ async function markDone(){
   }catch(e){saveErr(e)}
 }
 function markCancel(){
+  TR.from=0; TR.pick=false;
   document.querySelectorAll('.w.wnext').forEach(e=>e.classList.remove('wnext')); TR.wordMode=false;
   TR.marking=false; const mb=document.getElementById('markbar'); if(mb)mb.remove();
   lineHL(-1,'next'); if(TR.el)TR.el.pause();
@@ -2730,6 +2755,7 @@ function trackMenu(s){
   const marked=TR.marks.filter(x=>x!=null).length;
   const sw=findSong(S.cur),hasW=sw&&Array.isArray(sw.wmarks)&&sw.wmarks.some(a=>Array.isArray(a)&&a.some(x=>x!=null));
   return `<button class="btn" data-act="t-mark">${ICON.metro}${marked?'Разметить строки заново':'Разметить строки под минус'}</button>`+
+    (marked?`<button class="btn" data-act="t-markfrom">${ICON.metro}Доразметить с выбранной строки</button>`:'')+
     `<button class="btn" data-act="t-markw">${ICON.metro}${hasW?'Разметить по словам заново':'Разметить по словам'}</button><p class="hint">По словам: нажимаете в начале каждого слова, и при игре слова закрашиваются точно в момент, когда их поют. Без этого слова внутри строки закрашиваются примерно, по разметке строк.</p>`+add+
     (ghOn()?(s.track&&s.track.path?`<button class="btn" data-act="t-unsend">${ICON.share}Убрать минус с GitHub</button><p class="hint">Минус отправлен на GitHub: на iPad его можно скачать в этой песне.</p>`:`<button class="btn" data-act="t-send">${ICON.share}Отправить минус на iPad</button>`):'')+
     `<button class="btn danger" data-act="t-del">${ICON.trash}<span>Удалить минус</span></button>`+
@@ -3751,6 +3777,11 @@ function stopAuto(){S.scroll.on=false;cancelAnimationFrame(raf);if(wake){wake.re
 let patchT;
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');
+  if(TR.pick&&S.view==='song'){ // choosing where to continue the line marking
+    const ln=e.target.closest('#body .ln[data-li],#body .ln[data-pli]');
+    if(ln){e.preventDefault();markStart('lines',+(ln.dataset.li!=null?ln.dataset.li:ln.dataset.pli));return}
+    if(!(b&&b.dataset.act==='mk-pickcancel'))return;
+  }
   if(S.view==='song'&&(S.scroll.on||S.scroll.tapPaused)&&e.target.closest('#body')&&!(b&&b.dataset.act==='chord'&&!S.stage)){
     if(S.scroll.on){stopAuto();S.scroll.tapPaused=true;renderTools();toast('Прокрутка на паузе. Нажмите на текст, чтобы продолжить')}
     else{S.scroll.tapPaused=false;startScroll();renderTools()}
@@ -3809,6 +3840,8 @@ document.addEventListener('click',e=>{
   else if(a==='v-reset')vReset();
   else if(a==='t-mark')markStart();
   else if(a==='t-markw')markStart('words');
+  else if(a==='t-markfrom')markPick();
+  else if(a==='mk-pickcancel')markPickCancel();
   else if(a==='t-del')trackRemove(b);
   else if(a==='mk-tap')markTap();
   else if(a==='mk-undo')markUndo();
