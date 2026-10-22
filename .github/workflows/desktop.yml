@@ -1,0 +1,59 @@
+name: Fire Chords for Mac
+
+# Builds the macOS app on GitHub's Mac machines and publishes it as a release (.dmg and .zip).
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['desktop/**', '.github/workflows/desktop.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build the app
+        working-directory: desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'   # no Apple developer certificate: signed ad hoc below
+        run: |
+          npm install --no-audit --no-fund
+          cp ../fire-512.png icon.png
+          npx electron-builder --mac --universal --dir --publish never
+
+      - name: Sign ad hoc and pack
+        working-directory: desktop/dist
+        run: |
+          APP="mac-universal/Fire Chords.app"
+          codesign --force --deep --sign - "$APP"
+          codesign --verify --deep "$APP"
+          mkdir dmg && cp -R "$APP" dmg/ && ln -s /Applications dmg/Applications
+          hdiutil create -volname "Fire Chords" -srcfolder dmg -ov -format UDZO Fire-Chords.dmg
+          ditto -c -k --keepParent "$APP" Fire-Chords-mac.zip
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-v${{ github.run_number }}
+          name: Fire Chords для Mac (сборка ${{ github.run_number }})
+          files: |
+            desktop/dist/Fire-Chords.dmg
+            desktop/dist/Fire-Chords-mac.zip
+          body: |
+            Fire Chords для macOS (Apple Silicon и Intel).
+
+            Установка: откройте Fire-Chords.dmg и перетащите Fire Chords в «Программы».
+            Первый запуск: приложение не подписано в Apple, поэтому macOS его остановит.
+            Откройте «Системные настройки» → «Конфиденциальность и безопасность» → внизу «Всё равно открыть»
+            (на старых macOS: правой кнопкой по приложению → «Открыть» → «Открыть»).
+
+            Песенник внутри обновляется сам. Песни, минусы и разметка хранятся в папке приложения
+            и не пропадают при обновлениях.

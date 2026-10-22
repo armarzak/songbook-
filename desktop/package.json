@@ -1,0 +1,26 @@
+{
+  "name": "fire-chords",
+  "productName": "Fire Chords",
+  "version": "1.0.0",
+  "description": "Fire Chords — guitar songbook for macOS",
+  "main": "main.js",
+  "private": true,
+  "author": "armarzak",
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "io.github.armarzak.firechords",
+    "productName": "Fire Chords",
+    "files": ["main.js", "package.json"],
+    "mac": {
+      "category": "public.app-category.music",
+      "icon": "icon.png",
+      "hardenedRuntime": false,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Тюнер и практика аккордов слушают гитару через микрофон."
+      }
+    }
+  }
+}
