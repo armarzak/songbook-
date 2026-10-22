@@ -634,6 +634,11 @@ label.btn{cursor:pointer}
 .sec-p{margin:0 0 8px;color:var(--muted);font-size:14px}
 .mine-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 6px;margin-bottom:6px}
 .steps{margin:0;padding-left:20px;color:var(--muted);font-size:14px;display:flex;flex-direction:column;gap:4px;max-width:65ch}
+.imp-web{margin-bottom:18px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.imp-q input{width:100%;box-sizing:border-box}
+.imp-sites{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 6px}
+.imp-bm{margin:6px 0 4px}
+.imp-bm summary{cursor:pointer;color:var(--accent);font-weight:600;padding:6px 0}
 .imp-src{min-height:28vh;font-size:14px}
 .imp-defs .btn{margin-top:8px}
 .gh-form{max-width:420px;margin-top:10px;gap:10px}
@@ -3334,6 +3339,30 @@ function renderImport(){
     <span style="width:78px"></span>
   </div></header>
   <div class="wrap"><div class="form">
+    <section class="imp-web">
+      <h3 class="sec-h">Найти в интернете</h3>
+      <div class="imp-q"><input id="imp-q" type="search" placeholder="Исполнитель и название" autocomplete="off" enterkeyhint="search"></div>
+      <div class="imp-sites">
+        <button class="btn" data-act="imp-web" data-s="ug">Ultimate Guitar</button>
+        <button class="btn" data-act="imp-web" data-s="mc">MyChords</button>
+        <button class="btn" data-act="imp-web" data-s="am">Amdm</button>
+        <button class="btn" data-act="imp-web" data-s="gg">Google</button>
+      </div>
+      <p class="sec-p">Откроется Safari. На странице песни нажмите закладку <b>«→ Fire Chords»</b>: она скопирует аккорды. Потом вернитесь сюда и нажмите <b>«Вставить»</b>.</p>
+      <div class="actions" style="justify-content:flex-start;margin-top:0">
+        <button class="btn primary" data-act="imp-paste">${ICON.copy}Вставить</button>
+      </div>
+      <details class="imp-bm">
+        <summary>Как добавить закладку «→ Fire Chords» (один раз)</summary>
+        <ol class="steps">
+          <li>Нажмите <button class="btn" data-act="imp-bm-copy" style="min-height:34px;padding:2px 12px">Скопировать код закладки</button></li>
+          <li>В Safari откройте любую страницу → «Поделиться» → <b>«Добавить в Избранное»</b> → «Сохранить».</li>
+          <li>Откройте закладки (значок книжки) → «Избранное» → <b>«Изменить»</b> → нажмите на новую закладку.</li>
+          <li>Назовите её <b>→ Fire Chords</b>, в поле адреса сотрите всё и вставьте скопированный код → «Готово».</li>
+          <li>Пользоваться: на странице песни нажмите на адресную строку, в «Избранном» выберите «→ Fire Chords».</li>
+        </ol>
+      </details>
+    </section>
     <section class="imp-pdf">
       <h3 class="sec-h">Из PDF-файла</h3>
       <p class="sec-p">PDF с аккордами над текстом, например сохранённый с Ultimate Guitar. Аккорды встанут над теми же слогами.</p>
@@ -3343,7 +3372,7 @@ function renderImport(){
         <span class="hint" id="pdf-status" role="status"></span>
       </div>
     </section>
-    <h3 class="sec-h">Или вставьте текст со страницы</h3>
+    <h3 class="sec-h">Или вставьте текст со страницы вручную</h3>
     <ol class="steps">
       <li>Откройте песню на сайте с аккордами: Ultimate Guitar, Amdm, MyChords и другие.</li>
       <li>Выделите всю страницу и скопируйте. На айфоне: долгое нажатие на текст → «Выбрать все» → «Скопировать».</li>
@@ -3354,11 +3383,38 @@ function renderImport(){
     <div id="imp-res"></div>
   </div></div>`;
 }
+/* ---------- import from the web: search in Safari, the bookmark copies the chords, then paste here ---------- */
+const BOOKMARKLET="javascript:(()=>{const CH=/^[A-H](\\x23|b)?(m|maj|min|dim|aug|sus|add|M)?\\d*(sus\\d|add\\d|maj\\d|m\\d|b\\d|\\x23\\d|\\+)?(\\/[A-H](\\x23|b)?)?$/,isC=l=>{const t=l.trim().split(/\\s+/).filter(x=>x&&!/^[|()\\-x\\d\\/.]+$/i.test(x));return t.length>0&&t.every(x=>CH.test(x))};const C=[];for(const e of document.querySelectorAll('pre,div,section,article,td,p')){const x=e.innerText||'';if(x.length<80||x.length>30000)continue;const n=x.split('\\n').filter(isC).length;if(n)C.push({e,n,l:x.length,p:e.tagName==='PRE'})}const P=C.filter(c=>c.p&&c.n>2),L=P.length?P:C,M=Math.max(0,...L.map(c=>c.n));const b=(L.filter(c=>c.n>=M*0.8).sort((p,q)=>p.l-q.l)[0]||{}).e;const sel=String(getSelection());const body=sel.length>40?sel:b?b.innerText:document.body.innerText;const ti=document.title.replace(/\\s*@\\s*Ultimate-Guitar.*$/i,'').replace(/,\\s*(аккорды|текст|chords|tabs)[\\s\\S]*$/i,'').trim();const txt=ti+'\\n\\n'+body.replace(/\\r/g,'')+'\\n\\n'+location.href;const show=ok=>{const d=document.createElement('div');d.style.cssText='position:fixed;left:12px;right:12px;bottom:24px;z-index:2147483647;background:%23111;color:%23fff;font:600 16px -apple-system,sans-serif;padding:16px;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.45);text-align:center';if(ok){d.innerHTML='✓ Скопировано для Fire Chords<br><span style=\"font-weight:400;font-size:14px\">Откройте Fire Chords → Импорт → «Вставить»</span>';setTimeout(()=>d.remove(),4500)}else{const k=document.createElement('button');k.textContent='Скопировать для Fire Chords';k.style.cssText='font:700 17px -apple-system,sans-serif;padding:12px 18px;border:0;border-radius:10px;background:%23FFB648;color:%23111';k.onclick=()=>navigator.clipboard.writeText(txt).then(()=>{d.remove();show(true)});d.appendChild(k)}document.body.appendChild(d)};navigator.clipboard.writeText(txt).then(()=>show(true),()=>show(false))})()";
+function impWeb(site){
+  const q=(document.getElementById('imp-q').value||'').trim(),e=encodeURIComponent(q);
+  const url={ug:'https://www.ultimate-guitar.com/search.php?search_type=title&value='+e,mc:'https://mychords.net/ru/search?q='+e,am:'https://amdm.ru/search/?q='+e,gg:'https://www.google.com/search?q='+encodeURIComponent((q?q+' ':'')+'аккорды')}[site];
+  if(!q&&site!=='gg'){toast('Введите исполнителя и название');document.getElementById('imp-q').focus();return}
+  // in Safari itself (not the in-app sheet), where the bookmark lives
+  const a=document.createElement('a'); a.href=inSafari(url); a.target='_blank'; a.rel='noopener'; document.body.appendChild(a); a.click(); a.remove();
+}
+async function impPaste(){
+  let t='';
+  try{t=await navigator.clipboard.readText()}catch{toast('Не получилось прочитать скопированное. Вставьте вручную в поле ниже.');document.getElementById('imp-src').focus();return}
+  if(!t.trim()){toast('В буфере пусто. На странице песни нажмите закладку «→ Fire Chords».');return}
+  S.impName=null;
+  const ta=document.getElementById('imp-src'); ta.value=t; fillImport();
+  const res=document.getElementById('imp-res'); if(res)res.scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function impBmCopy(){
+  try{await navigator.clipboard.writeText(BOOKMARKLET);toast('Код закладки скопирован')}
+  catch{toast('Не получилось скопировать. Попробуйте ещё раз.')}
+}
 function fillImport(){
   const res=document.getElementById('imp-res'); if(!res)return;
   const src=document.getElementById('imp-src').value;
   if(!src.trim()){res.innerHTML='';IMP=null;return}
   IMP=importParse(src);
+  if(!IMP.title){ // first line "Artist - Title", as the Fire Chords bookmark copies it from MyChords / Amdm
+    const first=(src.split('\n').find(l=>l.trim())||'').trim(),m=first.match(/^(.{1,60}?)\s+[-–—]\s+(.{1,90})$/);
+    if(m&&!isChordLine(first)){IMP.artist=IMP.artist||m[1].trim();IMP.title=m[2].replace(/\s*(аккорды|chords).*$/i,'').trim()}
+  }
+  const calm=t=>t&&t.length>3&&t===t.toUpperCase()&&/[A-ZА-ЯЁ]/.test(t)?t.toLowerCase().replace(/(^|[\s(«"-])(\S)/g,(x,p,c)=>p+c.toUpperCase()):t;
+  IMP.title=calm(IMP.title); IMP.artist=calm(IMP.artist);
   IMP.ugUrl=((src.match(UG_TAB_RE)||[])[0]||'').replace(/[.,;]+$/,'');
   if(IMP.body)IMP.body=IMP.body.split('\n').filter(l=>!/^\s*https?:\/\/\S+\s*$/i.test(l)).join('\n').replace(/\n{3,}/g,'\n\n').replace(/\s+$/,''); // a bare page address is not part of the song
   if(S.impName&&(!IMP.title||!IMP.artist)){const f=nameFromFile(S.impName);IMP.title=IMP.title||f.title;IMP.artist=IMP.artist||f.artist}
@@ -3650,6 +3706,9 @@ document.addEventListener('click',e=>{
   else if(a==='pc-type')pcPick('type',b.dataset.v);
   else if(a==='pc-toggle')pcToggle();
   else if(a==='import')renderImport();
+  else if(a==='imp-web')impWeb(b.dataset.s);
+  else if(a==='imp-paste')impPaste();
+  else if(a==='imp-bm-copy')impBmCopy();
   else if(a==='t-play')trackToggle();
   else if(a==='t-send')trackSend(S.cur);
   else if(a==='t-unsend')trackUnsend();
