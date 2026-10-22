@@ -550,6 +550,10 @@ body.stage .video{display:none}
 .ln.cur{background:var(--sunk);box-shadow:-6px 0 0 var(--sunk),6px 0 0 var(--sunk);border-radius:4px;transition:background .25s}
 .ln.ly.cur{color:var(--accent);font-weight:600}
 .ln.next{outline:2px dashed var(--accent);outline-offset:2px;border-radius:4px}
+.ln.cur .w:not([data-s]){color:var(--fg)}
+.ln .w[data-s="2"]{color:var(--accent)}
+.ln .w[data-s="1"]{background:linear-gradient(90deg,var(--accent) var(--p,0%),var(--fg) var(--p,0%));-webkit-background-clip:text;background-clip:text;color:transparent}
+.ln .w.wnext{outline:2px solid var(--accent);outline-offset:1px;border-radius:3px}
 .markbar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--bar);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
 .markbar p{margin:0;font-size:14px;color:var(--muted);max-width:52ch}
 .mk-btns{display:flex;gap:8px;width:100%;max-width:560px}
@@ -2386,7 +2390,8 @@ async function trackLoad(s){
   if(S.view==='song')renderTools();
 }
 function trackStop(){
-  if(TR.marking&&TR.k>0&&TR.id&&store){const now=Date.now();store.patch(TR.id,{marks:TR.marks.slice(0,TR.k),marksAt:now,updatedAt:now}).catch(()=>{})}
+  if(TR.marking&&TR.k>0&&TR.id&&store){const now=Date.now(),o=TR.wordMode?wordMarksOut():{marks:TR.marks.slice(0,TR.k),wmarks:null};store.patch(TR.id,{marks:o.marks,wmarks:o.wmarks,marksAt:now,updatedAt:now}).catch(()=>{})}
+  wordClear(); TR.wordMode=false;
   if(TR.el){try{TR.el.pause();TR.el.removeAttribute('src');TR.el.load()}catch{}}
   if(TR.url)URL.revokeObjectURL(TR.url);
   cancelAnimationFrame(TR.raf);
@@ -2429,6 +2434,7 @@ function trackFollow(){
   if(TR.marks.some(x=>x!=null)){
     let i=-1; TR.marks.forEach((m,k)=>{if(m!=null&&m<=t+0.05)i=k});
     if(i!==TR.cur){TR.cur=i;lineHL(i,'cur',true)}
+    wordFollow(t);
   }else if(d>0){
     const max=SCR.scrollHeight-SCR.clientHeight;
     if(max>0){const y=Math.round(max*Math.min(1,t/d));if(Math.abs(y-SCR.scrollTop)>1)SCR.scrollTo(0,y)}
@@ -2449,7 +2455,7 @@ function vToggle(){
   else{stopAuto();TR.vStart=performance.now()-TR.vPaused*1000;TR.vOn=true;if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow)}
   renderTools();
 }
-function vReset(){TR.vOn=false;TR.vPaused=0;cancelAnimationFrame(TR.raf);TR.raf=0;TR.cur=-1;lineHL(-1,'cur');renderTools()}
+function vReset(){wordClear();TR.vOn=false;TR.vPaused=0;cancelAnimationFrame(TR.raf);TR.raf=0;TR.cur=-1;lineHL(-1,'cur');renderTools()}
 const AUDIO_TYPES={m4a:'audio/mp4',mp3:'audio/mpeg',wav:'audio/wav',aac:'audio/aac',aif:'audio/aiff',aiff:'audio/aiff'};
 /* After the app was removed and installed again: pick all minus files at once, they go back to their songs by name */
 async function trackRestore(files){
@@ -2596,49 +2602,118 @@ function tempoListen(){
     }
   },k=>{if(btn())btn().textContent='Темп на слух';if(st())st().textContent=micFailText(k)});
 }
-function markStart(){
+/* ---------- karaoke by words: the sung words fill with color, word by word, inside the current line ---------- */
+const wordsHtml=t=>t.split(/(\s+)/).map(p=>!p?'':/^\s+$/.test(p)?p:`<span class="w">${esc(p)}</span>`).join('');
+function wordClear(){(TR.wEls||[]).forEach(el=>{delete el.dataset.s;el.style.removeProperty('--p')});TR.wEls=[];TR.wLine=-1}
+/* when each word of line i starts: from the word marks if the line has them all, otherwise spread over the line by word length */
+function wordTimes(i,els){
+  const s=findSong(TR.id||S.cur)||{},wm=Array.isArray(s.wmarks)&&Array.isArray(s.wmarks[i])?s.wmarks[i]:null;
+  const st=TR.marks[i],nx=TR.marks.slice(i+1).find(x=>x!=null);
+  let end=nx!=null?nx:st+Math.max(2.5,els.length*0.45);
+  if(wm&&wm.length===els.length&&wm.every(x=>x!=null)){
+    const last=wm[wm.length-1],avg=wm.length>1?(last-wm[0])/(wm.length-1):0.5;
+    const r=wm.slice(); r.end=Math.min(end,last+Math.max(0.3,avg*1.3)); return r;
+  }
+  end=st+(end-st)*0.88; // a small breath before the next line
+  const w=els.map(e=>e.textContent.length+1),tot=w.reduce((a,b)=>a+b,0)||1; let acc=st;
+  const r=w.map(x=>{const v=acc;acc+=(end-st)*x/tot;return v}); r.end=end; return r;
+}
+function wordFollow(t){
+  const i=TR.cur;
+  if(i==null||i<0){if(TR.wLine>=0)wordClear();return}
+  if(TR.wLine!==i){
+    wordClear(); TR.wLine=i;
+    const ly=document.querySelector(`.ln[data-li="${i}"]`);
+    TR.wEls=ly?[...ly.querySelectorAll('.w')]:[]; TR.wTimes=TR.wEls.length?wordTimes(i,TR.wEls):[];
+  }
+  const ws=TR.wEls,tm=TR.wTimes; if(!ws||!ws.length)return;
+  for(let k=0;k<ws.length;k++){
+    const a=tm[k],b=tm[k+1]!=null?tm[k+1]:tm.end,el=ws[k];
+    if(t>=b){if(el.dataset.s!=='2'){el.dataset.s='2';el.style.removeProperty('--p')}}
+    else if(t>=a){el.dataset.s='1';el.style.setProperty('--p',Math.max(0,Math.min(100,Math.round((t-a)/Math.max(0.05,b-a)*100)))+'%')}
+    else if(el.dataset.s){delete el.dataset.s;el.style.removeProperty('--p')}
+  }
+}
+/* marking by words: one tap at the start of every word; the first word of a line also marks the line */
+function wordSeq(){
+  const seq=[];
+  document.querySelectorAll('.ln[data-li]').forEach(ly=>{const li=+ly.dataset.li;ly.querySelectorAll('.w').forEach((el,k)=>seq.push({li,k,el}))});
+  return seq;
+}
+function wordNext(){
+  document.querySelectorAll('.w.wnext').forEach(e=>e.classList.remove('wnext'));
+  const x=TR.wSeq&&TR.wSeq[TR.k]; if(!x)return;
+  x.el.classList.add('wnext');
+  if(TR.wLineNow!==x.li){TR.wLineNow=x.li;lineHL(x.li,'next',true)}
+}
+function wordMarksOut(){
+  const nl=document.querySelectorAll('.ln[data-li]').length,marks=[],wm=[];
+  for(let i=0;i<nl;i++){marks.push(TR.wm[i]&&TR.wm[i][0]!=null?TR.wm[i][0]:null);wm.push(TR.wm[i]?TR.wm[i].map(x=>x==null?null:x):null)}
+  while(marks.length&&marks[marks.length-1]==null){marks.pop();wm.pop()}
+  return {marks,wmarks:wm};
+}
+
+function markStart(mode){
   if(!TR.el)return; closeSheet();
   const n=document.querySelectorAll('.ln[data-li]').length;
   if(!n){toast('В песне нет строк текста.');return}
   stopAuto(); exitStage(); countInStop();
-  Object.assign(TR,{marking:true,marks:[],k:0,n,cur:-1}); lineHL(-1,'cur');
+  wordClear();
+  const byWords=mode==='words',seq=byWords?wordSeq():null;
+  if(byWords&&!seq.length){toast('В песне нет слов для разметки.');return}
+  Object.assign(TR,{marking:true,marks:[],k:0,n:byWords?seq.length:n,cur:-1,wordMode:byWords,wSeq:seq,wm:[],wLineNow:-1}); lineHL(-1,'cur');
   const bar=document.createElement('div'); bar.id='markbar'; bar.className='markbar';
-  bar.innerHTML=`<p>Нажимайте <b>«Строка»</b> в момент, когда начинается каждая строка. Ошиблись — «Назад».</p>
+  bar.innerHTML=`<p>${byWords?'Нажимайте <b>«Слово»</b> в момент, когда начинается каждое слово (следующее обведено). Ошиблись — «Назад».':'Нажимайте <b>«Строка»</b> в момент, когда начинается каждая строка. Ошиблись — «Назад».'}</p>
     <div class="mk-btns"><button class="btn" data-act="mk-undo">Назад</button>
-    <button class="btn primary mk-main" data-act="mk-tap" id="mk-main">Строка 1 из ${n}</button>
+    <button class="btn primary mk-main" data-act="mk-tap" id="mk-main">${byWords?'Слово 1 из '+seq.length:'Строка 1 из '+n}</button>
     <button class="btn" data-act="mk-done">Готово</button></div>
     <button class="link2" data-act="mk-cancel">Отменить разметку</button>`;
   document.body.appendChild(bar);
-  lineHL(0,'next',true);
+  if(byWords)wordNext(); else lineHL(0,'next',true);
   TR.el.currentTime=0;
   TR.el.play().then(()=>{if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow);renderTools()}).catch(()=>{});
 }
 function markTap(){
   if(!TR.marking||!TR.el)return;
+  if(TR.wordMode){
+    const x=TR.wSeq[TR.k],t=Math.round(TR.el.currentTime*100)/100;
+    (TR.wm[x.li]=TR.wm[x.li]||[])[x.k]=t; TR.k++;
+    if(TR.k>=TR.n){markDone();return}
+    wordNext(); markLabel(); return;
+  }
   TR.marks[TR.k]=Math.round(TR.el.currentTime*100)/100; TR.k++;
   if(TR.k>=TR.n){markDone();return}
   lineHL(TR.k,'next',true); markLabel();
 }
 function markUndo(){
   if(!TR.marking||!TR.k)return;
+  if(TR.wordMode){
+    TR.k--; const x=TR.wSeq[TR.k]; if(TR.wm[x.li])TR.wm[x.li][x.k]=null;
+    const p=TR.k?TR.wSeq[TR.k-1]:null,pt=p&&TR.wm[p.li]?TR.wm[p.li][p.k]:0;
+    if(TR.el)TR.el.currentTime=Math.max(0,(pt||0)-0.3);
+    TR.wLineNow=-1; wordNext(); markLabel(); return;
+  }
   TR.k--; TR.marks.length=TR.k;
   if(TR.el)TR.el.currentTime=Math.max(0,(TR.k?TR.marks[TR.k-1]:0)-0.5);
   lineHL(TR.k,'next',true); markLabel();
 }
-function markLabel(){const b=document.getElementById('mk-main');if(b)b.textContent='Строка '+(TR.k+1)+' из '+TR.n}
+function markLabel(){const b=document.getElementById('mk-main');if(b)b.textContent=(TR.wordMode?'Слово ':'Строка ')+(TR.k+1)+' из '+TR.n}
 async function markDone(){
   if(!TR.marking)return;
   TR.marking=false; const mb=document.getElementById('markbar'); if(mb)mb.remove();
   lineHL(-1,'next'); if(TR.el)TR.el.pause();
   const s=findSong(S.cur); if(!s)return;
-  const marks=TR.marks.slice(0,TR.k);
+  document.querySelectorAll('.w.wnext').forEach(e=>e.classList.remove('wnext'));
+  const byWords=TR.wordMode; TR.wordMode=false;
+  const out=byWords?wordMarksOut():{marks:TR.marks.slice(0,TR.k),wmarks:null},marks=out.marks;
   try{
-    const now=Date.now(); await store.patch(s.id,{marks,marksAt:now,updatedAt:now}); TR.marks=marks; if(S.view==='song')renderTools();
-    toast(marks.length?'Разметка сохранена: '+marks.length+' '+plural(marks.length,'строка','строки','строк')+(ghOn()?'. Отправляю на GitHub…':''):'Разметка очищена');
+    const now=Date.now(); await store.patch(s.id,{marks,wmarks:out.wmarks,marksAt:now,updatedAt:now}); TR.marks=marks; TR.wLine=-1; if(S.view==='song')renderTools();
+    toast(marks.length?'Разметка сохранена: '+(byWords?'по словам, ':'')+marks.filter(x=>x!=null).length+' '+plural(marks.filter(x=>x!=null).length,'строка','строки','строк')+(ghOn()?'. Отправляю на GitHub…':''):'Разметка очищена');
     if(ghOn()){clearTimeout(GH.timer);ghSync(true)}
   }catch(e){saveErr(e)}
 }
 function markCancel(){
+  document.querySelectorAll('.w.wnext').forEach(e=>e.classList.remove('wnext')); TR.wordMode=false;
   TR.marking=false; const mb=document.getElementById('markbar'); if(mb)mb.remove();
   lineHL(-1,'next'); if(TR.el)TR.el.pause();
   const s=findSong(S.cur); TR.marks=s&&Array.isArray(s.marks)?s.marks.slice():[];
@@ -2653,7 +2728,9 @@ function trackMenu(s){
       +(nm?`<p class="hint">Разметка строк есть (${nm}). Без файла её можно запустить кнопкой ▶ «по разметке» в нижней панели: текст пойдёт по сохранённому таймингу без звука.</p>`:'');
   }
   const marked=TR.marks.filter(x=>x!=null).length;
-  return `<button class="btn" data-act="t-mark">${ICON.metro}${marked?'Разметить строки заново':'Разметить строки под минус'}</button>`+add+
+  const sw=findSong(S.cur),hasW=sw&&Array.isArray(sw.wmarks)&&sw.wmarks.some(a=>Array.isArray(a)&&a.some(x=>x!=null));
+  return `<button class="btn" data-act="t-mark">${ICON.metro}${marked?'Разметить строки заново':'Разметить строки под минус'}</button>`+
+    `<button class="btn" data-act="t-markw">${ICON.metro}${hasW?'Разметить по словам заново':'Разметить по словам'}</button><p class="hint">По словам: нажимаете в начале каждого слова, и при игре слова закрашиваются точно в момент, когда их поют. Без этого слова внутри строки закрашиваются примерно, по разметке строк.</p>`+add+
     (ghOn()?(s.track&&s.track.path?`<button class="btn" data-act="t-unsend">${ICON.share}Убрать минус с GitHub</button><p class="hint">Минус отправлен на GitHub: на iPad его можно скачать в этой песне.</p>`:`<button class="btn" data-act="t-send">${ICON.share}Отправить минус на iPad</button>`):'')+
     `<button class="btn danger" data-act="t-del">${ICON.trash}<span>Удалить минус</span></button>`+
     `<p class="hint">${marked?'Размечено строк: '+marked+'. Текущая строка подсвечивается и сама встаёт на место.':'Без разметки текст просто плавно идёт за минусом от начала до конца. С разметкой каждая строка подсвечивается точно в своё время.'}</p>`;
@@ -3188,7 +3265,7 @@ function fillSong(){
     l.k==='gap'?'<div class="ln gap"></div>':
     l.k==='head'?`<div class="ln head">${esc(l.t)}</div>`:
     l.k==='ch'?`<div class="ln ch"${l.pli!=null?` data-pli="${l.pli}"`:''}>${chordLineHtml(l.s,S.shift,flats,seen)}</div>`:
-    `<div class="ln ly"${l.li!=null?` data-li="${l.li}"`:''}>${esc(l.t)||' '}</div>`).join('');
+    `<div class="ln ly"${l.li!=null?` data-li="${l.li}"`:''}>${(l.li!=null?wordsHtml(l.t):esc(l.t))||' '}</div>`).join('');
   const bodyEl=document.getElementById('body');
   bodyEl.innerHTML=html||'<div class="ln ly">Текст песни пока пустой.</div>';
   bodyEl.classList.toggle('plain',plain);
@@ -3731,6 +3808,7 @@ document.addEventListener('click',e=>{
   else if(a==='v-play')vToggle();
   else if(a==='v-reset')vReset();
   else if(a==='t-mark')markStart();
+  else if(a==='t-markw')markStart('words');
   else if(a==='t-del')trackRemove(b);
   else if(a==='mk-tap')markTap();
   else if(a==='mk-undo')markUndo();
@@ -3865,7 +3943,7 @@ function mergeData(local,remote){
   for(const s of local.songs){
     const o=map.get(s.id); if(!o){map.set(s.id,s);continue}
     let w=(s.updatedAt||0)>=(o.updatedAt||0)?s:o; const l=w===s?o:s;
-    if((l.marksAt||0)>(w.marksAt||0))w={...w,marks:l.marks,marksAt:l.marksAt};
+    if((l.marksAt||0)>(w.marksAt||0))w={...w,marks:l.marks,wmarks:l.wmarks,marksAt:l.marksAt};
     map.set(s.id,w);
   }
   const songs=[...map.values()].filter(s=>!(del[s.id]>=(s.updatedAt||0))).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
