@@ -567,6 +567,8 @@ body.stage .video{display:none}
 /* wide screens: Тон and metronome up top, the bottom bar keeps only the minus (one row + waveform) and text size */
 /* Тон and metronome sit in the song's top bar; the bottom bar keeps the minus and text size */
 .hdr-only{display:inline-flex;align-items:center}
+.grp .cibtn{width:auto;padding:0 8px;font:700 11px var(--f-mono);letter-spacing:-.02em;color:var(--muted);opacity:.7}
+.grp .cibtn.on{color:var(--accent);opacity:1}
 .hdr-only[hidden]{display:none}
 .tools-in>.grp[aria-label="Тональность"],.tools-in>.grp[aria-label="Метроном"],.tools-in>.tbreak{display:none}
 .tools-in>.grp[aria-label="Размер текста"]{order:4}
@@ -2321,7 +2323,7 @@ function openMetro(){
     <div class="m-row"><span class="cap">Отсчёт перед стартом</span><div class="seg" role="group" aria-label="Отсчёт перед стартом"><button data-act="ci" data-v="1" aria-pressed="${countInOn()}">Вкл</button><button data-act="ci" data-v="0" aria-pressed="${!countInOn()}">Выкл</button></div></div>
     <p class="hint" id="m-listen-st" role="status"></p>
     <p class="hint">«Темп на слух»: включите песню, песенник 12 секунд послушает её через микрофон и поставит темп. Если музыка играет на этом же телефоне, iOS может приостановить её, когда включится микрофон, тогда включите песню на другом устройстве.</p>
-    <p class="hint">Отсчёт: перед автопрокруткой метроном отсчитывает один такт в темпе песни.</p>
+    <p class="hint">Отсчёт: перед минусом и автопрокруткой метроном отсчитывает один такт в темпе песни. Быстро включить или выключить — кнопка «1·2·3·4» внизу песни.</p>
     <p class="hint">«Тап»: нажмите несколько раз в ритм песни, и темп подстроится. Темп и размер запоминаются для этой песни.</p>
   </div>`;
   sheet.hidden=false;
@@ -2506,7 +2508,7 @@ function trackTools(){
   const d=isFinite(TR.el.duration)?TR.el.duration:0,t=TR.el.currentTime||0,on=!TR.el.paused;
   return `<div class="grp trackgrp" aria-label="Минус">
     <button data-act="t-play" class="${on?'on':''}" aria-label="${on?'Пауза':'Играть минус'}">${on?ICON.pause:ICON.play}</button>
-    <span class="tt" id="t-time">${fmtTime(t)} / ${fmtTime(d)}</span>
+    <span class="tt" id="t-time">${fmtTime(t)} / ${fmtTime(d)}</span>${ciBtn()}
     </div><div class="wavebar"><canvas id="t-wave" class="wave" role="slider" aria-label="Минус: нажмите или проведите, чтобы перемотать" aria-valuemin="0" aria-valuemax="${Math.round(d)}" aria-valuenow="${Math.round(t)}"></canvas></div>`;
 }
 function trackToggle(){
@@ -2514,6 +2516,13 @@ function trackToggle(){
   if(CI.on){countInStop();renderTools();return}
   if(TR.el.paused){
     stopAuto();
+    if(countInOn()&&!M.on){
+      const el=TR.el,pos=el.currentTime;
+      countIn(()=>{const h=TR.ciHold;TR.ciHold=null;if(!h||TR.el!==h.el)return;h.el.currentTime=h.pos;h.el.muted=false;TR.cur=-2;renderTools()}); // first: it clears any earlier count
+      el.muted=true; TR.ciHold={el,pos};
+      el.play().then(()=>{if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow);renderTools()}).catch(()=>{TR.ciHold=null;el.muted=false;countInStop();toast('Не получилось включить минус.')});
+      return;
+    }
     TR.el.play().then(()=>{if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow);renderTools()}).catch(()=>toast('Не получилось включить минус. Проверьте, что файл открывается в «Файлах».'));
   }else TR.el.pause();
 }
@@ -2522,6 +2531,7 @@ function trackFollow(){
   const virt=!TR.el;
   if(virt?!TR.vOn:TR.el.paused){TR.raf=0;return}
   TR.raf=requestAnimationFrame(trackFollow); TR.beat=performance.now();
+  if(TR.ciHold)return;
   const t=virt?(performance.now()-TR.vStart)/1000:TR.el.currentTime,d=virt?vEnd():(TR.el.duration||0);
   if(virt&&t>=d){vReset();return}
   const tm=document.getElementById('t-time'); if(tm)tm.textContent=fmtTime(t)+' / '+fmtTime(d);
@@ -3453,12 +3463,13 @@ function openTone(){
 function renderTools(){
   setTimeout(()=>{drawWave();fitTools()},0);
   const sp=S.scroll,minus=!!(TR.has&&TR.el); // a minus drives the text itself, so autoscroll is hidden then
-  if(minus&&(sp.on||CI.on)){countInStop();stopAuto()}
+  if(minus&&sp.on)stopAuto();
+  if(minus&&CI.on&&!TR.ciHold)countInStop(); // an autoscroll count-in, not the minus's own
   if(S.stage){
     tools.innerHTML=`<div class="tools-in stage-tools">
       ${trackTools()}
       ${minus?'':`<div class="grp scroll" aria-label="Автопрокрутка">
-        <button data-act="scroll" class="${sp.on?'on':''}" aria-label="${sp.on?'Остановить':'Запустить'} автопрокрутку">${sp.on?ICON.pause:ICON.play}</button>
+        ${ciBtn()}<button data-act="scroll" class="${sp.on?'on':''}" aria-label="${sp.on?'Остановить':'Запустить'} автопрокрутку">${sp.on?ICON.pause:ICON.play}</button>
         <label class="speed" for="speed"><input type="range" id="speed" min="${SPEED_MIN}" max="${SPEED_MAX}" step="1" value="${sp.speed}" aria-label="Скорость прокрутки"></label></div>`}
       <div class="grp" aria-label="Размер текста">
         <button data-act="fs" data-d="-1" aria-label="Мельче" style="font-size:13px">A</button>
@@ -3479,7 +3490,7 @@ function renderTools(){
     ${trackTools()}
     <div class="grp" aria-label="Метроном"><button class="metrobtn${M.on?' on':''}" data-act="metro" aria-label="Метроном, ${M.bpm} ударов в минуту">${ICON.metro}<span class="lbl">${M.bpm}</span></button></div>
     ${minus?'':`<div class="grp scroll" aria-label="Автопрокрутка">
-      <button data-act="scroll" class="${sp.on?'on':''}" aria-label="${sp.on?'Остановить':'Запустить'} автопрокрутку">${sp.on?ICON.pause:ICON.play}</button>
+      ${ciBtn()}<button data-act="scroll" class="${sp.on?'on':''}" aria-label="${sp.on?'Остановить':'Запустить'} автопрокрутку">${sp.on?ICON.pause:ICON.play}</button>
       <label class="speed" for="speed"><span class="cap">Медл.</span>
         <input type="range" id="speed" min="${SPEED_MIN}" max="${SPEED_MAX}" step="1" value="${sp.speed}" aria-label="Скорость прокрутки">
         <span class="cap">Быстр.</span></label></div>`}
@@ -3842,8 +3853,10 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.view===
 
 /* ---------- count-in: one bar of clicks before the minus or the autoscroll starts ---------- */
 const CI={on:false,timers:[],el:null};
+function ciBtn(){const on=countInOn();return `<button data-act="ci-toggle" class="cibtn${on?' on':''}" aria-pressed="${on}" aria-label="Отсчёт перед стартом: ${on?'включён':'выключен'}">1·2·3·4</button>`}
 function countInOn(){return lsGet('sb.countin')!=='0'}
-function countInStop(){CI.on=false;CI.timers.forEach(clearTimeout);CI.timers=[];if(CI.el){CI.el.remove();CI.el=null}}
+function countInStop(done){const h=TR.ciHold;if(h&&!done){ /* cancelled: the minus stops where it was */TR.ciHold=null;try{h.el.pause();h.el.currentTime=h.pos;h.el.muted=false}catch{}}
+  CI.on=false;CI.timers.forEach(clearTimeout);CI.timers=[];if(CI.el){CI.el.remove();CI.el=null}}
 function countIn(go){
   if(!countInOn()||M.on){go();return}
   countInStop();
@@ -3860,7 +3873,7 @@ function countIn(go){
       metroClick(t0+k*spb,k===0);
       CI.timers.push(setTimeout(()=>{const b=ov.querySelector('b');b.textContent=k+1;b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop')},lead+k*spb*1000));
     }
-    CI.timers.push(setTimeout(()=>{countInStop();go()},lead+n*spb*1000));
+    CI.timers.push(setTimeout(()=>{countInStop(true);go()},lead+n*spb*1000));
   });
 }
 
@@ -3925,13 +3938,14 @@ document.addEventListener('click',e=>{
   if(S.stage){
     const act=b&&b.dataset.act;
     if(!b||act==='chord'){if(!e.target.closest('#tools'))stageTap(e);return}
-    if(!['scroll','fs','stage-exit','t-play','v-play','v-reset'].includes(act))exitStage();
+    if(!['scroll','fs','stage-exit','t-play','v-play','v-reset','ci-toggle'].includes(act))exitStage();
   }
   if(!b){if(e.target===sheet)closeSheet();return}
   const a=b.dataset.act;
   if(a==='new')renderEditor(null);
   else if(a==='tab-list'){S.cur=null;renderList()}
   else if(a==='tonebridge')toneBridgeCopy(b.dataset.q);
+  else if(a==='ci-toggle'){const on=!countInOn();lsSet('sb.countin',on?'1':'0');renderTools();toast(on?'Отсчёт перед стартом включён':'Отсчёт выключен')}
   else if(a==='ci'){lsSet('sb.countin',b.dataset.v);openMetro()}
   else if(a==='tab-chart')renderChart();
   else if(a==='tab-tuner')renderTuner();
