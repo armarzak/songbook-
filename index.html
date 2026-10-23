@@ -2420,13 +2420,22 @@ async function wavePeaks(id,rec){
     lsSet(key,JSON.stringify({sig,p:out}));
   }catch{}
 }
-function drawWave(){
+/* size and colors are read only now and then: reading them every frame made the page stall, so taps on pause or back were lost */
+const WV={c:null,w:0,h:0,at:0,col:null,key:''};
+function drawWave(tick){
   const c=document.getElementById('t-wave'); if(!c||!TR.el)return;
-  const w=c.clientWidth,h=c.clientHeight,dpr=window.devicePixelRatio||1; if(!w||!h)return;
+  const now=performance.now();
+  if(!tick||WV.c!==c||now-WV.at>2000){
+    const cs=getComputedStyle(document.documentElement);
+    Object.assign(WV,{c,w:c.clientWidth,h:c.clientHeight,at:now,key:'',col:[cs.getPropertyValue('--accent').trim()||'#FFB648',cs.getPropertyValue('--muted').trim()||'#888',cs.getPropertyValue('--fg').trim()||'#fff']});
+  }
+  const w=WV.w,h=WV.h,dpr=window.devicePixelRatio||1; if(!w||!h)return;
+  const [acc,dim,fg]=WV.col;
+  const d=isFinite(TR.el.duration)?TR.el.duration:0,t=TR.el.currentTime||0,px=d?t/d*w:0;
+  const key=w+'|'+h+'|'+Math.round(px)+'|'+(TR.peaks?TR.peaks.length:0)+'|'+TR.marks.length+'|'+acc;
+  if(key===WV.key)return; WV.key=key; // the playhead has not moved a pixel: nothing to redraw
   if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr)}
   const g=c.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,w,h);
-  const cs=getComputedStyle(document.documentElement),acc=cs.getPropertyValue('--accent').trim()||'#FFB648',dim=cs.getPropertyValue('--muted').trim()||'#888';
-  const d=isFinite(TR.el.duration)?TR.el.duration:0,t=TR.el.currentTime||0,px=d?t/d*w:0;
   const P=TR.peaks,bw=3,n=Math.floor(w/bw);
   for(let i=0;i<n;i++){
     let v=0.06;
@@ -2439,7 +2448,7 @@ function drawWave(){
   if(d){ // line marks
     g.fillStyle=acc;
     g.globalAlpha=0.5; TR.marks.forEach(m=>{if(m!=null)g.fillRect(Math.round(m/d*w),0,1,3)}); g.globalAlpha=1; // where each marked line starts
-    g.fillStyle=cs.getPropertyValue('--fg').trim()||'#fff'; g.fillRect(Math.round(px)-1,0,2,h); // playhead
+    g.fillStyle=fg; g.fillRect(Math.round(px)-1,0,2,h); // playhead
   }
 }
 /* seeking on the waveform */
@@ -2534,8 +2543,8 @@ function trackFollow(){
   if(TR.ciHold)return;
   const t=virt?(performance.now()-TR.vStart)/1000:TR.el.currentTime,d=virt?vEnd():(TR.el.duration||0);
   if(virt&&t>=d){vReset();return}
-  const tm=document.getElementById('t-time'); if(tm)tm.textContent=fmtTime(t)+' / '+fmtTime(d);
-  if(!virt)drawWave();
+  const tm=document.getElementById('t-time'),tt=fmtTime(t)+' / '+fmtTime(d); if(tm&&tm.textContent!==tt)tm.textContent=tt;
+  if(!virt)drawWave(true);
   if(TR.marking)return;
   if(TR.marks.some(x=>x!=null)){
     let i=-1; TR.marks.forEach((m,k)=>{if(m!=null&&m<=t+0.05)i=k});
@@ -2714,7 +2723,7 @@ function tempoListen(){
 }
 /* ---------- karaoke by words: the sung words fill with color, word by word, inside the current line ---------- */
 const wordsHtml=t=>t.split(/(\s+)/).map(p=>!p?'':/^\s+$/.test(p)?p:`<span class="w">${esc(p)}</span>`).join('');
-function wordClear(){(TR.wEls||[]).forEach(el=>{delete el.dataset.s;el.style.removeProperty('--p')});TR.wEls=[];TR.wLine=-1}
+function wordClear(){(TR.wEls||[]).forEach(el=>{delete el.dataset.s;el.style.removeProperty('--p');el._p=null});TR.wEls=[];TR.wLine=-1}
 /* when each word of line i starts: from the word marks if the line has them all, otherwise spread over the line by word length */
 function wordTimes(i,els){
   const s=findSong(TR.id||S.cur)||{},wm=Array.isArray(s.wmarks)&&Array.isArray(s.wmarks[i])?s.wmarks[i]:null;
@@ -2737,11 +2746,16 @@ function wordFollow(t){
     TR.wEls=ly?[...ly.querySelectorAll('.w')]:[]; TR.wTimes=TR.wEls.length?wordTimes(i,TR.wEls):[];
   }
   const ws=TR.wEls,tm=TR.wTimes; if(!ws||!ws.length)return;
+  // only what changed is written, in 5% steps: repainting the words every frame made the phone lag
   for(let k=0;k<ws.length;k++){
     const a=tm[k],b=tm[k+1]!=null?tm[k+1]:tm.end,el=ws[k];
-    if(t>=b){if(el.dataset.s!=='2'){el.dataset.s='2';el.style.removeProperty('--p')}}
-    else if(t>=a){el.dataset.s='1';el.style.setProperty('--p',Math.max(0,Math.min(100,Math.round((t-a)/Math.max(0.05,b-a)*100)))+'%')}
-    else if(el.dataset.s){delete el.dataset.s;el.style.removeProperty('--p')}
+    if(t>=b){if(el.dataset.s!=='2'){el.dataset.s='2';el.style.removeProperty('--p');el._p=null}}
+    else if(t>=a){
+      if(el.dataset.s!=='1')el.dataset.s='1';
+      const p=Math.max(0,Math.min(100,Math.round((t-a)/Math.max(0.05,b-a)*20)*5));
+      if(el._p!==p){el._p=p;el.style.setProperty('--p',p+'%')}
+    }
+    else if(el.dataset.s){delete el.dataset.s;el.style.removeProperty('--p');el._p=null}
   }
 }
 /* marking by words: one tap at the start of every word; the first word of a line also marks the line */
@@ -3923,6 +3937,12 @@ function stopAuto(){S.scroll.on=false;cancelAnimationFrame(raf);if(wake){wake.re
 
 /* ---------- events ---------- */
 let patchT;
+/* «Слово»/«Строка» counts at the moment the finger touches: a click comes only when it lifts, later and not for every quick tap */
+document.addEventListener('pointerdown',e=>{
+  if(e.button>0||!(e.target.closest&&e.target.closest('[data-act="mk-tap"]')))return;
+  TR.tapEat=performance.now(); markTap();
+});
+document.addEventListener('click',e=>{if(TR.tapEat&&performance.now()-TR.tapEat<800){TR.tapEat=0;e.stopPropagation();e.preventDefault()}},true); // the click of that same tap
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');
   if(TR.pick&&S.view==='song'){ // choosing where to continue the line marking
@@ -3992,7 +4012,7 @@ document.addEventListener('click',e=>{
   else if(a==='t-markfrom')markPick();
   else if(a==='mk-pickcancel')markPickCancel();
   else if(a==='t-del')trackRemove(b);
-  else if(a==='mk-tap')markTap();
+  else if(a==='mk-tap'){if(e.detail===0)markTap()} // touch and mouse are handled on press (below); this is the keyboard
   else if(a==='mk-undo')markUndo();
   else if(a==='mk-done')markDone();
   else if(a==='mk-cancel')markCancel();
