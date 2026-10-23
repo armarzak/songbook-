@@ -549,10 +549,14 @@ body.stage .video{display:none}
 .trackgrp input{flex:1;min-width:70px;padding:0;border:0;background:transparent;accent-color:var(--accent);height:36px}
 .trackgrp .wave{flex:1;min-width:90px;height:36px;display:block;cursor:pointer;touch-action:none;border-radius:6px}
 /* bottom bar: Тон · метроном · A A on the first row, the minus with its waveform across the whole second row */
-.tools-in>.grp[aria-label="Метроном"]{order:1}
-.tools-in>.grp[aria-label="Размер текста"]{order:2}
-.tools-in>.trackgrp{order:3;flex:1 1 100%}
-.tools-in>.grp.scroll{order:4}
+.tools-in>.grp[aria-label="Тональность"]{order:0}
+.tools-in>.grp[aria-label="Размер текста"]{order:1}
+.tools-in>.tbreak{order:2;flex:0 0 100%;height:0}
+.tools-in>.trackgrp{order:3;flex:1 1 auto}
+.tools-in>.grp[aria-label="Метроном"]{order:4}
+.tools-in>.grp.scroll{order:5}
+.tools-in>.wavebar{order:6;flex:0 0 calc(100% + 24px);margin:2px -12px -2px}
+.wavebar .wave{width:100%;height:46px;display:block;cursor:pointer;touch-action:none}
 .ln.cur{background:var(--sunk);box-shadow:-6px 0 0 var(--sunk),6px 0 0 var(--sunk);border-radius:4px;transition:background .25s}
 .ln.ly.cur{color:var(--accent);font-weight:600}
 .ln.next{outline:2px dashed var(--accent);outline-offset:2px;border-radius:4px}
@@ -2475,7 +2479,7 @@ function trackTools(){
   return `<div class="grp trackgrp" aria-label="Минус">
     <button data-act="t-play" class="${on?'on':''}" aria-label="${on?'Пауза':'Играть минус'}">${on?ICON.pause:ICON.play}</button>
     <span class="tt" id="t-time">${fmtTime(t)} / ${fmtTime(d)}</span>
-    <canvas id="t-wave" class="wave" role="slider" aria-label="Минус: нажмите или проведите, чтобы перемотать" aria-valuemin="0" aria-valuemax="${Math.round(d)}" aria-valuenow="${Math.round(t)}"></canvas></div>`;
+    </div><div class="wavebar"><canvas id="t-wave" class="wave" role="slider" aria-label="Минус: нажмите или проведите, чтобы перемотать" aria-valuemin="0" aria-valuemax="${Math.round(d)}" aria-valuenow="${Math.round(t)}"></canvas></div>`;
 }
 function trackToggle(){
   if(!TR.el)return;
@@ -3413,6 +3417,7 @@ function renderTools(){
     <div class="grp" aria-label="Размер текста">
       <button data-act="fs" data-d="-1" aria-label="Мельче" style="font-size:13px">A</button>
       <button data-act="fs" data-d="1" aria-label="Крупнее" style="font-size:18px">A</button></div>
+    ${minus?'<i class="tbreak" aria-hidden="true"></i>':''}
     ${trackTools()}
     <div class="grp" aria-label="Метроном"><button class="metrobtn${M.on?' on':''}" data-act="metro" aria-label="Метроном, ${M.bpm} ударов в минуту">${ICON.metro}<span class="lbl">${M.bpm}</span></button></div>
     ${minus?'':`<div class="grp scroll" aria-label="Автопрокрутка">
