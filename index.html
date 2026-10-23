@@ -565,11 +565,21 @@ body.stage .video{display:none}
 .bar .metrobtn svg{width:18px;height:18px}
 .bar .metrobtn .lbl{font:700 14px var(--f-mono)}
 /* wide screens: Тон and metronome up top, the bottom bar keeps only the minus (one row + waveform) and text size */
-@media (min-width:600px){
-  .hdr-only{display:inline-flex;align-items:center}
-  .hdr-only[hidden]{display:none}
-  .tools-in>.grp[aria-label="Тональность"],.tools-in>.grp[aria-label="Метроном"],.tools-in>.tbreak{display:none}
-  .tools-in>.grp[aria-label="Размер текста"]{order:4}
+/* Тон and metronome sit in the song's top bar; the bottom bar keeps the minus and text size */
+.hdr-only{display:inline-flex;align-items:center}
+.hdr-only[hidden]{display:none}
+.tools-in>.grp[aria-label="Тональность"],.tools-in>.grp[aria-label="Метроном"],.tools-in>.tbreak{display:none}
+.tools-in>.grp[aria-label="Размер текста"]{order:4}
+/* a narrow phone: compact top bar so everything fits in one row */
+@media (max-width:599px){
+  .bar-in:has(.hdr-tone){padding-inline:8px;gap:4px}
+  .bar-in:has(.hdr-tone) .btn.icon{width:36px;min-height:36px;height:36px}
+  .bar-in:has(.hdr-tone) .seg.vt button{width:32px}
+  .bar .hdr-tone,.bar .metrobtn.hdr-only{flex-direction:column;justify-content:center;gap:0;width:40px;min-height:36px;height:36px;padding:0}
+  .bar .hdr-tone .cap{font-size:9px;line-height:1}
+  .bar .hdr-tone b{font-size:13px;line-height:1.1}
+  .bar .metrobtn.hdr-only svg{width:14px;height:14px}
+  .bar .metrobtn.hdr-only .lbl{font-size:11px;line-height:1.1}
 }
 .ln.cur{background:var(--sunk);box-shadow:-6px 0 0 var(--sunk),6px 0 0 var(--sunk);border-radius:4px;transition:background .25s}
 .ln.ly.cur{color:var(--accent);font-weight:600}
