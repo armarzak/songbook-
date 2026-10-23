@@ -557,6 +557,20 @@ body.stage .video{display:none}
 .tools-in>.grp.scroll{order:5}
 .tools-in>.wavebar{order:6;flex:0 0 calc(100% + 24px);margin:2px -12px -2px}
 .wavebar .wave{width:100%;height:46px;display:block;cursor:pointer;touch-action:none}
+.hdr-only{display:none}
+.hdr-tone{gap:6px;padding:6px 10px}
+.hdr-tone .cap{font-size:11px;color:var(--muted)}
+.hdr-tone b{font:700 15px var(--f-mono);min-width:2ch;text-align:center}
+.bar .metrobtn{gap:6px;padding:6px 10px}
+.bar .metrobtn svg{width:18px;height:18px}
+.bar .metrobtn .lbl{font:700 14px var(--f-mono)}
+/* wide screens: Тон and metronome up top, the bottom bar keeps only the minus (one row + waveform) and text size */
+@media (min-width:600px){
+  .hdr-only{display:inline-flex;align-items:center}
+  .hdr-only[hidden]{display:none}
+  .tools-in>.grp[aria-label="Тональность"],.tools-in>.grp[aria-label="Метроном"],.tools-in>.tbreak{display:none}
+  .tools-in>.grp[aria-label="Размер текста"]{order:4}
+}
 .ln.cur{background:var(--sunk);box-shadow:-6px 0 0 var(--sunk),6px 0 0 var(--sunk);border-radius:4px;transition:background .25s}
 .ln.ly.cur{color:var(--accent);font-weight:600}
 .ln.next{outline:2px dashed var(--accent);outline-offset:2px;border-radius:4px}
@@ -2254,13 +2268,13 @@ function metroStop(){
 }
 function metroFlash(b){
   document.querySelectorAll('.mdots i').forEach((d,i)=>d.classList.toggle('on',M.on&&i===b));
-  const btn=document.querySelector('.metrobtn'); if(btn&&M.on){btn.classList.remove('beat');void btn.offsetWidth;btn.classList.add('beat')}
+  if(M.on)document.querySelectorAll('.metrobtn').forEach(btn=>{btn.classList.remove('beat');void btn.offsetWidth;btn.classList.add('beat')});
 }
 function metroSet(bpm){
   M.bpm=Math.min(240,Math.max(30,Math.round(bpm)));
   const n=document.getElementById('m-num'); if(n)n.textContent=M.bpm;
   const r=document.getElementById('m-bpm'); if(r&&+r.value!==M.bpm)r.value=M.bpm;
-  const l=document.querySelector('.metrobtn .lbl'); if(l)l.textContent=M.bpm;
+  document.querySelectorAll('.metrobtn .lbl').forEach(l=>l.textContent=M.bpm);
   metroSave();
 }
 function metroSave(){
@@ -2269,7 +2283,7 @@ function metroSave(){
   M.saveT=setTimeout(()=>{if(store&&((+s.bpm||100)!==M.bpm||(+s.beats||4)!==M.beats))store.patch(s.id,{bpm:M.bpm,beats:M.beats,updatedAt:Date.now()}).catch(()=>{})},900);
 }
 function metroUI(){
-  const btn=document.querySelector('.metrobtn'); if(btn)btn.classList.toggle('on',M.on);
+  document.querySelectorAll('.metrobtn').forEach(btn=>btn.classList.toggle('on',M.on));
   const t=document.getElementById('m-toggle'); if(t)t.textContent=M.on?'Стоп':'Старт';
   if(!M.on)document.querySelectorAll('.mdots i').forEach(d=>d.classList.remove('on'));
 }
@@ -3322,6 +3336,8 @@ function renderSong(id,keepScroll){
       <button data-act="viewmode" data-v="0" aria-pressed="${!S.textOnly}" aria-label="С аккордами">${ICON.guitar}</button>
       <button data-act="viewmode" data-v="1" aria-pressed="${S.textOnly}" aria-label="Только текст">${ICON.book}</button>
     </div>
+    <button class="btn hdr-only hdr-tone" data-act="tone-open" aria-label="Тональность"${S.textOnly?' hidden':''}><span class="cap">Тон</span><b class="tone-val">${S.shift>0?'+':''}${S.shift}</b></button>
+    <button class="btn hdr-only metrobtn${M.on?' on':''}" data-act="metro" aria-label="Метроном">${ICON.metro}<span class="lbl">${M.bpm}</span></button>
     ${s.demo?'':`<button class="btn icon favbtn" data-act="fav" aria-pressed="${!!s.fav}" aria-label="Избранное">${ICON.star}</button>`}
     <button class="btn icon" data-act="stage" aria-label="Режим сцены">${ICON.stage}</button>
     <button class="btn icon" data-act="edit" aria-label="Изменить песню">${ICON.edit}</button>
@@ -3392,6 +3408,16 @@ function fillSong(){
 /* the song's bottom padding follows the bar's real height (it grows to two rows on a phone) */
 function fitTools(){const h=tools.hidden?0:tools.offsetHeight;if(h)document.documentElement.style.setProperty('--toolsh',h+'px')}
 if(window.ResizeObserver)new ResizeObserver(fitTools).observe(tools); addEventListener('resize',fitTools);
+function openTone(){
+  sheet.innerHTML=`<div class="panel" role="dialog" aria-label="Тональность">
+    <div class="panel-top"><h2 class="ptitle">Тональность</h2><button class="btn" data-act="close">Готово</button></div>
+    <div class="m-big"><button class="btn icon" data-act="tr" data-d="-1" aria-label="Ниже на полтона">−</button>
+      <div class="m-val"><b class="tone-val">${S.shift>0?'+':''}${S.shift}</b><span>полутонов</span></div>
+      <button class="btn icon" data-act="tr" data-d="1" aria-label="Выше на полтона">+</button></div>
+    <div class="actions" style="justify-content:center"><button class="btn" data-act="tr-reset">Как в оригинале</button></div>
+  </div>`;
+  sheet.hidden=false;
+}
 function renderTools(){
   setTimeout(()=>{drawWave();fitTools()},0);
   const sp=S.scroll,minus=!!(TR.has&&TR.el); // a minus drives the text itself, so autoscroll is hidden then
@@ -3941,7 +3967,7 @@ document.addEventListener('click',e=>{
   else if(a==='m-beats'){M.beats=+b.dataset.v;M.beat=0;metroSave();openMetro()}
   else if(a==='stage')enterStage();
   else if(a==='stage-exit')exitStage();
-  else if(a==='viewmode'){S.textOnly=b.dataset.v==='1';lsSet('sb.textonly',S.textOnly?'1':'0');document.querySelectorAll('.vt button').forEach(x=>x.setAttribute('aria-pressed',String((x.dataset.v==='1')===S.textOnly)));fillSong();renderTools()}
+  else if(a==='viewmode'){S.textOnly=b.dataset.v==='1';lsSet('sb.textonly',S.textOnly?'1':'0');document.querySelectorAll('.vt button').forEach(x=>x.setAttribute('aria-pressed',String((x.dataset.v==='1')===S.textOnly)));document.querySelectorAll('.hdr-tone').forEach(x=>x.hidden=S.textOnly);fillSong();renderTools()}
   else if(a==='tag'){S.tag=b.dataset.t||null;fillList()}
   else if(a==='artist'){pageTurn('back');S.cur=null;S.tag=null;S.q=b.dataset.a;renderList();SCR.scrollTo(0,0)}
   else if(a==='tagfilter'){S.tag=b.dataset.t;S.q='';S.cur=null;renderList()}
@@ -3977,9 +4003,12 @@ document.addEventListener('click',e=>{
   else if(a==='close')closeSheet();
   else if(a==='ask-del')askDelete();
   else if(a==='del'){const id=S.cur;closeSheet();store.remove(id).then(()=>{toast('Песня удалена');S.cur=null;renderList()},saveErr)}
+  else if(a==='tone-open')openTone();
+  else if(a==='tr-reset'){S.shift=0;fillSong();renderTools();document.querySelectorAll('.tone-val').forEach(e=>e.textContent='0');const id=S.cur;if(id!=='demo'){clearTimeout(patchT);patchT=setTimeout(()=>store.patch(id,{transpose:0,updatedAt:Date.now()}).catch(()=>{}),300)}}
   else if(a==='tr'){
     S.shift=((S.shift+ +b.dataset.d)+18)%12-6; if(S.shift===-6)S.shift=6;
     fillSong();renderTools();
+    document.querySelectorAll('.tone-val').forEach(e=>e.textContent=(S.shift>0?'+':'')+S.shift);
     const id=S.cur;
     if(id!=='demo'){clearTimeout(patchT);patchT=setTimeout(()=>store.patch(id,{transpose:S.shift,updatedAt:Date.now()}).catch(()=>{}),900)}
   }
