@@ -547,6 +547,7 @@ body.stage .video{display:none}
 .trackgrp{flex:1 1 260px;gap:6px;padding-inline-end:8px}
 .trackgrp .tt{font:600 12px var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .trackgrp input{flex:1;min-width:70px;padding:0;border:0;background:transparent;accent-color:var(--accent);height:36px}
+.trackgrp .wave{flex:1;min-width:90px;height:36px;display:block;cursor:pointer;touch-action:none;border-radius:6px}
 .ln.cur{background:var(--sunk);box-shadow:-6px 0 0 var(--sunk),6px 0 0 var(--sunk);border-radius:4px;transition:background .25s}
 .ln.ly.cur{color:var(--accent);font-weight:600}
 .ln.next{outline:2px dashed var(--accent);outline-offset:2px;border-radius:4px}
@@ -2363,8 +2364,65 @@ async function trackPut(id,rec){const db=await idb();return new Promise((ok,no)=
 async function trackDelete(id){try{const db=await idb();await new Promise(ok=>{const t=db.transaction('tracks','readwrite');t.objectStore('tracks').delete(id);t.oncomplete=ok;t.onerror=ok})}catch{}}
 const fmtTime=t=>{t=Math.max(0,Math.floor(t||0));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')};
 
+/* ---------- the minus as a waveform (like Logic): played part in the theme color, a playhead, line marks; tap or drag to seek ---------- */
+const WAVE_N=800;
+async function wavePeaks(id,rec){
+  const key='sb.wave.'+id,sig=(rec.size||0)+':'+(rec.name||'');
+  try{const c=JSON.parse(lsGet(key)||'null');if(c&&c.sig===sig&&Array.isArray(c.p)){TR.peaks=c.p;return}}catch{}
+  try{
+    const ab=rec.buf?rec.buf.slice(0):await rec.blob.arrayBuffer();
+    const oc=new (window.OfflineAudioContext||window.webkitOfflineAudioContext)(1,1,8000); // decoded at 8 kHz: enough for a picture, light on memory
+    const au=await new Promise((ok,no)=>{const p=oc.decodeAudioData(ab,ok,no);if(p&&p.catch)p.catch(no)});
+    const ch=au.getChannelData(0),step=Math.max(1,Math.floor(ch.length/WAVE_N)),p=[];
+    let mx=0;
+    for(let i=0;i<WAVE_N;i++){let m=0;const a=i*step,b=Math.min(ch.length,a+step);for(let j=a;j<b;j+=2){const v=Math.abs(ch[j]);if(v>m)m=v}p.push(m);if(m>mx)mx=m}
+    const out=p.map(v=>Math.round(Math.min(1,v/(mx||1))*100)/100);
+    if(TR.id===id){TR.peaks=out;drawWave()}
+    lsSet(key,JSON.stringify({sig,p:out}));
+  }catch{}
+}
+function drawWave(){
+  const c=document.getElementById('t-wave'); if(!c||!TR.el)return;
+  const w=c.clientWidth,h=c.clientHeight,dpr=window.devicePixelRatio||1; if(!w||!h)return;
+  if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr)}
+  const g=c.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,w,h);
+  const cs=getComputedStyle(document.documentElement),acc=cs.getPropertyValue('--accent').trim()||'#FFB648',dim=cs.getPropertyValue('--muted').trim()||'#888';
+  const d=isFinite(TR.el.duration)?TR.el.duration:0,t=TR.el.currentTime||0,px=d?t/d*w:0;
+  const P=TR.peaks,bw=3,n=Math.floor(w/bw);
+  for(let i=0;i<n;i++){
+    let v=0.06;
+    if(P){const a=Math.floor(i/n*P.length),b=Math.max(a+1,Math.floor((i+1)/n*P.length));for(let j=a;j<b;j++)if(P[j]>v)v=P[j]}
+    const bh=Math.max(2,v*(h-4)),x=i*bw;
+    g.fillStyle=x<px?acc:dim; g.globalAlpha=x<px?1:0.45;
+    g.fillRect(x,(h-bh)/2,bw-1,bh);
+  }
+  g.globalAlpha=1;
+  if(d){ // line marks
+    g.fillStyle=acc;
+    TR.marks.forEach(m=>{if(m!=null){const x=Math.round(m/d*w);g.fillRect(x,0,1,4);g.fillRect(x,h-4,1,4)}});
+    g.fillStyle=cs.getPropertyValue('--fg').trim()||'#fff'; g.fillRect(Math.round(px)-1,0,2,h); // playhead
+  }
+}
+/* seeking on the waveform */
+(()=>{
+  let drag=false;
+  const seek=e=>{const c=document.getElementById('t-wave');if(!c||!TR.el)return;const d=TR.el.duration;if(!isFinite(d)||!d)return;
+    const r=c.getBoundingClientRect(),x=Math.max(0,Math.min(r.width,e.clientX-r.left));
+    TR.seeking=Date.now();TR.el.currentTime=x/r.width*d;TR.cur=-2;
+    const tm=document.getElementById('t-time');if(tm)tm.textContent=fmtTime(TR.el.currentTime)+' / '+fmtTime(d);drawWave()};
+  document.addEventListener('pointerdown',e=>{if(e.target.id!=='t-wave')return;drag=true;try{e.target.setPointerCapture(e.pointerId)}catch{}seek(e);e.preventDefault()});
+  document.addEventListener('pointermove',e=>{if(drag)seek(e)});
+  const up=()=>{drag=false};document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up);
+  addEventListener('resize',()=>drawWave());
+})();
+/* when the minus has no line marks the text glides with it; a finger or the wheel moves it freely and the glide carries on from there */
+(()=>{
+  const mark=e=>{if(S.view==='song'&&TR.el&&!TR.el.paused&&!(e.target.closest&&e.target.closest('#tools,.markbar,.sheet')))TR.userAt=performance.now()};
+  document.addEventListener('touchstart',mark,{passive:true});document.addEventListener('touchmove',mark,{passive:true});document.addEventListener('wheel',mark,{passive:true});
+})();
+
 async function trackLoad(s){
-  trackStop(); TR.id=s.id; TR.marks=Array.isArray(s.marks)?s.marks.slice():[];
+  trackStop(); TR.id=s.id; TR.marks=Array.isArray(s.marks)?s.marks.slice():[]; TR.peaks=null; TR.glideOff=0;
   if(S.view==='song')renderTools();
   if(!trackCan()||!s.track)return;
   let rec=await trackGet(s.id);
@@ -2388,6 +2446,7 @@ async function trackLoad(s){
   a.addEventListener('pause',()=>{if(S.view==='song')renderTools()});
   TR.el=a; TR.has=true;
   if(S.view==='song')renderTools();
+  wavePeaks(s.id,rec);
 }
 function trackStop(){
   if(TR.marking&&TR.k>0&&TR.id&&store){const now=Date.now(),o=TR.wordMode?wordMarksOut():TR.from?markMerged():{marks:TR.marks.slice(0,TR.k),wmarks:null};store.patch(TR.id,{marks:o.marks,wmarks:o.wmarks,marksAt:now,updatedAt:now}).catch(()=>{})}
@@ -2411,7 +2470,7 @@ function trackTools(){
   return `<div class="grp trackgrp" aria-label="Минус">
     <button data-act="t-play" class="${on?'on':''}" aria-label="${on?'Пауза':'Играть минус'}">${on?ICON.pause:ICON.play}</button>
     <span class="tt" id="t-time">${fmtTime(t)} / ${fmtTime(d)}</span>
-    <input type="range" id="t-seek" min="0" max="${Math.max(1,Math.round(d*10))}" value="${Math.round(t*10)}" aria-label="Перемотка минуса"></div>`;
+    <canvas id="t-wave" class="wave" role="slider" aria-label="Минус: нажмите или проведите, чтобы перемотать" aria-valuemin="0" aria-valuemax="${Math.round(d)}" aria-valuenow="${Math.round(t)}"></canvas></div>`;
 }
 function trackToggle(){
   if(!TR.el)return;
@@ -2429,7 +2488,7 @@ function trackFollow(){
   const t=virt?(performance.now()-TR.vStart)/1000:TR.el.currentTime,d=virt?vEnd():(TR.el.duration||0);
   if(virt&&t>=d){vReset();return}
   const tm=document.getElementById('t-time'); if(tm)tm.textContent=fmtTime(t)+' / '+fmtTime(d);
-  const sk=document.getElementById('t-seek'); if(sk&&Date.now()-TR.seeking>400)sk.value=Math.round(t*10);
+  if(!virt)drawWave();
   if(TR.marking)return;
   if(TR.marks.some(x=>x!=null)){
     let i=-1; TR.marks.forEach((m,k)=>{if(m!=null&&m<=t+0.05)i=k});
@@ -2437,7 +2496,11 @@ function trackFollow(){
     wordFollow(t);
   }else if(d>0){
     const max=SCR.scrollHeight-SCR.clientHeight;
-    if(max>0){const y=Math.round(max*Math.min(1,t/d));if(Math.abs(y-SCR.scrollTop)>1)SCR.scrollTo(0,y)}
+    if(max>0){
+      const base=Math.round(max*Math.min(1,t/d));
+      if(performance.now()-(TR.userAt||0)<1200)TR.glideOff=SCR.scrollTop-base; // the user is moving the text: remember where they put it
+      else{const y=Math.max(0,Math.min(max,base+(TR.glideOff||0)));if(Math.abs(y-SCR.scrollTop)>1)SCR.scrollTo(0,y)}
+    }
   }
 }
 function lineHL(li,cls,scroll){
@@ -3318,6 +3381,7 @@ function fillSong(){
   if(TR.marking)lineHL(TR.k,'next',false);
 }
 function renderTools(){
+  setTimeout(drawWave,0);
   const sp=S.scroll,minus=!!(TR.has&&TR.el); // a minus drives the text itself, so autoscroll is hidden then
   if(minus&&(sp.on||CI.on)){countInStop();stopAuto()}
   if(S.stage){
