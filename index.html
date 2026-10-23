@@ -548,6 +548,11 @@ body.stage .video{display:none}
 .trackgrp .tt{font:600 12px var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .trackgrp input{flex:1;min-width:70px;padding:0;border:0;background:transparent;accent-color:var(--accent);height:36px}
 .trackgrp .wave{flex:1;min-width:90px;height:36px;display:block;cursor:pointer;touch-action:none;border-radius:6px}
+/* bottom bar: Тон · метроном · A A on the first row, the minus with its waveform across the whole second row */
+.tools-in>.grp[aria-label="Метроном"]{order:1}
+.tools-in>.grp[aria-label="Размер текста"]{order:2}
+.tools-in>.trackgrp{order:3;flex:1 1 100%}
+.tools-in>.grp.scroll{order:4}
 .ln.cur{background:var(--sunk);box-shadow:-6px 0 0 var(--sunk),6px 0 0 var(--sunk);border-radius:4px;transition:background .25s}
 .ln.ly.cur{color:var(--accent);font-weight:600}
 .ln.next{outline:2px dashed var(--accent);outline-offset:2px;border-radius:4px}
