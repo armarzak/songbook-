@@ -130,6 +130,8 @@ body.dark .dia .nut,body.dark .dia .dot{fill:#ECEEE9}
 body.dark .dia .open{stroke:#ECEEE9}
 body.dark .dia .fg{fill:#141615}
 .chip .dia .fg{display:none}
+.tab{color:#2a9d6e;font-weight:bold}
+.cmt{color:#8a8a8a;font-style:italic;font-weight:normal}
 </style>
 </head>
 <body>
@@ -308,6 +310,7 @@ function diagram(v,mini){
 var IGNORE=/^(\|+|-+|\/|%|\.{2,}|[xх×]\d+|\([xх×]?\d+[xх×]?\)|\d+[xх×]|:?\|\|?:?|N\.C\.?)$/i;
 var SEC=/^(?:intro|verse|chorus|pre-?chorus|bridge|outro|solo|interlude|instrumental|refrain|hook|coda|куплет|припев|предприпев|проигрыш|вступление|бридж|кода|соло|концовка|окончание)(?:\s*\d+)?\s*:?$/i;
 function isChordLine(line){
+  if(TAB_LINE.test(line))return false;
   var toks=line.match(/\S+/g),n=0; if(!toks)return false;
   for(var i=0;i<toks.length;i++){if(IGNORE.test(toks[i]))continue;if(chordTok(toks[i]))n++;else return false}
   return n>0;
@@ -445,17 +448,36 @@ function renderSong(id){
     '<div class="strip" id="strip"></div><div class="sheet" id="sheet"></div><div id="gtpbox"></div><div id="minus"></div></div>';
   trkInit(s); fillSong(); renderGtp(s); renderTools(); window.scrollTo(0,0);
 }
+/* ₽…₽ is a comment: shown dimmed without the ₽ signs; a line that is only a comment is not a lyric line, so marking skips it.
+   A ₽ left open carries the comment on to the following lines until the closing ₽. (Kept in ES5: the iPad page uses it too.) */
+function markComments(lines){
+  var open=false,i,l,n,parts,k,outside;
+  for(i=0;i<lines.length;i++){
+    l=lines[i]; if(l.k!=='ly')continue;
+    n=(l.t.match(/₽/g)||[]).length;
+    if(open){l.cmt=true;if(n%2)open=false;l.t=l.t.replace(/₽/g,'');continue}
+    if(!n)continue;
+    if(n%2)open=true;
+    parts=l.t.split('₽'); outside='';
+    for(k=0;k<parts.length;k+=2)outside+=parts[k];
+    if(!outside.replace(/\s/g,''))l.cmt=true; else l.frag=parts;
+    l.t=l.t.replace(/₽/g,'');
+  }
+  return lines;
+}
+function fragHtml(parts){var h='',k;for(k=0;k<parts.length;k++)h+=k%2?'<span class="cmt">'+esc(parts[k])+'</span>':esc(parts[k]);return h||' '}
 function fillSong(){
   var s=find(S.cur); if(!s)return;
-  var flats=usesFlats(s.body),seen=[],lines=parseSong(s.body),html='',i,li=0;
-  for(i=0;i<lines.length;i++)if(lines[i].k==='ly'&&lines[i].t.replace(/\s/g,'')&&!TAB_LINE.test(lines[i].t))lines[i].li=li++;
+  var flats=usesFlats(s.body),seen=[],lines=markComments(parseSong(s.body)),html='',i,li=0;
+  for(i=0;i<lines.length;i++)if(lines[i].k==='ly'&&!lines[i].cmt&&lines[i].t.replace(/\s/g,'')&&!TAB_LINE.test(lines[i].t))lines[i].li=li++;
   for(i=0;i<lines.length;i++)if(lines[i].k==='ch'&&lines[i+1]&&lines[i+1].li!=null)lines[i].pli=lines[i+1].li;
   for(i=0;i<lines.length;i++){
     var l=lines[i];
     if(l.k==='gap')html+='<div class="gap"></div>';
     else if(l.k==='head')html+='<div class="head">'+esc(l.t)+'</div>';
     else if(l.k==='ch')html+='<div class="ch"'+(l.pli!=null?' data-pli="'+l.pli+'"':'')+'>'+chordLineHtml(l.s,S.shift,flats,seen)+'</div>';
-    else html+='<div'+(l.li!=null?' data-li="'+l.li+'"':'')+'>'+(esc(l.t)||' ')+'</div>';
+    else if(l.cmt)html+='<div class="cmt">'+(esc(l.t)||' ')+'</div>';
+    else html+='<div'+(TAB_LINE.test(l.t)?' class="tab"':'')+(l.li!=null?' data-li="'+l.li+'"':'')+'>'+(l.frag?fragHtml(l.frag):(esc(l.t)||' '))+'</div>';
   }
   var sh=$('sheet'); sh.innerHTML=html; sh.style.fontSize=S.fs+'px';
   var st='';
