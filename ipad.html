@@ -518,7 +518,7 @@ function fillTagbar(){
 }
 
 /* ---------- minus and line marks: the minus file is added on this iPad, the marks come with the song ---------- */
-var TAB_LINE=/^\s*[A-Ga-g]?#?\s*\|?[-0-9|hpbrxX\/\\~()\s]{6,}\|?\s*$/;
+var TAB_LINE=/^(?=.*--)\s*[A-Ga-g]?#?\s*[|:]?[-0-9|hpbrxX\/\\~()\s]{6,}\|?\s*$/;
 var TRK={el:null,url:'',id:null,marks:[],v:false,vStart:0,vPaused:0,cur:-1,raf:0};
 function fmt(t){t=Math.max(0,Math.floor(t||0));var s=t%60;return Math.floor(t/60)+':'+(s<10?'0':'')+s}
 function hasMarks(){for(var i=0;i<TRK.marks.length;i++)if(TRK.marks[i]!=null)return true;return false}

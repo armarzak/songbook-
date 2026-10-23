@@ -3129,7 +3129,7 @@ function addTag(){
   const inp=document.getElementById('f-tag'),t=(inp.value||'').trim().toLowerCase().replace(/\s+/g,' ');
   if(!t)return; if(!ED.tags.includes(t))ED.tags.push(t); inp.value=''; fillTagpick();
 }
-const TAB_LINE=/^\s*[A-Ga-g]?#?\s*\|?[-0-9|hpbrxX\/\\~()\s]{6,}\|?\s*$/;
+const TAB_LINE=/^(?=.*--)\s*[A-Ga-g]?#?\s*[|:]?[-0-9|hpbrxX\/\\~()\s]{6,}\|?\s*$/; // e|--5--| and E:--5--|
 
 /* ---------- stage mode ---------- */
 let stageWake=null;
