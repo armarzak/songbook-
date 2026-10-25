@@ -469,7 +469,7 @@ function markComments(lines){
 }
 function fragHtml(parts){var h='',k;for(k=0;k<parts.length;k++)h+=k%2?'<span class="cmt">'+esc(parts[k])+'</span>':esc(parts[k]);return h||' '}
 /* the same line numbering as the iPhone page (keep the two in step: marks are shared through GitHub) */
-var INSTR=/^(?:проигрыш|вступление|соло|intro|instrumental|solo)(?:$|[^a-zа-яё])/i;
+var INSTR=/^(?:проигрыш|вступление|соло|instrumental|solo)(?:$|[^a-zа-яё])/i;
 var REP=/(?:^|[^\d])(\d{1,2})\s*(?:раза?|раз|times)(?![a-zа-яё])|(?:^|[\s(|])[x×]\s?(\d{1,2})(?!\d)/i;
 var REP_ONLY=/^\s*\(?\s*(?:повтор\S*\s*)?(?:[x×]\s?\d{1,2}|\d{1,2}\s*(?:раза?|раз|times))\s*\)?\s*:?\s*$/i;
 var TAB_REP=/(?:\||\s)[x×]\s?(\d{1,2})\s*$/i;

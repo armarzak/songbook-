@@ -3435,7 +3435,7 @@ function markComments(lines){
 /* which lines are marked under the minus: every lyric line; a part without words ([Проигрыш], [Вступление], [Соло]) as one line
    with its chords and tabs under it; a tab block (staves one under another) as one line. The others in a group follow its first
    line like a chord line does. (ES5, the same as on the iPad page: keep the two in step, marks are shared through GitHub.) */
-var INSTR=/^(?:проигрыш|вступление|соло|intro|instrumental|solo)(?:$|[^a-zа-яё])/i;
+var INSTR=/^(?:проигрыш|вступление|соло|instrumental|solo)(?:$|[^a-zа-яё])/i;
 /* "4 раза", "x3", "×2", "(2 times)": a part played several times takes that many lines, so the marking passes it that many times */
 var REP=/(?:^|[^\d])(\d{1,2})\s*(?:раза?|раз|times)(?![a-zа-яё])|(?:^|[\s(|])[x×]\s?(\d{1,2})(?!\d)/i;
 var REP_ONLY=/^\s*\(?\s*(?:повтор\S*\s*)?(?:[x×]\s?\d{1,2}|\d{1,2}\s*(?:раза?|раз|times))\s*\)?\s*:?\s*$/i;
