@@ -590,6 +590,7 @@ body.stage .video{display:none}
 .ln.cmt,.ln .cmt{color:var(--muted);font-style:italic;font-weight:400}
 .ln.next{outline:2px dashed var(--accent);outline-offset:2px;border-radius:4px}
 .ln.cur .w:not([data-s]){color:var(--fg)}
+.ln.tab.cur .w:not([data-s]){color:inherit}
 .ln .w[data-s="2"]{color:var(--accent)}
 .ln .w[data-s="1"]{background:linear-gradient(90deg,var(--accent) var(--p,0%),var(--fg) var(--p,0%));-webkit-background-clip:text;background-clip:text;color:transparent}
 .ln .w.wnext{outline:2px solid var(--accent);outline-offset:1px;border-radius:3px}
@@ -685,6 +686,9 @@ label.btn{cursor:pointer}
 .imp-bm{margin:6px 0 4px}
 .imp-bm summary{cursor:pointer;color:var(--accent);font-weight:600;padding:6px 0}
 .imp-src{min-height:28vh;font-size:14px}
+.secchips{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}
+.secchip{font:600 12px var(--f-ui,inherit);padding:5px 9px;border-radius:999px;border:1px solid var(--line);background:var(--sunk);color:var(--fg);cursor:pointer}
+.secchip:active{background:var(--accent);color:var(--bg)}
 .imp-defs .btn{margin-top:8px}
 .gh-form{max-width:420px;margin-top:10px;gap:10px}
 .gh-msg{font-size:14px;color:var(--muted);margin:8px 0 0;min-height:0}
@@ -1145,7 +1149,8 @@ function parseSong(body){
   for(const raw of (body||'').replace(/\r/g,'').split('\n')){
     const t=raw.trim(); let m;
     if(!t){out.push({k:'gap'});continue}
-    if((m=t.match(/^\[([^\]]+)\]$/))&&!chordTok(m[1].trim())){out.push({k:'head',t:m[1]});continue}
+    if((m=t.match(/^\[([^\]]+)\]\s*:?$/))&&!chordTok(m[1].trim())){out.push({k:'head',t:m[1]});continue} // [Припев] and [Припев]:
+    if(SEC.test(t)){out.push({k:'head',t:t.replace(/\s*:$/,'')});continue} // Припев: on its own line, as the iPad page reads it
     if((m=t.match(/^\{(?:c|comment|ci|soc|start_of_chorus)(?::\s*(.*))?\}$/i))){out.push({k:'head',t:m[1]||'Припев'});continue}
     if(/^\{.*\}$/.test(t))continue;
     if(isChordLine(raw)){out.push({k:'ch',s:raw.replace(/\s+$/,'')});continue}
@@ -1198,7 +1203,7 @@ function importParse(raw){
   title=cleanTitle(title); artist=cleanArtist(artist);
   const cm=text.match(/capo[:\s]*(?:on\s*)?(\d{1,2})|каподастр\w*[^\d\n]{0,20}(\d{1,2})/i);
   const capo=cm?Math.min(12,+(cm[1]||cm[2])):0;
-  const isHead=t=>SEC.test(t)||(/^\[[^\]]+\]$/.test(t)&&!chordTok(t.slice(1,-1).trim()));
+  const isHead=t=>SEC.test(t)||(/^\[[^\]]+\]\s*:?$/.test(t)&&!chordTok(t.replace(/\s*:$/,'').slice(1,-1).trim())); // [Припев] and [Припев]:
   const defs=[];
   const kind=lines.map(l=>{const t=l.trim();
     if(!t)return 'blank'; if(isHead(t))return 'head'; if(JUNK.test(t)||META_LINE.test(t))return 'junk';
@@ -1220,7 +1225,7 @@ function importParse(raw){
     const k=kind[i],t=lines[i].trim();
     if(k==='junk')continue;
     if(k==='blank'){if(out.length&&out[out.length-1]!=='')out.push('');continue}
-    if(k==='head'){out.push(t.startsWith('[')?t:'['+t.replace(/:$/,'')+']');continue}
+    if(k==='head'){out.push(t.startsWith('[')?t.replace(/\s*:$/,''):'['+t.replace(/\s*:$/,'')+']');continue}
     out.push(lines[i]);
   }
   while(out.length&&out[out.length-1]==='')out.pop();
@@ -3418,12 +3423,28 @@ function markComments(lines){
   }
   return lines;
 }
+/* which lines are marked under the minus: every lyric line; a part without words ([Проигрыш], [Вступление], [Соло]) as one line
+   with its chords and tabs under it; a tab block (staves one under another) as one line. The others in a group follow its first
+   line like a chord line does. (ES5, the same as on the iPad page: keep the two in step, marks are shared through GitHub.) */
+var INSTR=/^(?:проигрыш|вступление|соло|intro|interlude|instrumental|solo)(?:$|[^a-zа-яё])/i;
+function lyricIndex(lines){
+  var li=0,grp=null,i,l;
+  for(i=0;i<lines.length;i++){
+    l=lines[i];
+    if(l.k==='gap'){grp=null;continue}
+    if(l.k==='head'){if(INSTR.test(l.t)){l.li=li++;grp=l.li}else grp=null;continue}
+    if(l.k==='ch'){if(grp!=null)l.pli=grp;continue}
+    if(l.k!=='ly'||l.cmt||!l.t.replace(/\s/g,''))continue;
+    if(TAB_LINE.test(l.t)){l.tab=true;if(grp!=null){l.pli=grp;continue}l.li=li++;grp=l.li;continue}
+    l.li=li++; grp=null;
+  }
+  return lines;
+}
 function fillSong(){
   const s=findSong(S.cur); if(!s)return;
   const flats=usesFlats(s.body),seen=[];
   const plain=S.textOnly;
-  let lines=markComments(parseSong(s.body)),li=0;
-  lines=lines.map(l=>l.k==='ly'&&!l.cmt&&l.t.trim()&&!TAB_LINE.test(l.t)?{...l,li:li++}:l);
+  let lines=lyricIndex(markComments(parseSong(s.body)));
   lines.forEach((l,i)=>{if(l.k==='ch'&&lines[i+1]&&lines[i+1].li!=null)l.pli=lines[i+1].li});
   if(plain){
     // text only: drop chord lines and tab staves, then squeeze the blank lines that leaves behind
@@ -3432,9 +3453,10 @@ function fillSong(){
   }
   const html=lines.map(l=>
     l.k==='gap'?'<div class="ln gap"></div>':
-    l.k==='head'?`<div class="ln head">${esc(l.t)}</div>`:
+    l.k==='head'?(l.li!=null?`<div class="ln head" data-li="${l.li}"><span class="w">${esc(l.t)}</span></div>`:`<div class="ln head">${esc(l.t)}</div>`):
     l.k==='ch'?`<div class="ln ch"${l.pli!=null?` data-pli="${l.pli}"`:''}>${chordLineHtml(l.s,S.shift,flats,seen)}</div>`:
     l.cmt?`<div class="ln cmt">${esc(l.t)||' '}</div>`:
+    l.tab?`<div class="ln ly tab"${l.li!=null?` data-li="${l.li}"`:l.pli!=null?` data-pli="${l.pli}"`:''}>${l.li!=null?`<span class="w">${esc(l.t)}</span>`:esc(l.t)}</div>`: // a whole tab block is one "word" when marking by words
     `<div class="ln ly${TAB_LINE.test(l.t)?" tab":""}"${l.li!=null?` data-li="${l.li}"`:''}>${(l.frag?l.frag.map((p,k)=>k%2?`<span class="cmt">${esc(p)}</span>`:l.li!=null?wordsHtml(p):esc(p)).join(''):l.li!=null?wordsHtml(l.t):esc(l.t))||' '}</div>`).join('');
   const bodyEl=document.getElementById('body');
   bodyEl.innerHTML=html||'<div class="ln ly">Текст песни пока пустой.</div>';
@@ -3536,6 +3558,7 @@ function renderEditor(id,draft){
     <div class="field"><label for="f-ug">Ultimate Guitar — ссылка на эту песню</label><input id="f-ug" type="url" inputmode="url" autocapitalize="off" spellcheck="false" placeholder="https://tabs.ultimate-guitar.com/tab/…" value="${esc((s&&!s.demo&&s.ugUrl)||'')}"><div class="hint">Тогда иконка «Guitar Tabs» откроет сразу эту песню, а приложение Ultimate Guitar — её страницу, откуда есть переход в ToneBridge. Ссылку можно скопировать в приложении Ultimate Guitar: «Поделиться» → «Скопировать ссылку».</div></div>
     <div class="field"><label for="f-video">Видео</label><textarea id="f-video" class="vlinks-in" rows="3" spellcheck="false" autocapitalize="off" placeholder="Ссылки на видео — каждая с новой строки: YouTube, Rutube, VK Видео, Instagram">${esc((s&&s.video)||'')}</textarea><div class="hint">Можно несколько ссылок, каждая с новой строки. Видео покажутся в конце песни. Rutube и VK Видео работают без VPN, YouTube и Instagram — только с VPN.</div></div>
     <div class="field"><label for="f-body">Текст с аккордами</label>
+      ${secChips('f-body')}
       <textarea id="f-body" spellcheck="false" placeholder="Am            F&#10;Утро тихо стелет туман,">${esc(s?s.body:'')}</textarea><div class="err" id="e-body"></div></div>
     <div class="hint">Подойдут оба привычных формата:<br>
       • аккорды строкой над текстом, как на Ultimate Guitar: скопируйте песню оттуда целиком;<br>
@@ -3647,9 +3670,27 @@ function renderImport(){
       <li>Вставьте сюда. Меню, рекламу и комментарии приложение уберёт само.</li>
     </ol>
     <div class="field"><label for="imp-src">Скопированная страница</label>
+      ${secChips('imp-src')}
       <textarea id="imp-src" class="imp-src" spellcheck="false" placeholder="Вставьте сюда текст страницы"></textarea></div>
     <div id="imp-res"></div>
   </div></div>`;
+}
+/* ---------- part names: a tap puts [Припев] on its own line where the cursor is ---------- */
+const SEC_NAMES=['Вступление','Куплет','Предприпев','Припев','Бридж','Проигрыш','Соло','Концовка','Intro','Verse','Pre-Chorus','Chorus','Bridge','Solo','Outro'];
+const secChips=id=>`<div class="secchips" role="group" aria-label="Вставить название части">${SEC_NAMES.map(n=>`<button type="button" class="secchip" data-act="sec-ins" data-for="${id}" data-t="${n}">${n}</button>`).join('')}</div>`;
+function secInsert(id,name){
+  const ta=document.getElementById(id); if(!ta)return;
+  const v=ta.value,pos=ta.selectionStart!=null?ta.selectionStart:v.length;
+  let a=v.lastIndexOf('\n',pos-1)+1,b=v.indexOf('\n',pos); if(b<0)b=v.length;
+  if(/^(?:Куплет|Verse)$/.test(name)){ // the second verse becomes [Куплет 2]
+    const n=(v.slice(0,a).match(new RegExp('^\\['+name+'(?:\\s*\\d+)?\\]','gmi'))||[]).length;
+    if(n)name+=' '+(n+1);
+  }
+  const tag='['+name+']',blank=!v.slice(a,b).trim();
+  const ins=blank?tag:tag+'\n'; if(blank)b=a+v.slice(a,b).length; else b=a;
+  ta.value=v.slice(0,a)+ins+v.slice(b);
+  const c=a+tag.length+(blank?0:1); try{ta.setSelectionRange(c,c)}catch{}
+  ta.focus(); ta.dispatchEvent(new Event('input',{bubbles:true}));
 }
 /* ---------- import from the web: search in Safari, the bookmark copies the chords, then paste here ---------- */
 const BOOKMARKLET="javascript:(()=>{const CH=/^[A-H](\\x23|b)?(m|maj|min|dim|aug|sus|add|M)?\\d*(sus\\d|add\\d|maj\\d|m\\d|b\\d|\\x23\\d|\\+)?(\\/[A-H](\\x23|b)?)?$/,isC=l=>{const t=l.trim().split(/\\s+/).filter(x=>x&&!/^[|()\\-x\\d\\/.]+$/i.test(x));return t.length>0&&t.every(x=>CH.test(x))};const C=[];for(const e of document.querySelectorAll('pre,div,section,article,td,p')){const x=e.innerText||'';if(x.length<80||x.length>30000)continue;const n=x.split('\\n').filter(isC).length;if(n)C.push({e,n,l:x.length,p:e.tagName==='PRE'})}const P=C.filter(c=>c.p&&c.n>2),L=P.length?P:C,M=Math.max(0,...L.map(c=>c.n));const b=(L.filter(c=>c.n>=M*0.8).sort((p,q)=>p.l-q.l)[0]||{}).e;const sel=String(getSelection());const body=sel.length>40?sel:b?b.innerText:document.body.innerText;const ti=document.title.replace(/\\s*@\\s*Ultimate-Guitar.*$/i,'').replace(/,\\s*(аккорды|текст|chords|tabs)[\\s\\S]*$/i,'').trim();const txt=ti+'\\n\\n'+body.replace(/\\r/g,'')+'\\n\\n'+location.href;const show=ok=>{const d=document.createElement('div');d.style.cssText='position:fixed;left:12px;right:12px;bottom:24px;z-index:2147483647;background:%23111;color:%23fff;font:600 16px -apple-system,sans-serif;padding:16px;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.45);text-align:center';if(ok){d.innerHTML='✓ Скопировано для Fire Chords<br><span style=\"font-weight:400;font-size:14px\">Откройте Fire Chords → Импорт → «Вставить»</span>';setTimeout(()=>d.remove(),4500)}else{const k=document.createElement('button');k.textContent='Скопировать для Fire Chords';k.style.cssText='font:700 17px -apple-system,sans-serif;padding:12px 18px;border:0;border-radius:10px;background:%23FFB648;color:%23111';k.onclick=()=>navigator.clipboard.writeText(txt).then(()=>{d.remove();show(true)});d.appendChild(k)}document.body.appendChild(d)};navigator.clipboard.writeText(txt).then(()=>show(true),()=>show(false))})()";
@@ -3942,6 +3983,7 @@ document.addEventListener('pointerdown',e=>{
   if(e.button>0||!(e.target.closest&&e.target.closest('[data-act="mk-tap"]')))return;
   TR.tapEat=performance.now(); markTap();
 });
+document.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('.secchip'))e.preventDefault()}); // the text field keeps its cursor and the keyboard stays up
 document.addEventListener('click',e=>{if(TR.tapEat&&performance.now()-TR.tapEat<800){TR.tapEat=0;e.stopPropagation();e.preventDefault()}},true); // the click of that same tap
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');
@@ -4014,6 +4056,7 @@ document.addEventListener('click',e=>{
   else if(a==='t-del')trackRemove(b);
   else if(a==='mk-tap'){if(e.detail===0)markTap()} // touch and mouse are handled on press (below); this is the keyboard
   else if(a==='mk-undo')markUndo();
+  else if(a==='sec-ins')secInsert(b.dataset.for,b.dataset.t);
   else if(a==='mk-done')markDone();
   else if(a==='mk-cancel')markCancel();
   else if(a==='m-listen')tempoListen();

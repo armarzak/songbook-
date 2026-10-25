@@ -332,7 +332,7 @@ function parseSong(body){
   for(var i=0;i<lines.length;i++){
     var raw=lines[i],t=raw.replace(/^\s+|\s+$/g,''),m;
     if(!t){out.push({k:'gap'});continue}
-    if((m=t.match(/^\[([^\]]+)\]$/))&&!chordTok(m[1])){out.push({k:'head',t:m[1]});continue}
+    if((m=t.match(/^\[([^\]]+)\]\s*:?$/))&&!chordTok(m[1])){out.push({k:'head',t:m[1]});continue}
     if(SEC.test(t)){out.push({k:'head',t:t.replace(/:$/,'')});continue}
     if(/^\{.*\}$/.test(t))continue;
     if(isChordLine(raw)){out.push({k:'ch',s:raw.replace(/\s+$/,'')});continue}
@@ -466,18 +466,33 @@ function markComments(lines){
   return lines;
 }
 function fragHtml(parts){var h='',k;for(k=0;k<parts.length;k++)h+=k%2?'<span class="cmt">'+esc(parts[k])+'</span>':esc(parts[k]);return h||' '}
+/* the same line numbering as the iPhone page (keep the two in step: marks are shared through GitHub) */
+var INSTR=/^(?:проигрыш|вступление|соло|intro|interlude|instrumental|solo)(?:$|[^a-zа-яё])/i;
+function lyricIndex(lines){
+  var li=0,grp=null,i,l;
+  for(i=0;i<lines.length;i++){
+    l=lines[i];
+    if(l.k==='gap'){grp=null;continue}
+    if(l.k==='head'){if(INSTR.test(l.t)){l.li=li++;grp=l.li}else grp=null;continue}
+    if(l.k==='ch'){if(grp!=null)l.pli=grp;continue}
+    if(l.k!=='ly'||l.cmt||!l.t.replace(/\s/g,''))continue;
+    if(TAB_LINE.test(l.t)){l.tab=true;if(grp!=null){l.pli=grp;continue}l.li=li++;grp=l.li;continue}
+    l.li=li++; grp=null;
+  }
+  return lines;
+}
 function fillSong(){
   var s=find(S.cur); if(!s)return;
   var flats=usesFlats(s.body),seen=[],lines=markComments(parseSong(s.body)),html='',i,li=0;
-  for(i=0;i<lines.length;i++)if(lines[i].k==='ly'&&!lines[i].cmt&&lines[i].t.replace(/\s/g,'')&&!TAB_LINE.test(lines[i].t))lines[i].li=li++;
+  lyricIndex(lines);
   for(i=0;i<lines.length;i++)if(lines[i].k==='ch'&&lines[i+1]&&lines[i+1].li!=null)lines[i].pli=lines[i+1].li;
   for(i=0;i<lines.length;i++){
     var l=lines[i];
     if(l.k==='gap')html+='<div class="gap"></div>';
-    else if(l.k==='head')html+='<div class="head">'+esc(l.t)+'</div>';
+    else if(l.k==='head')html+='<div class="head"'+(l.li!=null?' data-li="'+l.li+'"':'')+'>'+esc(l.t)+'</div>';
     else if(l.k==='ch')html+='<div class="ch"'+(l.pli!=null?' data-pli="'+l.pli+'"':'')+'>'+chordLineHtml(l.s,S.shift,flats,seen)+'</div>';
     else if(l.cmt)html+='<div class="cmt">'+(esc(l.t)||' ')+'</div>';
-    else html+='<div'+(TAB_LINE.test(l.t)?' class="tab"':'')+(l.li!=null?' data-li="'+l.li+'"':'')+'>'+(l.frag?fragHtml(l.frag):(esc(l.t)||' '))+'</div>';
+    else html+='<div'+(TAB_LINE.test(l.t)?' class="tab"':'')+(l.li!=null?' data-li="'+l.li+'"':l.pli!=null?' data-pli="'+l.pli+'"':'')+'>'+(l.frag?fragHtml(l.frag):(esc(l.t)||' '))+'</div>';
   }
   var sh=$('sheet'); sh.innerHTML=html; sh.style.fontSize=S.fs+'px';
   var st='';
