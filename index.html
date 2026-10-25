@@ -591,6 +591,8 @@ body.stage .video{display:none}
 .ln.next{outline:2px dashed var(--accent);outline-offset:2px;border-radius:4px}
 .ln.cur .w:not([data-s]){color:var(--fg)}
 .ln.tab.cur .w:not([data-s]){color:inherit}
+.ln.rep{min-height:0;height:0;margin:0;padding:0;overflow:hidden}
+.ln[data-pass]::after{content:attr(data-pass);margin-left:10px;padding:1px 7px;border-radius:999px;background:var(--accent);color:var(--bg);font:700 11px var(--f-ui,sans-serif);vertical-align:middle}
 .ln .w[data-s="2"]{color:var(--accent)}
 .ln .w[data-s="1"]{background:linear-gradient(90deg,var(--accent) var(--p,0%),var(--fg) var(--p,0%));-webkit-background-clip:text;background-clip:text;color:transparent}
 .ln .w.wnext{outline:2px solid var(--accent);outline-offset:1px;border-radius:3px}
@@ -1144,12 +1146,13 @@ function inlineToPair(line){
   ly+=line.slice(last);
   return found?{ch,ly}:null;
 }
+var HEAD_RE=/^\[([^\]]+)\]\s*:?\s*(\(?\s*(?:[x×]\s?\d{1,2}|\d{1,2}\s*(?:раза?|раз|times))\s*\)?)?\s*:?$/i; // (ES5: the iPad page has the same)
 function parseSong(body){
   const out=[];
   for(const raw of (body||'').replace(/\r/g,'').split('\n')){
     const t=raw.trim(); let m;
     if(!t){out.push({k:'gap'});continue}
-    if((m=t.match(/^\[([^\]]+)\]\s*:?$/))&&!chordTok(m[1].trim())){out.push({k:'head',t:m[1]});continue} // [Припев] and [Припев]:
+    if((m=t.match(HEAD_RE))&&!chordTok(m[1].trim())){out.push({k:'head',t:m[1]+(m[2]?' '+m[2]:'')});continue} // [Припев], [Припев]:, [Проигрыш] x2
     if(SEC.test(t)){out.push({k:'head',t:t.replace(/\s*:$/,'')});continue} // Припев: on its own line, as the iPad page reads it
     if((m=t.match(/^\{(?:c|comment|ci|soc|start_of_chorus)(?::\s*(.*))?\}$/i))){out.push({k:'head',t:m[1]||'Припев'});continue}
     if(/^\{.*\}$/.test(t))continue;
@@ -1203,7 +1206,7 @@ function importParse(raw){
   title=cleanTitle(title); artist=cleanArtist(artist);
   const cm=text.match(/capo[:\s]*(?:on\s*)?(\d{1,2})|каподастр\w*[^\d\n]{0,20}(\d{1,2})/i);
   const capo=cm?Math.min(12,+(cm[1]||cm[2])):0;
-  const isHead=t=>SEC.test(t)||(/^\[[^\]]+\]\s*:?$/.test(t)&&!chordTok(t.replace(/\s*:$/,'').slice(1,-1).trim())); // [Припев] and [Припев]:
+  const isHead=t=>{if(SEC.test(t))return true;const m=t.match(HEAD_RE);return !!m&&!chordTok(m[1].trim())}; // [Припев], [Припев]:, [Проигрыш] x2
   const defs=[];
   const kind=lines.map(l=>{const t=l.trim();
     if(!t)return 'blank'; if(isHead(t))return 'head'; if(JUNK.test(t)||META_LINE.test(t))return 'junk';
@@ -2564,12 +2567,15 @@ function trackFollow(){
     }
   }
 }
+/* the element that shows line li: a repeat marker of a part played several times stands for that part's first line */
+function liEl(li){let e=document.querySelector(`.ln[data-li="${li}"]`);if(e&&e.dataset.rep!=null)e=document.querySelector(`.ln[data-li="${e.dataset.rep}"]`);return e}
 function lineHL(li,cls,scroll){
-  document.querySelectorAll('.ln.'+cls).forEach(e=>e.classList.remove(cls));
+  document.querySelectorAll('.ln.'+cls).forEach(e=>{e.classList.remove(cls);delete e.dataset.pass});
   if(li<0)return;
-  const ly=document.querySelector(`.ln[data-li="${li}"]`); if(!ly)return;
-  ly.classList.add(cls);
-  document.querySelectorAll(`.ln[data-pli="${li}"]`).forEach(e=>e.classList.add(cls));
+  const ly=liEl(li); if(!ly)return;
+  const first=+ly.dataset.li,n=+ly.dataset.reps||1;
+  ly.classList.add(cls); if(n>1)ly.dataset.pass=(li-first+1)+' из '+n; // which pass is playing
+  document.querySelectorAll(`.ln[data-pli="${first}"]`).forEach(e=>e.classList.add(cls));
   if(scroll){const top=scrTop(ly)-SCR.clientHeight*0.35;SCR.scrollTo({top:Math.max(0,top),behavior:'smooth'})}
 }
 function vToggle(){
@@ -2747,7 +2753,7 @@ function wordFollow(t){
   if(i==null||i<0){if(TR.wLine>=0)wordClear();return}
   if(TR.wLine!==i){
     wordClear(); TR.wLine=i;
-    const ly=document.querySelector(`.ln[data-li="${i}"]`);
+    const ly=liEl(i);
     TR.wEls=ly?[...ly.querySelectorAll('.w')]:[]; TR.wTimes=TR.wEls.length?wordTimes(i,TR.wEls):[];
   }
   const ws=TR.wEls,tm=TR.wTimes; if(!ws||!ws.length)return;
@@ -2766,7 +2772,7 @@ function wordFollow(t){
 /* marking by words: one tap at the start of every word; the first word of a line also marks the line */
 function wordSeq(){
   const seq=[];
-  document.querySelectorAll('.ln[data-li]').forEach(ly=>{const li=+ly.dataset.li;ly.querySelectorAll('.w').forEach((el,k)=>seq.push({li,k,el}))});
+  document.querySelectorAll('.ln[data-li]').forEach(ly=>{const li=+ly.dataset.li;liEl(li).querySelectorAll('.w').forEach((el,k)=>seq.push({li,k,el}))});
   return seq;
 }
 function wordNext(){
@@ -3427,19 +3433,35 @@ function markComments(lines){
    with its chords and tabs under it; a tab block (staves one under another) as one line. The others in a group follow its first
    line like a chord line does. (ES5, the same as on the iPad page: keep the two in step, marks are shared through GitHub.) */
 var INSTR=/^(?:проигрыш|вступление|соло|intro|interlude|instrumental|solo)(?:$|[^a-zа-яё])/i;
+/* "4 раза", "x3", "×2", "(2 times)": a part played several times takes that many lines, so the marking passes it that many times */
+var REP=/(?:^|[^\d])(\d{1,2})\s*(?:раза?|раз|times)(?![a-zа-яё])|(?:^|[\s(|])[x×]\s?(\d{1,2})(?!\d)/i;
+var REP_ONLY=/^\s*\(?\s*(?:повтор\S*\s*)?(?:[x×]\s?\d{1,2}|\d{1,2}\s*(?:раза?|раз|times))\s*\)?\s*:?\s*$/i;
+var TAB_REP=/(?:\||\s)[x×]\s?(\d{1,2})\s*$/i;
+function repOf(t){var m=REP.exec(t||''),n;if(!m)return 1;n=+(m[1]||m[2]);return n>1&&n<=16?n:1}
 function lyricIndex(lines){
-  var li=0,grp=null,i,l;
+  var li=0,grp=null,pend=1,i,l,n;
+  var start=function(l,n){l.li=li;l.rep=n;li+=n;grp=l;pend=1};
   for(i=0;i<lines.length;i++){
     l=lines[i];
     if(l.k==='gap'){grp=null;continue}
-    if(l.k==='head'){if(INSTR.test(l.t)){l.li=li++;grp=l.li}else grp=null;continue}
-    if(l.k==='ch'){if(grp!=null)l.pli=grp;continue}
-    if(l.k!=='ly'||l.cmt||!l.t.replace(/\s/g,''))continue;
-    if(TAB_LINE.test(l.t)){l.tab=true;if(grp!=null){l.pli=grp;continue}l.li=li++;grp=l.li;continue}
-    l.li=li++; grp=null;
+    if(l.k==='head'){if(INSTR.test(l.t))start(l,Math.max(repOf(l.t),pend));else{grp=null;pend=repOf(l.t)}continue}
+    if(l.k==='ch'){if(grp)l.pli=grp.li;continue}
+    if(l.cmt||(l.k==='ly'&&REP_ONLY.test(l.t))){l.note=true;n=repOf(l.t);if(n>1)pend=n;continue} // a note before the part says how many times
+    if(l.k!=='ly'||!l.t.replace(/\s/g,''))continue;
+    if(TAB_LINE.test(l.t)){
+      l.tab=true; n=TAB_REP.exec(l.t); n=Math.max(n&&+n[1]>1&&+n[1]<=16?+n[1]:1,pend); // only "| x4" at the end: x inside a stave is a muted string
+      if(!grp){start(l,n);continue}
+      l.pli=grp.li;
+      if(n>grp.rep&&li===grp.li+grp.rep){li+=n-grp.rep;grp.rep=n} // "x4" written at the end of a later stave
+      continue;
+    }
+    l.li=li++; grp=null; pend=1;
   }
   return lines;
 }
+/* a part played n times: its first line holds the first number, empty markers right after it hold the other passes */
+const repAttr=l=>l.rep>1?` data-reps="${l.rep}"`:'';
+const repHtml=l=>l.li!=null&&l.rep>1?Array.from({length:l.rep-1},(_,k)=>`<div class="ln rep" data-li="${l.li+k+1}" data-rep="${l.li}"></div>`).join(''):'';
 function fillSong(){
   const s=findSong(S.cur); if(!s)return;
   const flats=usesFlats(s.body),seen=[];
@@ -3453,10 +3475,10 @@ function fillSong(){
   }
   const html=lines.map(l=>
     l.k==='gap'?'<div class="ln gap"></div>':
-    l.k==='head'?(l.li!=null?`<div class="ln head" data-li="${l.li}"><span class="w">${esc(l.t)}</span></div>`:`<div class="ln head">${esc(l.t)}</div>`):
+    l.k==='head'?(l.li!=null?`<div class="ln head" data-li="${l.li}"${repAttr(l)}><span class="w">${esc(l.t)}</span></div>${repHtml(l)}`:`<div class="ln head">${esc(l.t)}</div>`):
     l.k==='ch'?`<div class="ln ch"${l.pli!=null?` data-pli="${l.pli}"`:''}>${chordLineHtml(l.s,S.shift,flats,seen)}</div>`:
     l.cmt?`<div class="ln cmt">${esc(l.t)||' '}</div>`:
-    l.tab?`<div class="ln ly tab"${l.li!=null?` data-li="${l.li}"`:l.pli!=null?` data-pli="${l.pli}"`:''}>${l.li!=null?`<span class="w">${esc(l.t)}</span>`:esc(l.t)}</div>`: // a whole tab block is one "word" when marking by words
+    l.tab?`<div class="ln ly tab"${l.li!=null?` data-li="${l.li}"${repAttr(l)}`:l.pli!=null?` data-pli="${l.pli}"`:''}>${l.li!=null?`<span class="w">${esc(l.t)}</span>`:esc(l.t)}</div>${repHtml(l)}`: // a whole tab block is one "word" when marking by words
     `<div class="ln ly${TAB_LINE.test(l.t)?" tab":""}"${l.li!=null?` data-li="${l.li}"`:''}>${(l.frag?l.frag.map((p,k)=>k%2?`<span class="cmt">${esc(p)}</span>`:l.li!=null?wordsHtml(p):esc(p)).join(''):l.li!=null?wordsHtml(l.t):esc(l.t))||' '}</div>`).join('');
   const bodyEl=document.getElementById('body');
   bodyEl.innerHTML=html||'<div class="ln ly">Текст песни пока пустой.</div>';

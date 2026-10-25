@@ -131,6 +131,7 @@ body.dark .dia .open{stroke:#ECEEE9}
 body.dark .dia .fg{fill:#141615}
 .chip .dia .fg{display:none}
 .tab{color:#2a9d6e;font-weight:bold}
+.sheet .rep{height:0;overflow:hidden}
 .cmt{color:#8a8a8a;font-style:italic;font-weight:normal}
 </style>
 </head>
@@ -327,12 +328,13 @@ function inlineToPair(line){
   ly+=line.slice(last);
   return found?{ch:ch,ly:ly}:null;
 }
+var HEAD_RE=/^\[([^\]]+)\]\s*:?\s*(\(?\s*(?:[x×]\s?\d{1,2}|\d{1,2}\s*(?:раза?|раз|times))\s*\)?)?\s*:?$/i;
 function parseSong(body){
   var out=[],lines=(body||'').replace(/\r/g,'').split('\n');
   for(var i=0;i<lines.length;i++){
     var raw=lines[i],t=raw.replace(/^\s+|\s+$/g,''),m;
     if(!t){out.push({k:'gap'});continue}
-    if((m=t.match(/^\[([^\]]+)\]\s*:?$/))&&!chordTok(m[1])){out.push({k:'head',t:m[1]});continue}
+    if((m=t.match(HEAD_RE))&&!chordTok(m[1])){out.push({k:'head',t:m[1]+(m[2]?' '+m[2]:'')});continue}
     if(SEC.test(t)){out.push({k:'head',t:t.replace(/:$/,'')});continue}
     if(/^\{.*\}$/.test(t))continue;
     if(isChordLine(raw)){out.push({k:'ch',s:raw.replace(/\s+$/,'')});continue}
@@ -468,19 +470,33 @@ function markComments(lines){
 function fragHtml(parts){var h='',k;for(k=0;k<parts.length;k++)h+=k%2?'<span class="cmt">'+esc(parts[k])+'</span>':esc(parts[k]);return h||' '}
 /* the same line numbering as the iPhone page (keep the two in step: marks are shared through GitHub) */
 var INSTR=/^(?:проигрыш|вступление|соло|intro|interlude|instrumental|solo)(?:$|[^a-zа-яё])/i;
+var REP=/(?:^|[^\d])(\d{1,2})\s*(?:раза?|раз|times)(?![a-zа-яё])|(?:^|[\s(|])[x×]\s?(\d{1,2})(?!\d)/i;
+var REP_ONLY=/^\s*\(?\s*(?:повтор\S*\s*)?(?:[x×]\s?\d{1,2}|\d{1,2}\s*(?:раза?|раз|times))\s*\)?\s*:?\s*$/i;
+var TAB_REP=/(?:\||\s)[x×]\s?(\d{1,2})\s*$/i;
+function repOf(t){var m=REP.exec(t||''),n;if(!m)return 1;n=+(m[1]||m[2]);return n>1&&n<=16?n:1}
 function lyricIndex(lines){
-  var li=0,grp=null,i,l;
+  var li=0,grp=null,pend=1,i,l,n;
+  var start=function(l,n){l.li=li;l.rep=n;li+=n;grp=l;pend=1};
   for(i=0;i<lines.length;i++){
     l=lines[i];
     if(l.k==='gap'){grp=null;continue}
-    if(l.k==='head'){if(INSTR.test(l.t)){l.li=li++;grp=l.li}else grp=null;continue}
-    if(l.k==='ch'){if(grp!=null)l.pli=grp;continue}
-    if(l.k!=='ly'||l.cmt||!l.t.replace(/\s/g,''))continue;
-    if(TAB_LINE.test(l.t)){l.tab=true;if(grp!=null){l.pli=grp;continue}l.li=li++;grp=l.li;continue}
-    l.li=li++; grp=null;
+    if(l.k==='head'){if(INSTR.test(l.t))start(l,Math.max(repOf(l.t),pend));else{grp=null;pend=repOf(l.t)}continue}
+    if(l.k==='ch'){if(grp)l.pli=grp.li;continue}
+    if(l.cmt||(l.k==='ly'&&REP_ONLY.test(l.t))){l.note=true;n=repOf(l.t);if(n>1)pend=n;continue}
+    if(l.k!=='ly'||!l.t.replace(/\s/g,''))continue;
+    if(TAB_LINE.test(l.t)){
+      l.tab=true; n=TAB_REP.exec(l.t); n=Math.max(n&&+n[1]>1&&+n[1]<=16?+n[1]:1,pend);
+      if(!grp){start(l,n);continue}
+      l.pli=grp.li;
+      if(n>grp.rep&&li===grp.li+grp.rep){li+=n-grp.rep;grp.rep=n}
+      continue;
+    }
+    l.li=li++; grp=null; pend=1;
   }
   return lines;
 }
+/* a part played n times: empty markers after its first line hold the other passes */
+function repHtml(l){var h='',k;if(l.li!=null&&l.rep>1)for(k=1;k<l.rep;k++)h+='<div class="rep" data-li="'+(l.li+k)+'" data-rep="'+l.li+'"></div>';return h}
 function fillSong(){
   var s=find(S.cur); if(!s)return;
   var flats=usesFlats(s.body),seen=[],lines=markComments(parseSong(s.body)),html='',i,li=0;
@@ -489,10 +505,10 @@ function fillSong(){
   for(i=0;i<lines.length;i++){
     var l=lines[i];
     if(l.k==='gap')html+='<div class="gap"></div>';
-    else if(l.k==='head')html+='<div class="head"'+(l.li!=null?' data-li="'+l.li+'"':'')+'>'+esc(l.t)+'</div>';
+    else if(l.k==='head')html+='<div class="head"'+(l.li!=null?' data-li="'+l.li+'"':'')+'>'+esc(l.t)+'</div>'+repHtml(l);
     else if(l.k==='ch')html+='<div class="ch"'+(l.pli!=null?' data-pli="'+l.pli+'"':'')+'>'+chordLineHtml(l.s,S.shift,flats,seen)+'</div>';
     else if(l.cmt)html+='<div class="cmt">'+(esc(l.t)||' ')+'</div>';
-    else html+='<div'+(TAB_LINE.test(l.t)?' class="tab"':'')+(l.li!=null?' data-li="'+l.li+'"':l.pli!=null?' data-pli="'+l.pli+'"':'')+'>'+(l.frag?fragHtml(l.frag):(esc(l.t)||' '))+'</div>';
+    else html+='<div'+(TAB_LINE.test(l.t)?' class="tab"':'')+(l.li!=null?' data-li="'+l.li+'"':l.pli!=null?' data-pli="'+l.pli+'"':'')+'>'+(l.frag?fragHtml(l.frag):(esc(l.t)||' '))+'</div>'+repHtml(l);
   }
   var sh=$('sheet'); sh.innerHTML=html; sh.style.fontSize=S.fs+'px';
   var st='';
@@ -635,6 +651,7 @@ function lineHL(li){
   for(i=0;i<old.length;i++)old[i].className=old[i].className.replace(/\s*\bcur\b/g,'');
   if(li<0)return;
   var ly=document.querySelector('[data-li="'+li+'"]'); if(!ly)return;
+  if(ly.getAttribute('data-rep')!=null){li=ly.getAttribute('data-rep');ly=document.querySelector('[data-li="'+li+'"]');if(!ly)return} // another pass of a repeated part
   ly.className+=' cur';
   var ch=document.querySelectorAll('[data-pli="'+li+'"]'); for(i=0;i<ch.length;i++)ch[i].className+=' cur';
   window.scrollTo(0,Math.max(0,ly.getBoundingClientRect().top+window.pageYOffset-window.innerHeight*0.35));
