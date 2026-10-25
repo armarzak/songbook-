@@ -1163,7 +1163,8 @@ function parseSong(body){
   return out;
 }
 /* ---------- cleaning a page copied from a chords website ---------- */
-const SEC=/^(?:intro|verse|chorus|pre-?chorus|bridge|outro|solo|interlude|instrumental|refrain|hook|coda|куплет|припев|предприпев|проигрыш|вступление|бридж|кода|соло|концовка|окончание)(?:\s*\d+)?\s*:?$/i;
+/* a part name on its own line: "Припев", "Куплет 2:", "1 куплет", "Припев x2", "Куплет (тихо)" (the same on the iPad page) */
+const SEC=/^(?:\d+\s*(?:-?(?:й|ый|ой|ий))?\s*)?(?:intro|verse|chorus|pre-?chorus|bridge|outro|solo|interlude|instrumental|refrain|hook|coda|куплет|припев|предприпев|проигрыш|вступление|бридж|кода|соло|концовка|окончание)(?:\s*\d+)?\.?(?:\s*\([^)]*\))?(?:\s*[x×]\s?\d{1,2}|\s*\d{1,2}\s*(?:раза?|раз|times))?\s*:?$/i;
 const JUNK=/^(?:x|×|[\d.,]+k?\s*(?:views|просмотр\p{L}*)|last update|rating|rate this|please rate|comments?|print|report bad tab|tabbed by|tab by|thanks to|transpose|autoscroll|font size|download pdf|add to (?:playlist|favorites)|share|chords? used|strumming|difficulty|tuning|key:|author|added|updated|video|видео|комментари\p{L}*|транспон\p{L}*|поделиться|добавить в|распечатать|скачать|автопрокрутка|подбор\p{L}*|оценк\p{L}*|исправить|аппликатуры аккордов|разбор|смотреть|реклама|advertisement|related|more versions|other versions|all versions|самоучитель|войти|регистрация|log in|sign up)(?![\p{L}\p{N}]).*$/iu;
 const SEC_INLINE=/^((?:intro|verse|chorus|pre-?chorus|bridge|outro|solo|interlude|instrumental|refrain|coda|куплет|припев|предприпев|проигрыш|вступление|бридж|кода|соло|концовка|окончание)(?:\s*\d+)?)\s*:\s*(\S.*)$/i;
 function expandTabs(l){let o='';for(const ch of l){if(ch==='\t')o+=' '.repeat(8-o.length%8);else o+=ch}return o}
@@ -2734,7 +2735,7 @@ function tempoListen(){
 }
 /* ---------- karaoke by words: the sung words fill with color, word by word, inside the current line ---------- */
 const wordsHtml=t=>t.split(/(\s+)/).map(p=>!p?'':/^\s+$/.test(p)?p:`<span class="w">${esc(p)}</span>`).join('');
-function wordClear(){(TR.wEls||[]).forEach(el=>{delete el.dataset.s;el.style.removeProperty('--p');el._p=null});TR.wEls=[];TR.wLine=-1}
+function wordClear(){(TR.wEls||[]).concat(TR.wMirror||[]).forEach(el=>{delete el.dataset.s;el.style.removeProperty('--p');el._p=null});TR.wEls=[];TR.wMirror=[];TR.wLine=-1}
 /* when each word of line i starts: from the word marks if the line has them all, otherwise spread over the line by word length */
 function wordTimes(i,els){
   const s=findSong(TR.id||S.cur)||{},wm=Array.isArray(s.wmarks)&&Array.isArray(s.wmarks[i])?s.wmarks[i]:null;
@@ -2755,18 +2756,20 @@ function wordFollow(t){
     wordClear(); TR.wLine=i;
     const ly=liEl(i);
     TR.wEls=ly?[...ly.querySelectorAll('.w')]:[]; TR.wTimes=TR.wEls.length?wordTimes(i,TR.wEls):[];
+    // a tab block (or a part with tabs under it) is one "word": every stave fills along with it, not just the first
+    TR.wMirror=ly&&TR.wEls.length===1?[...document.querySelectorAll(`.ln.tab[data-pli="${ly.dataset.li}"] .w`)]:[];
   }
   const ws=TR.wEls,tm=TR.wTimes; if(!ws||!ws.length)return;
   // only what changed is written, in 5% steps: repainting the words every frame made the phone lag
+  const set=(el,s,p)=>{
+    if(s){if(el.dataset.s!==s)el.dataset.s=s}else if(el.dataset.s)delete el.dataset.s;
+    if(p==null){if(el._p!=null){el.style.removeProperty('--p');el._p=null}}else if(el._p!==p){el._p=p;el.style.setProperty('--p',p+'%')}
+  };
   for(let k=0;k<ws.length;k++){
-    const a=tm[k],b=tm[k+1]!=null?tm[k+1]:tm.end,el=ws[k];
-    if(t>=b){if(el.dataset.s!=='2'){el.dataset.s='2';el.style.removeProperty('--p');el._p=null}}
-    else if(t>=a){
-      if(el.dataset.s!=='1')el.dataset.s='1';
-      const p=Math.max(0,Math.min(100,Math.round((t-a)/Math.max(0.05,b-a)*20)*5));
-      if(el._p!==p){el._p=p;el.style.setProperty('--p',p+'%')}
-    }
-    else if(el.dataset.s){delete el.dataset.s;el.style.removeProperty('--p');el._p=null}
+    const a=tm[k],b=tm[k+1]!=null?tm[k+1]:tm.end;
+    let s='',p=null;
+    if(t>=b)s='2'; else if(t>=a){s='1';p=Math.max(0,Math.min(100,Math.round((t-a)/Math.max(0.05,b-a)*20)*5))}
+    set(ws[k],s,p); if(k===0)TR.wMirror.forEach(el=>set(el,s,p));
   }
 }
 /* marking by words: one tap at the start of every word; the first word of a line also marks the line */
@@ -3478,7 +3481,7 @@ function fillSong(){
     l.k==='head'?(l.li!=null?`<div class="ln head" data-li="${l.li}"${repAttr(l)}><span class="w">${esc(l.t)}</span></div>${repHtml(l)}`:`<div class="ln head">${esc(l.t)}</div>`):
     l.k==='ch'?`<div class="ln ch"${l.pli!=null?` data-pli="${l.pli}"`:''}>${chordLineHtml(l.s,S.shift,flats,seen)}</div>`:
     l.cmt?`<div class="ln cmt">${esc(l.t)||' '}</div>`:
-    l.tab?`<div class="ln ly tab"${l.li!=null?` data-li="${l.li}"${repAttr(l)}`:l.pli!=null?` data-pli="${l.pli}"`:''}>${l.li!=null?`<span class="w">${esc(l.t)}</span>`:esc(l.t)}</div>${repHtml(l)}`: // a whole tab block is one "word" when marking by words
+    l.tab?`<div class="ln ly tab"${l.li!=null?` data-li="${l.li}"${repAttr(l)}`:l.pli!=null?` data-pli="${l.pli}"`:''}>${l.li!=null||l.pli!=null?`<span class="w">${esc(l.t)}</span>`:esc(l.t)}</div>${repHtml(l)}`: // a whole tab block is one "word" when marking by words
     `<div class="ln ly${TAB_LINE.test(l.t)?" tab":""}"${l.li!=null?` data-li="${l.li}"`:''}>${(l.frag?l.frag.map((p,k)=>k%2?`<span class="cmt">${esc(p)}</span>`:l.li!=null?wordsHtml(p):esc(p)).join(''):l.li!=null?wordsHtml(l.t):esc(l.t))||' '}</div>`).join('');
   const bodyEl=document.getElementById('body');
   bodyEl.innerHTML=html||'<div class="ln ly">Текст песни пока пустой.</div>';

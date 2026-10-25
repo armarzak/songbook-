@@ -309,7 +309,7 @@ function diagram(v,mini){
 
 /* ---------- song text ---------- */
 var IGNORE=/^(\|+|-+|\/|%|\.{2,}|[xх×]\d+|\([xх×]?\d+[xх×]?\)|\d+[xх×]|:?\|\|?:?|N\.C\.?)$/i;
-var SEC=/^(?:intro|verse|chorus|pre-?chorus|bridge|outro|solo|interlude|instrumental|refrain|hook|coda|куплет|припев|предприпев|проигрыш|вступление|бридж|кода|соло|концовка|окончание)(?:\s*\d+)?\s*:?$/i;
+var SEC=/^(?:\d+\s*(?:-?(?:й|ый|ой|ий))?\s*)?(?:intro|verse|chorus|pre-?chorus|bridge|outro|solo|interlude|instrumental|refrain|hook|coda|куплет|припев|предприпев|проигрыш|вступление|бридж|кода|соло|концовка|окончание)(?:\s*\d+)?\.?(?:\s*\([^)]*\))?(?:\s*[x×]\s?\d{1,2}|\s*\d{1,2}\s*(?:раза?|раз|times))?\s*:?$/i;
 function isChordLine(line){
   if(TAB_LINE.test(line))return false;
   var toks=line.match(/\S+/g),n=0; if(!toks)return false;
@@ -335,7 +335,7 @@ function parseSong(body){
     var raw=lines[i],t=raw.replace(/^\s+|\s+$/g,''),m;
     if(!t){out.push({k:'gap'});continue}
     if((m=t.match(HEAD_RE))&&!chordTok(m[1])){out.push({k:'head',t:m[1]+(m[2]?' '+m[2]:'')});continue}
-    if(SEC.test(t)){out.push({k:'head',t:t.replace(/:$/,'')});continue}
+    if(SEC.test(t)){out.push({k:'head',t:t.replace(/\s*:$/,'')});continue}
     if(/^\{.*\}$/.test(t))continue;
     if(isChordLine(raw)){out.push({k:'ch',s:raw.replace(/\s+$/,'')});continue}
     if(raw.indexOf('[')>=0){var p=inlineToPair(raw);if(p){if(p.ch)out.push({k:'ch',s:p.ch});if(p.ly.replace(/\s/g,''))out.push({k:'ly',t:p.ly});continue}}
