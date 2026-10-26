@@ -688,6 +688,9 @@ label.btn{cursor:pointer}
 .imp-bm{margin:6px 0 4px}
 .imp-bm summary{cursor:pointer;color:var(--accent);font-weight:600;padding:6px 0}
 .imp-src{min-height:28vh;font-size:14px}
+.ac{position:absolute;left:0;right:0;z-index:30;max-height:260px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);padding:4px}
+.ac-i{display:block;width:100%;text-align:left;padding:10px 12px;border:0;border-radius:7px;background:none;color:var(--fg);font:inherit;font-size:15px;cursor:pointer}
+.ac-i:hover,.ac-i:active{background:var(--sunk)}
 .secchips{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}
 .secchip{font:600 12px var(--f-ui,inherit);padding:5px 9px;border-radius:999px;border:1px solid var(--line);background:var(--sunk);color:var(--fg);cursor:pointer}
 .secchip:active{background:var(--accent);color:var(--bg)}
@@ -3664,7 +3667,7 @@ function renderImport(){
         <button class="btn" data-act="imp-web" data-s="am">Amdm</button>
         <button class="btn" data-act="imp-web" data-s="gg">Google</button>
       </div>
-      <p class="sec-p">Откроется Safari. На странице песни нажмите закладку <b>«→ Fire Chords»</b>: она скопирует аккорды. Потом вернитесь сюда и нажмите <b>«Вставить»</b>.</p>
+      <p class="sec-p">Откроется Safari. На странице песни нажмите закладку <b>«→ Fire Chords»</b>: она скопирует аккорды. Потом вернитесь сюда и нажмите <b>«Вставить»</b>. Рядом с кнопкой iOS покажет маленькую подсказку «Вставить» — нажмите и её: так система разрешает приложению взять скопированное.</p>
       <div class="actions" style="justify-content:flex-start;margin-top:0">
         <button class="btn primary" data-act="imp-paste">${ICON.copy}Вставить</button>
       </div>
@@ -3700,6 +3703,34 @@ function renderImport(){
     <div id="imp-res"></div>
   </div></div>`;
 }
+/* ---------- artist field: a list of the artists already in the songbook, narrowed by what is typed ---------- */
+const AC_IDS=['f-artist','i-artist'];
+function artistsKnown(){
+  const n=new Map();
+  S.songs.forEach(s=>{const a=(s.artist||'').trim();if(!a||s.demo)return;const k=a.toLowerCase(),o=n.get(k);if(o)o.c++;else n.set(k,{a,c:1})});
+  return [...n.values()].sort((x,y)=>y.c-x.c||x.a.localeCompare(y.a,'ru')).map(x=>x.a);
+}
+function acShow(inp){
+  acHide();
+  const q=inp.value.trim().toLowerCase(),all=artistsKnown();
+  let list=q?all.filter(a=>a.toLowerCase().includes(q)).sort((x,y)=>(y.toLowerCase().startsWith(q)?1:0)-(x.toLowerCase().startsWith(q)?1:0)):all;
+  list=list.filter(a=>a.toLowerCase()!==q).slice(0,8);
+  if(!list.length)return;
+  const box=document.createElement('div'); box.className='ac'; box.id='ac'; box.setAttribute('role','listbox');
+  box.innerHTML=list.map(a=>`<button type="button" class="ac-i" role="option" data-a="${esc(a)}">${esc(a)}</button>`).join('');
+  inp.parentNode.style.position='relative'; inp.insertAdjacentElement('afterend',box);
+  box.style.top=(inp.offsetTop+inp.offsetHeight+4)+'px';
+}
+function acHide(){const b=document.getElementById('ac');if(b)b.remove()}
+document.addEventListener('focusin',e=>{if(AC_IDS.includes(e.target.id))acShow(e.target)});
+document.addEventListener('input',e=>{if(AC_IDS.includes(e.target.id))acShow(e.target)});
+document.addEventListener('focusout',e=>{if(AC_IDS.includes(e.target.id))setTimeout(()=>{if(!AC_IDS.includes((document.activeElement||{}).id))acHide()},150)});
+document.addEventListener('pointerdown',e=>{
+  const it=e.target.closest&&e.target.closest('.ac-i'); if(!it)return;
+  e.preventDefault(); // the field keeps the focus until the choice is made
+  const inp=document.getElementById('ac').previousElementSibling;
+  inp.value=it.dataset.a; acHide(); inp.dispatchEvent(new Event('input',{bubbles:true})); acHide(); inp.blur();
+});
 /* ---------- part names: a tap puts [Припев] on its own line where the cursor is ---------- */
 const SEC_NAMES=['Вступление','Куплет','Предприпев','Припев','Бридж','Проигрыш','Соло','Концовка','Intro','Verse','Pre-Chorus','Chorus','Bridge','Solo','Outro'];
 const secChips=id=>`<div class="secchips" role="group" aria-label="Вставить название части">${SEC_NAMES.map(n=>`<button type="button" class="secchip" data-act="sec-ins" data-for="${id}" data-t="${n}">${n}</button>`).join('')}</div>`;
@@ -3726,12 +3757,29 @@ function impWeb(site){
   // in Safari itself (not the in-app sheet), where the bookmark lives
   const a=document.createElement('a'); a.href=inSafari(url); a.target='_blank'; a.rel='noopener'; document.body.appendChild(a); a.click(); a.remove();
 }
+/* iOS asks before an app reads what another site copied: a small «Вставить» bubble appears by the button and has to be tapped.
+   If reading still fails, the field takes the focus right away, so one tap on it and «Вставить» finishes the job. */
 async function impPaste(){
   let t='';
-  try{t=await navigator.clipboard.readText()}catch{toast('Не получилось прочитать скопированное. Вставьте вручную в поле ниже.');document.getElementById('imp-src').focus();return}
-  if(!t.trim()){toast('В буфере пусто. На странице песни нажмите закладку «→ Fire Chords».');return}
+  const cb=navigator.clipboard;
+  try{t=await cb.readText()}
+  catch{
+    try{ // some versions give the copied text only through read()
+      for(const it of await cb.read()){
+        const ty=it.types.find(x=>x==='text/plain')||it.types.find(x=>x==='text/html'); if(!ty)continue;
+        const s=await (await it.getType(ty)).text();
+        t=ty==='text/html'?(new DOMParser().parseFromString(s,'text/html').body.innerText||''):s; if(t.trim())break;
+      }
+    }catch{}
+  }
+  const ta=document.getElementById('imp-src');
+  if(!t.trim()){
+    ta.focus(); ta.scrollIntoView({behavior:'smooth',block:'center'});
+    toast('Нажмите на поле «Скопированная страница» и выберите «Вставить»');
+    return;
+  }
   S.impName=null;
-  const ta=document.getElementById('imp-src'); ta.value=t; fillImport();
+  ta.value=t; fillImport();
   const res=document.getElementById('imp-res'); if(res)res.scrollIntoView({behavior:'smooth',block:'start'});
 }
 async function impBmCopy(){

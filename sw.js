@@ -1,4 +1,4 @@
-const V='songbook-v98';
+const V='songbook-v99';
 const SHELL=['./','./index.html','./manifest.json','./fire-180.png','./fire-512.png'];
 const GTR='fc-guitar-1'; // recorded guitar notes: their own cache, kept across app versions
 const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
