@@ -1184,6 +1184,22 @@ function shapeDef(line){
   const frets=parts.map(p=>/x/i.test(p)?-1:+p);
   return frets.length===6&&frets.every(f=>f>=-1&&f<=22)?{name:m[1],frets}:null;
 }
+/* chord charts under a song (MyChords and others) come out as text: a chord name alone on a line, then the frets
+   ("x02210", "x o o", "1 fr", single digits). A run of such lines at the end of the song is cut off. */
+const DIAG_LINE=/^\s*(?:(?:[xo×\d]\s*[-,]?\s*){4,6}|\d{1,2}\s*(?:fr|лад)\.?|[xo×\d]{1,2}|[│|─—=●○•\s]+)\s*$/i;
+function stripDiagrams(out){
+  let i=out.length,names=0,frets=0;
+  while(i>0){
+    const t=out[i-1].trim();
+    if(!t||/^https?:\/\/\S+$/i.test(t)){i--;continue} // the page address the bookmark adds at the very end
+    if(/^\S+$/.test(t)&&chordTok(t)){names++;i--;continue}
+    if(DIAG_LINE.test(t)){frets++;i--;continue}
+    break;
+  }
+  // only a real chart: several names in a row, or names with frets; one chord ending the song stays
+  if(names>=3||(names>=1&&frets>=2)){out.length=i;while(out.length&&!out[out.length-1].trim())out.pop()}
+  return out;
+}
 function importParse(raw){
   const text=raw.replace(/\r/g,'').replace(/ /g,' ').replace(/\[\/?(?:ch|tab)\]/gi,'');
   const lines=[];
@@ -1236,6 +1252,7 @@ function importParse(raw){
     out.push(lines[i]);
   }
   while(out.length&&out[out.length-1]==='')out.pop();
+  stripDiagrams(out);
   return {title,artist,capo,defs,body:out.join('\n'),
     chordLines:kind.filter((k,i)=>k==='chord'&&i>=start&&i<=end).length,parts:kind.filter((k,i)=>k==='head'&&i>=start&&i<=end).length};
 }
@@ -3665,6 +3682,7 @@ function renderImport(){
         <button class="btn" data-act="imp-web" data-s="ug">Ultimate Guitar</button>
         <button class="btn" data-act="imp-web" data-s="mc">MyChords</button>
         <button class="btn" data-act="imp-web" data-s="am">Amdm</button>
+        <button class="btn" data-act="imp-web" data-s="ya">Amdm в Яндексе</button>
         <button class="btn" data-act="imp-web" data-s="gg">Google</button>
       </div>
       <p class="sec-p">Откроется Safari. На странице песни нажмите закладку <b>«→ Fire Chords»</b>: она скопирует аккорды. Потом вернитесь сюда и нажмите <b>«Вставить»</b>. Рядом с кнопкой iOS покажет маленькую подсказку «Вставить» — нажмите и её: так система разрешает приложению взять скопированное.</p>
@@ -3749,10 +3767,10 @@ function secInsert(id,name){
   ta.focus(); ta.dispatchEvent(new Event('input',{bubbles:true}));
 }
 /* ---------- import from the web: search in Safari, the bookmark copies the chords, then paste here ---------- */
-const BOOKMARKLET="javascript:(()=>{const CH=/^[A-H](\\x23|b)?(m|maj|min|dim|aug|sus|add|M)?\\d*(sus\\d|add\\d|maj\\d|m\\d|b\\d|\\x23\\d|\\+)?(\\/[A-H](\\x23|b)?)?$/,isC=l=>{const t=l.trim().split(/\\s+/).filter(x=>x&&!/^[|()\\-x\\d\\/.]+$/i.test(x));return t.length>0&&t.every(x=>CH.test(x))};const C=[];for(const e of document.querySelectorAll('pre,div,section,article,td,p')){const x=e.innerText||'';if(x.length<80||x.length>30000)continue;const n=x.split('\\n').filter(isC).length;if(n)C.push({e,n,l:x.length,p:e.tagName==='PRE'})}const P=C.filter(c=>c.p&&c.n>2),L=P.length?P:C,M=Math.max(0,...L.map(c=>c.n));const b=(L.filter(c=>c.n>=M*0.8).sort((p,q)=>p.l-q.l)[0]||{}).e;const sel=String(getSelection());const body=sel.length>40?sel:b?b.innerText:document.body.innerText;const ti=document.title.replace(/\\s*@\\s*Ultimate-Guitar.*$/i,'').replace(/,\\s*(аккорды|текст|chords|tabs)[\\s\\S]*$/i,'').trim();const txt=ti+'\\n\\n'+body.replace(/\\r/g,'')+'\\n\\n'+location.href;const show=ok=>{const d=document.createElement('div');d.style.cssText='position:fixed;left:12px;right:12px;bottom:24px;z-index:2147483647;background:%23111;color:%23fff;font:600 16px -apple-system,sans-serif;padding:16px;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.45);text-align:center';if(ok){d.innerHTML='✓ Скопировано для Fire Chords<br><span style=\"font-weight:400;font-size:14px\">Откройте Fire Chords → Импорт → «Вставить»</span>';setTimeout(()=>d.remove(),4500)}else{const k=document.createElement('button');k.textContent='Скопировать для Fire Chords';k.style.cssText='font:700 17px -apple-system,sans-serif;padding:12px 18px;border:0;border-radius:10px;background:%23FFB648;color:%23111';k.onclick=()=>navigator.clipboard.writeText(txt).then(()=>{d.remove();show(true)});d.appendChild(k)}document.body.appendChild(d)};navigator.clipboard.writeText(txt).then(()=>show(true),()=>show(false))})()";
+const BOOKMARKLET="javascript:(()=>{const CH=/^[A-H](\\x23|b)?(m|maj|min|dim|aug|sus|add|M)?\\d*(sus\\d|add\\d|maj\\d|m\\d|b\\d|\\x23\\d|\\+)?(\\/[A-H](\\x23|b)?)?$/,isC=l=>{const t=l.trim().split(/\\s+/).filter(x=>x&&!/^[|()\\-x\\d\\/.]+$/i.test(x));return t.length>0&&t.every(x=>CH.test(x))};const C=[];for(const e of document.querySelectorAll('pre,div,section,article,td,p')){const x=e.innerText||'';if(x.length<80||x.length>30000)continue;const n=x.split('\\n').filter(isC).reduce((s,l)=>s+(l.trim().split(/\\s+/).length>1?1:0.3),0);if(n)C.push({e,n,l:x.length,p:e.tagName==='PRE'})}const P=C.filter(c=>c.p&&c.n>2),L=P.length?P:C,M=Math.max(0,...L.map(c=>c.n));const b=(L.filter(c=>c.n>=M*0.8).sort((p,q)=>p.l-q.l)[0]||{}).e;const sel=String(getSelection());const body=sel.length>40?sel:b?b.innerText:document.body.innerText;const ti=document.title.replace(/\\s*@\\s*Ultimate-Guitar.*$/i,'').replace(/,\\s*(аккорды|текст|chords|tabs)[\\s\\S]*$/i,'').trim();const txt=ti+'\\n\\n'+body.replace(/\\r/g,'')+'\\n\\n'+location.href;const show=ok=>{const d=document.createElement('div');d.style.cssText='position:fixed;left:12px;right:12px;bottom:24px;z-index:2147483647;background:%23111;color:%23fff;font:600 16px -apple-system,sans-serif;padding:16px;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.45);text-align:center';if(ok){d.innerHTML='✓ Скопировано для Fire Chords<br><span style=\"font-weight:400;font-size:14px\">Откройте Fire Chords → Импорт → «Вставить»</span>';setTimeout(()=>d.remove(),4500)}else{const k=document.createElement('button');k.textContent='Скопировать для Fire Chords';k.style.cssText='font:700 17px -apple-system,sans-serif;padding:12px 18px;border:0;border-radius:10px;background:%23FFB648;color:%23111';k.onclick=()=>navigator.clipboard.writeText(txt).then(()=>{d.remove();show(true)});d.appendChild(k)}document.body.appendChild(d)};navigator.clipboard.writeText(txt).then(()=>show(true),()=>show(false))})()";
 function impWeb(site){
   const q=(document.getElementById('imp-q').value||'').trim(),e=encodeURIComponent(q);
-  const url={ug:'https://www.ultimate-guitar.com/search.php?search_type=title&value='+e,mc:'https://mychords.net/ru/search?q='+e,am:'https://amdm.ru/search/?q='+e,gg:'https://www.google.com/search?q='+encodeURIComponent((q?q+' ':'')+'аккорды')}[site];
+  const url={ug:'https://www.ultimate-guitar.com/search.php?search_type=title&value='+e,mc:'https://mychords.net/ru/search?q='+e,am:'https://764.amdm.ru/search/?q='+e,ya:'https://yandex.ru/search/?text='+encodeURIComponent(q+' аккорды site:amdm.ru'),gg:'https://www.google.com/search?q='+encodeURIComponent((q?q+' ':'')+'аккорды')}[site];
   if(!q&&site!=='gg'){toast('Введите исполнителя и название');document.getElementById('imp-q').focus();return}
   // in Safari itself (not the in-app sheet), where the bookmark lives
   const a=document.createElement('a'); a.href=inSafari(url); a.target='_blank'; a.rel='noopener'; document.body.appendChild(a); a.click(); a.remove();
