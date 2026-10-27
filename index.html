@@ -1029,7 +1029,7 @@ const CHART=CHART_RAW.map(row=>row.map(([name,s,base])=>{
 /* more shapes for the reference: chords with a bass note and open positions the table above does not have.
    They come first for exactly this chord name; the user's own shapes still come before them. */
 const EXTRA_RAW=[['D9/F#','2 x 0 2 1 0'],['C/B','x 2 2 0 1 x'],['Dadd4','x 5 4 0 3 x'],['E7','0 2 0 1 0 0'],['F/C','x 3 3 2 1 x'],
-  ['F#/C#','x 4 4 3 2 x'],['G/D','x 5 5 4 3 x'],['G/E','0 2 0 0 0 3'],['G/F#','2 x 0 0 0 3']];
+  ['F#/C#','x 4 4 3 2 x'],['G/D','x 5 5 4 3 x'],['G/E','0 2 0 0 0 3'],['G/F#','2 x 0 0 0 3'],['Dmaj9/F#','2 x 0 2 2 0'],['Dsus2','x x 0 2 3 0']];
 const EXTRA=EXTRA_RAW.map(([name,s])=>{const frets=s.split(' ').map(x=>x==='x'?-1:+x);return {name,frets,base:0,barre:autoBarre(frets),label:'Из справочника'}});
 const EXTRA_BY_NAME=Object.fromEntries(EXTRA.map(v=>[v.name,v]));
 const CHART_BY_KEY={},CHART_BY_NAME={};
