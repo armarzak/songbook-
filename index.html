@@ -691,6 +691,8 @@ label.btn{cursor:pointer}
 .ac{position:absolute;left:0;right:0;z-index:30;max-height:260px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);padding:4px}
 .ac-i{display:block;width:100%;text-align:left;padding:10px 12px;border:0;border-radius:7px;background:none;color:var(--fg);font:inherit;font-size:15px;cursor:pointer}
 .ac-i:hover,.ac-i:active{background:var(--sunk)}
+.var-acts{display:flex;gap:12px;justify-content:center;margin-top:4px}
+.nvar{font-size:11px;color:var(--accent);font-weight:700}
 .secchips{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}
 .secchip{font:600 12px var(--f-ui,inherit);padding:5px 9px;border-radius:999px;border:1px solid var(--line);background:var(--sunk);color:var(--fg);cursor:pointer}
 .secchip:active{background:var(--accent);color:var(--bg)}
@@ -1064,7 +1066,8 @@ function setShapes(shapes){
   CUSTOM_BY_KEY={};
   for(const [name,s] of Object.entries(shapes||{})){
     const c=parseChord(name); if(!c||!Array.isArray(s.frets))continue;
-    CUSTOM_BY_KEY[customKey(c)]={name,frets:s.frets,base:s.base||0,barre:autoBarre(s.frets),label:'Моя схема'};
+    const alts=(Array.isArray(s.alts)?s.alts:[]).filter(a=>a&&Array.isArray(a.frets)).map((a,k)=>({name,frets:a.frets,base:a.base||0,barre:autoBarre(a.frets),label:'Мой вариант '+(k+2)}));
+    CUSTOM_BY_KEY[customKey(c)]={name,frets:s.frets,base:s.base||0,barre:autoBarre(s.frets),label:alts.length?'Мой вариант 1':'Моя схема',alts};
   }
   vCache.clear();
 }
@@ -1077,7 +1080,7 @@ function getVoicings(name){
   if(c){
     const {q,approx}=normQ(c.q); const list=[];
     const mine=CUSTOM_BY_KEY[customKey(c)];
-    if(mine){res.list=[mine];vCache.set(name,res);return res}
+    if(mine){res.list=[mine,...mine.alts];vCache.set(name,res);return res} // the user's own variants, the first one leads
     if(EXTRA_BY_NAME[name])list.push(EXTRA_BY_NAME[name]);
     if(c.bass!=null&&c.bass!==c.root){const f=SLASH[c.root+':'+q+'/'+c.bass]; if(f)list.push({frets:f,barre:false,label:'С басом '+name.split('/')[1]})}
     const ch=CHART_BY_KEY[c.root+':'+q]; if(ch)list.push(ch);
@@ -2156,7 +2159,8 @@ function fillChart(){
   document.getElementById('mine').innerHTML=mine.length?`<h3 class="sec-h">Мои схемы</h3>
     <p class="sec-p">Они заменяют схемы из таблицы и стандартные во всех песнях.</p>
     <div class="mine-grid">${mine.map(n=>{const s=S.shapes[n],ck=checkShape(n,s.frets);
-      return `<button class="cell${ck&&ck.ok===false?' flag':''}" data-act="mychord" data-c="${esc(n)}"><span class="n">${esc(pretty(n))}</span>${diagram({frets:s.frets,base:s.base||0},true)}${ck&&ck.ok===false?'<span class="badge">!</span>':''}</button>`}).join('')}</div>
+      const nv=shapeVars(s).length;
+      return `<button class="cell${ck&&ck.ok===false?' flag':''}" data-act="mychord" data-c="${esc(n)}"><span class="n">${esc(pretty(n))}${nv>1?` <small class="nvar">×${nv}</small>`:''}</span>${diagram({frets:s.frets,base:s.base||0},true)}${ck&&ck.ok===false?'<span class="badge">!</span>':''}</button>`}).join('')}</div>
     <h3 class="sec-h">Таблица</h3>`:'';
   const all=CHART.flat();
   document.getElementById('chart-sum').innerHTML=`
@@ -2171,13 +2175,14 @@ function fillChart(){
 function allVoicings(name){
   const c=parseChord(name); if(!c)return [];
   const {q}=normQ(c.q),out=[],seen=new Set(),add=v=>{if(!v)return;const k=v.frets.join();if(!seen.has(k)){seen.add(k);out.push(v)}};
+  const mine=CUSTOM_BY_KEY[customKey(c)]; if(mine){add(mine);mine.alts.forEach(add)}
   if(EXTRA_BY_NAME[name])add(EXTRA_BY_NAME[name]);
   if(CHART_BY_NAME[name])add(CHART_BY_NAME[name]);
   getVoicings(name).list.forEach(add);
   const o=OPEN[c.root+':'+q]; if(o)add({frets:o,barre:false,label:'Открытая позиция'});
   const low=v=>{const p=v.frets.filter(x=>x>0);return p.length?Math.min(...p):0};
   ['E','A','D','C'].map(k=>shapeVoicing(c.root,q,k)).filter(Boolean).sort((x,y)=>low(x)-low(y)).forEach(add);
-  return out.slice(0,6);
+  return out.slice(0,Math.max(6,mine?mine.alts.length+1:0));
 }
 /* note names under the six strings, lined up with the diagram */
 function stringNotes(v,flats){
@@ -3874,15 +3879,19 @@ function impFields(){
 
 /* ---------- own chord shapes ---------- */
 let SE=null;
-function renderShapeEditor(name){
+/* the variants of one of the user's chords: the main one, then the extra ones (kept in s.alts) */
+const shapeVars=s=>s?[{frets:s.frets,base:s.base||0},...(Array.isArray(s.alts)?s.alts:[])]:[];
+/* vi: which variant is edited (0 — the main one), 'new' — a further variant of this chord */
+function renderShapeEditor(name,vi){
   stopScroll(); S.view='shape'; tools.hidden=true; document.body.classList.remove('has-tools'); closeSheet();
-  const s=name?S.shapes[name]:null;
+  vi=vi==null?0:vi;
+  const s=name&&vi!=='new'?shapeVars(S.shapes[name])[vi]:null;
   const fr=s?[...s.frets]:[-1,-1,-1,-1,-1,-1], p=fr.filter(x=>x>0);
-  SE={orig:name||null,frets:fr,base:s&&s.base?s.base:(p.length&&Math.max(...p)>5?Math.min(...p):1)};
+  SE={orig:name||null,vi,frets:fr,base:s&&s.base?s.base:(p.length&&Math.max(...p)>5?Math.min(...p):1)};
   app.innerHTML=`
   <header class="bar"><div class="bar-in">
     <button class="btn" data-act="tab-chart">Отмена</button>
-    <div class="bar-title" style="text-align:center">${name?'Моя схема':'Новая схема'}</div>
+    <div class="bar-title" style="text-align:center">${vi==='new'?'Ещё вариант':name?(shapeVars(S.shapes[name]).length>1?'Вариант '+(vi+1):'Моя схема'):'Новая схема'}</div>
     <button class="btn primary" data-act="se-save">Сохранить</button>
   </div></header>
   <div class="wrap"><div class="form">
@@ -3935,20 +3944,49 @@ async function saveShape(){
   if(!name||!parseChord(name)){err.textContent='Введите название аккорда латиницей, например Am7.';return}
   if(SE.frets.every(x=>x<0)){err.textContent='Отметьте хотя бы одну струну.';return}
   const next={...S.shapes};
+  const p=SE.frets.filter(x=>x>0),one={frets:[...SE.frets],base:SE.base>1?SE.base:(p.length&&Math.max(...p)>4?Math.min(...p):0)};
+  // the variants this chord had (when renamed, they all move to the new name)
+  let vars=SE.orig?shapeVars(next[SE.orig]):[],at=SE.vi==='new'?vars.length:SE.vi||0;
   if(SE.orig&&SE.orig!==name)delete next[SE.orig];
-  const p=SE.frets.filter(x=>x>0);
-  next[name]={frets:[...SE.frets],base:SE.base>1?SE.base:(p.length&&Math.max(...p)>4?Math.min(...p):0),t:Date.now()};delete DEL['shape:'+name];saveDel();
+  if(!SE.orig)at=0;
+  vars[at]=one;
+  // a chord that already has a shape under this name gets these as further variants
+  const had=SE.orig!==name?shapeVars(next[name]):[];
+  if(had.length)vars=[...had,...vars.filter(v=>!had.some(h=>h.frets.join()===v.frets.join()))];
+  const k=vars.findIndex(v=>v.frets.join()===one.frets.join()); vars=vars.filter((v,i)=>i===k||v.frets.join()!==one.frets.join()); // no two equal variants
+  next[name]={frets:vars[0].frets,base:vars[0].base,t:Date.now(),...(vars.length>1?{alts:vars.slice(1)}:{})};delete DEL['shape:'+name];saveDel();
   S.shapes=next;setShapes(next);
-  try{await store.save({id:'_shapes',shapes:next});toast('Схема сохранена');renderChart()}catch(e){saveErr(e)}
+  try{await store.save({id:'_shapes',shapes:next});toast(vars.length>1?'Сохранено. Вариантов у '+name+': '+vars.length:'Схема сохранена');renderChart()}catch(e){saveErr(e)}
+}
+/* removes one variant; the chord itself goes only with its last variant */
+async function deleteShapeVar(name,vi,btn){
+  const vars=shapeVars(S.shapes[name]); if(vars.length<2){deleteShape(name,btn);return}
+  vars.splice(vi,1);
+  const next={...S.shapes};next[name]={frets:vars[0].frets,base:vars[0].base,t:Date.now(),...(vars.length>1?{alts:vars.slice(1)}:{})};
+  S.shapes=next;setShapes(next);openMyShape(name);fillChart();
+  try{await store.save({id:'_shapes',shapes:next});toast('Вариант убран')}catch(e){saveErr(e)}
 }
 function openMyShape(name){
   const s=S.shapes[name]; if(!s)return;
+  const vars=shapeVars(s);
+  if(vars.length>1){ // several variants: all of them, each can be played, changed or removed
+    sheet.innerHTML=`<div class="panel" role="dialog" aria-label="Мои варианты ${esc(pretty(name))}">
+      <div class="panel-top"><h2>${esc(pretty(name))}</h2><button class="btn" data-act="close">Закрыть</button></div>
+      <div class="vars">${vars.map((x,i)=>{const v={...x,barre:autoBarre(x.frets)},ck=checkShape(name,x.frets);return `<div class="var">
+        <button class="var-play" data-act="play-frets" data-f="${x.frets.join(',')}" aria-label="Сыграть вариант ${i+1}">${diagram(v)}</button>
+        <span class="var-lbl">Вариант ${i+1}${i===0?' · главный':''}${ck&&ck.ok===false?' · ноты не совпадают':''}</span>
+        <span class="var-acts"><button class="link2" data-act="edit-shape" data-c="${esc(name)}" data-v="${i}">Изменить</button><button class="link2" data-act="del-var" data-c="${esc(name)}" data-v="${i}">Убрать</button></span></div>`}).join('')}</div>
+      <p class="hint">Главный вариант показывается в песнях. Остальные видны, если нажать на аккорд.</p>
+      <div class="actions"><button class="btn danger" data-act="del-shape" data-c="${esc(name)}">Удалить все</button><button class="btn primary" data-act="add-var" data-c="${esc(name)}">Ещё вариант</button></div>
+    </div>`;
+    sheet.hidden=false; return;
+  }
   const v={frets:s.frets,base:s.base||0,barre:autoBarre(s.frets)},info=chordInfo(v,name),ck=checkShape(name,s.frets);
   sheet.innerHTML=`<div class="panel" role="dialog" aria-label="Моя схема ${esc(pretty(name))}">
     <div class="panel-top"><h2>${esc(pretty(name))}</h2>${playBtn(`data-act="play-frets" data-f="${s.frets.join(',')}"`)}<button class="btn" data-act="close">Закрыть</button></div>
     <div class="one">${diagram(v)}<div class="info">Ноты: ${esc(info.notes)}<br>Лады: ${esc(info.frets)}</div></div>
     ${ck&&!ck.unknown?(ck.ok?'<p class="verdict ok">Ноты совпадают с названием аккорда.</p>':`<p class="verdict bad">Схема не совпадает с названием.${ck.extra.length?` Лишние ноты: ${esc(ck.extra.join(', '))}.`:''}${ck.missing.length?` Не хватает: ${esc(ck.missing.join(', '))}.`:''}</p>`):''}
-    <div class="actions"><button class="btn danger" data-act="del-shape" data-c="${esc(name)}">Удалить</button><button class="btn primary" data-act="edit-shape" data-c="${esc(name)}">Изменить</button></div>
+    <div class="actions"><button class="btn danger" data-act="del-shape" data-c="${esc(name)}">Удалить</button><button class="btn" data-act="add-var" data-c="${esc(name)}">Ещё вариант</button><button class="btn primary" data-act="edit-shape" data-c="${esc(name)}">Изменить</button></div>
   </div>`;
   sheet.hidden=false;
 }
@@ -3961,6 +3999,7 @@ async function deleteShape(name,btn){
 /* ---------- sheets ---------- */
 function openChord(name){
   const {list,approx}=getVoicings(name);
+  if(list[0]&&list[0].alts&&list[0].alts.length){openChartChord(name);return} // the user's chord with several variants: show them all
   sheet.innerHTML=`<div class="panel" role="dialog" aria-label="Аппликатура ${esc(name)}">
     <div class="panel-top"><h2>${esc(name)}</h2>${list.length?playBtn(`data-act="play" data-c="${esc(name)}"`):''}<button class="btn" data-act="close">Закрыть</button></div>
     ${approx&&list.length?'<p class="hint">Точной схемы нет, показан упрощённый вариант.</p>':''}
@@ -4203,7 +4242,9 @@ document.addEventListener('click',e=>{
   }
   else if(a==='new-shape')renderShapeEditor(null);
   else if(a==='mychord')openMyShape(b.dataset.c);
-  else if(a==='edit-shape')renderShapeEditor(b.dataset.c);
+  else if(a==='edit-shape')renderShapeEditor(b.dataset.c,+(b.dataset.v||0));
+  else if(a==='add-var')renderShapeEditor(b.dataset.c,'new');
+  else if(a==='del-var')deleteShapeVar(b.dataset.c,+b.dataset.v,b);
   else if(a==='del-shape')deleteShape(b.dataset.c,b);
   else if(a==='se-top'){const i=+b.dataset.s;SE.frets[i]=SE.frets[i]<0?0:-1;fillShapeEditor()}
   else if(a==='se-fret'){const i=+b.dataset.s,f=+b.dataset.f;SE.frets[i]=SE.frets[i]===f?0:f;fillShapeEditor()}
