@@ -940,7 +940,7 @@ function chordName(c,shift,flats){
 const QMAP={'':'maj','M':'maj','maj':'maj','m':'m','min':'m','-':'m','7':'7','m7':'m7','min7':'m7','-7':'m7',
   'maj7':'maj7','M7':'maj7','Δ':'maj7','Δ7':'maj7','sus2':'sus2','2':'sus2','sus4':'sus4','sus':'sus4','4':'sus4',
   'dim':'dim','°':'dim','o':'dim','dim7':'dim7','°7':'dim7','o7':'dim7','aug':'aug','+':'aug','6':'6','m6':'m6',
-  '9':'9','add9':'add9','5':'5','7sus4':'7sus4','7sus':'7sus4','m7b5':'m7b5','ø':'m7b5','m7-5':'m7b5','ø7':'m7b5'};
+  '9':'9','add9':'add9','add4':'add4','add11':'add4','5':'5','7sus4':'7sus4','7sus':'7sus4','m7b5':'m7b5','ø':'m7b5','m7-5':'m7b5','ø7':'m7b5'};
 function normQ(q){
   q=q.replace(/[()]/g,'');
   if(q in QMAP)return {q:QMAP[q],approx:false};
@@ -1026,6 +1026,12 @@ const CHART=CHART_RAW.map(row=>row.map(([name,s,base])=>{
   v.check=checkChart(name,frets);
   return v;
 }));
+/* more shapes for the reference: chords with a bass note and open positions the table above does not have.
+   They come first for exactly this chord name; the user's own shapes still come before them. */
+const EXTRA_RAW=[['D9/F#','2 x 0 2 1 0'],['C/B','x 2 2 0 1 x'],['Dadd4','x 5 4 0 3 x'],['E7','0 2 0 1 0 0'],['F/C','x 3 3 2 1 x'],
+  ['F#/C#','x 4 4 3 2 x'],['G/D','x 5 5 4 3 x'],['G/E','0 2 0 0 0 3'],['G/F#','2 x 0 0 0 3']];
+const EXTRA=EXTRA_RAW.map(([name,s])=>{const frets=s.split(' ').map(x=>x==='x'?-1:+x);return {name,frets,base:0,barre:autoBarre(frets),label:'Из справочника'}});
+const EXTRA_BY_NAME=Object.fromEntries(EXTRA.map(v=>[v.name,v]));
 const CHART_BY_KEY={},CHART_BY_NAME={};
 const CQ={'':'maj',m:'m','6':'6','7':'7','9':'9',m6:'m6',m7:'m7',maj7:'maj7',dim:'dim','+':'aug',sus:'sus4'};
 for(const row of CHART)for(const v of row){
@@ -1037,7 +1043,7 @@ for(const row of CHART)for(const v of row){
 }
 /* ---------- the user's own shapes ---------- */
 const TONES={maj:[0,4,7],m:[0,3,7],'7':[0,4,7,10],m7:[0,3,7,10],maj7:[0,4,7,11],sus2:[0,2,7],sus4:[0,5,7],dim:[0,3,6],dim7:[0,3,6,9],
-  aug:[0,4,8],'6':[0,4,7,9],m6:[0,3,7,9],'9':[0,4,7,10,2],add9:[0,4,7,2],'5':[0,7],'7sus4':[0,5,7,10],m7b5:[0,3,6,10]};
+  aug:[0,4,8],'6':[0,4,7,9],m6:[0,3,7,9],'9':[0,4,7,10,2],add9:[0,4,7,2],add4:[0,4,5,7],'5':[0,7],'7sus4':[0,5,7,10],m7b5:[0,3,6,10]};
 function checkShape(name,frets){
   const c=parseChord(name); if(!c)return null;
   const {q,approx}=normQ(c.q); if(approx||!TONES[q])return {unknown:true};
@@ -1052,7 +1058,8 @@ function checkShape(name,frets){
   return {extra,missing,ok:!extra.length&&!missing.length&&have.size>0};
 }
 let CUSTOM_BY_KEY={};
-function customKey(c){const {q}=normQ(c.q);return c.root+':'+q+(c.bass!=null&&c.bass!==c.root?'/'+c.bass:'')}
+/* a quality the app does not know (say add4) keeps its own spelling: otherwise Dadd4 and D got one key and your Dadd4 replaced D */
+function customKey(c){const {q,approx}=normQ(c.q);return c.root+':'+(approx?'~'+c.q:q)+(c.bass!=null&&c.bass!==c.root?'/'+c.bass:'')}
 function setShapes(shapes){
   CUSTOM_BY_KEY={};
   for(const [name,s] of Object.entries(shapes||{})){
@@ -1071,12 +1078,18 @@ function getVoicings(name){
     const {q,approx}=normQ(c.q); const list=[];
     const mine=CUSTOM_BY_KEY[customKey(c)];
     if(mine){res.list=[mine];vCache.set(name,res);return res}
+    if(EXTRA_BY_NAME[name])list.push(EXTRA_BY_NAME[name]);
     if(c.bass!=null&&c.bass!==c.root){const f=SLASH[c.root+':'+q+'/'+c.bass]; if(f)list.push({frets:f,barre:false,label:'С басом '+name.split('/')[1]})}
     const ch=CHART_BY_KEY[c.root+':'+q]; if(ch)list.push(ch);
     const o=OPEN[c.root+':'+q]; if(o)list.push({frets:o,barre:false,label:'Открытая позиция'});
     const rest=['E','A','D'].map(k=>shapeVoicing(c.root,q,k)).filter(Boolean).sort((a,b)=>Math.max(...a.frets)-Math.max(...b.frets));
     const seen=new Set(); for(const v of ch?[...list]:[...list,...rest]){const k=v.frets.join();if(!seen.has(k)){seen.add(k);res.list.push(v)}}
     res.approx=approx;
+    if(!res.list.length&&q==='add4'){ // no add4 shape in this key: the plain major chord, marked as approximate
+      const o=OPEN[c.root+':maj'];if(o)res.list.push({frets:o,barre:false,label:'Открытая позиция'});
+      ['E','A','D'].map(k=>shapeVoicing(c.root,'maj',k)).filter(Boolean).forEach(v=>res.list.push(v));
+      res.approx=true;
+    }
   }
   vCache.set(name,res); return res;
 }
@@ -2151,12 +2164,14 @@ function fillChart(){
   const cell=v=>`<button class="cell" data-act="cchord" data-c="${esc(v.name)}" aria-label="${esc(pretty(v.name))}">
       <span class="n">${esc(pretty(v.name))}</span>${diagram(v,true)}</button>`;
   grid.innerHTML=CHART.map(row=>{const root=(row[0].name.match(/^[A-G][#b]?/)||[row[0].name])[0];
-    return `<h3 class="chart-root">${esc(pretty(root))}</h3><div class="chart-row">${row.map(cell).join('')}</div>`}).join('');
+    return `<h3 class="chart-root">${esc(pretty(root))}</h3><div class="chart-row">${row.map(cell).join('')}</div>`}).join('')
+    +`<h3 class="chart-root">С басом и другие</h3><div class="chart-row">${EXTRA.map(cell).join('')}</div>`;
 }
 /* every playable position of a chord: the user's own / table one first, then the open shape and the movable E, A, D, C shapes up the neck */
 function allVoicings(name){
   const c=parseChord(name); if(!c)return [];
   const {q}=normQ(c.q),out=[],seen=new Set(),add=v=>{if(!v)return;const k=v.frets.join();if(!seen.has(k)){seen.add(k);out.push(v)}};
+  if(EXTRA_BY_NAME[name])add(EXTRA_BY_NAME[name]);
   if(CHART_BY_NAME[name])add(CHART_BY_NAME[name]);
   getVoicings(name).list.forEach(add);
   const o=OPEN[c.root+':'+q]; if(o)add({frets:o,barre:false,label:'Открытая позиция'});
