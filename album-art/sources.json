@@ -1,0 +1,75 @@
+[
+  {
+    "key": "stadium",
+    "album": "Stadium Arcadium",
+    "artist": "Red Hot Chili Peppers",
+    "titles": [
+      "snow hey oh"
+    ],
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music5/v4/5e/49/35/5e493511-d87b-5aa2-b379-30fffbae902b/093624932154.jpg/300x300bb.jpg"
+  },
+  {
+    "key": "californication",
+    "album": "Greatest Hits",
+    "artist": "Red Hot Chili Peppers",
+    "titles": [
+      "californication"
+    ],
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/94/d4/24/94d42473-eb0e-229b-dd84-900a1874a91d/093624931980.jpg/300x300bb.jpg"
+  },
+  {
+    "key": "ok-computer",
+    "album": "OK Computer",
+    "artist": "Radiohead",
+    "titles": [
+      "no surprises",
+      "karma police"
+    ],
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/07/60/ba/0760ba0f-148c-b18f-d0ff-169ee96f3af5/634904078164.png/300x300bb.jpg"
+  },
+  {
+    "key": "parachutes",
+    "album": "Parachutes",
+    "artist": "Coldplay",
+    "titles": [
+      "yellow"
+    ],
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/f5/93/8c/f5938c49-964c-31d1-4b33-78b634f71fb7/190295978075.jpg/300x300bb.jpg"
+  },
+  {
+    "key": "origin",
+    "album": "Origin of Symmetry",
+    "artist": "Muse",
+    "titles": [
+      "feeling good"
+    ],
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/0c/c8/0b/0cc80b73-aa09-492d-4fcc-984cab29acfa/825646096909.jpg/300x300bb.jpg"
+  },
+  {
+    "key": "morning-glory",
+    "album": "(What's the Story) Morning Glory?",
+    "artist": "Oasis",
+    "titles": [
+      "wonderwall"
+    ],
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music113/v4/04/92/e0/0492e08b-cbcc-9969-9ad6-8f5a0888068c/5051961007107.jpg/300x300bb.jpg"
+  },
+  {
+    "key": "in-your-honor",
+    "album": "In Your Honor",
+    "artist": "Foo Fighters",
+    "titles": [
+      "best of you"
+    ],
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/03/15/58/0315584b-0c8d-93c8-2342-55b3fc3fa88b/828767967257.jpg/300x300bb.jpg"
+  },
+  {
+    "key": "the-bends",
+    "album": "The Bends",
+    "artist": "Radiohead",
+    "titles": [
+      "fake plastic trees"
+    ],
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/1b/a9/5c/1ba95cac-b245-d386-63fb-6b857aa9dce8/634904078065.png/300x300bb.jpg"
+  }
+]

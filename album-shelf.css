@@ -1,0 +1,19 @@
+/* Album cover flow: local artwork, touch navigation, no network at runtime. */
+.album-shelf{margin:10px -8px 12px;position:relative;isolation:isolate}
+.album-shelf[hidden]{display:none}
+.album-shelf-head{display:flex;align-items:center;justify-content:space-between;padding:0 8px;gap:12px}
+.album-shelf-head h2{margin:0;font:600 14px var(--f-body);color:var(--muted)}
+.album-shelf-controls{display:flex;gap:4px}
+.album-shelf-controls button{border:0;background:transparent;color:var(--muted);width:36px;height:36px;border-radius:50%;font:500 20px var(--f-body);display:grid;place-items:center}
+.album-shelf-controls button:hover{background:var(--sunk);color:var(--fg)}
+.album-shelf-stage{height:174px;position:relative;overflow:hidden;touch-action:pan-y;perspective:750px;cursor:grab;user-select:none;-webkit-user-select:none;mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
+.album-shelf-stage:active{cursor:grabbing}
+.album-cover{all:unset;box-sizing:border-box;position:absolute;left:50%;top:12px;width:132px;height:132px;border-radius:12px;background:var(--sunk);box-shadow:0 10px 18px -8px var(--shadow);cursor:pointer;transform-style:preserve-3d;will-change:transform;overflow:hidden;border:1px solid color-mix(in srgb,var(--fg) 14%,transparent)}
+.album-cover img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;-webkit-user-drag:none}
+.album-cover::after{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(125deg,rgba(255,255,255,.16),transparent 38%,rgba(0,0,0,.1));pointer-events:none}
+.album-cover:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.album-shelf-caption{margin:0 12px;min-height:41px;text-align:center;line-height:1.3;pointer-events:none}
+.album-shelf-caption strong{display:block;font-size:14px;font-weight:600;color:var(--fg)}
+.album-shelf-caption span{display:block;font-size:12px;color:var(--muted);margin-top:3px}
+@media(min-width:600px){.album-shelf-stage{height:199px}.album-cover{width:156px;height:156px}.album-shelf{margin-block:12px 16px}}
+@media(prefers-reduced-motion:reduce){.album-cover{will-change:auto}}

@@ -1,5 +1,5 @@
-const V='songbook-v104';
-const SHELL=['./','./index.html','./manifest.json','./fire-180.png','./fire-512.png'];
+const V='songbook-v105';
+const SHELL=['./','./index.html','./manifest.json','./fire-180.png','./fire-512.png','./album-shelf.css','./album-shelf.js','./album-art/stadium.jpg','./album-art/californication.jpg','./album-art/ok-computer.jpg','./album-art/parachutes.jpg','./album-art/origin.jpg','./album-art/morning-glory.jpg','./album-art/in-your-honor.jpg','./album-art/the-bends.jpg'];
 const GTR='fc-guitar-1'; // recorded guitar notes: their own cache, kept across app versions
 const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(async c=>{
@@ -7,7 +7,7 @@ self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(async c=>{
   // the PDF reader, so PDF import also works offline; skipped quietly if the network is down
   await Promise.all(['pdf.min.js','pdf.worker.min.js'].map(f=>c.add(PDFJS+f).catch(()=>{})));
 }).then(()=>self.skipWaiting()))});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==V&&k!==GTR).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>/^songbook-v\d+$/.test(k)&&k!==V).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{
   const r=e.request; if(r.method!=='GET')return;
   const u=new URL(r.url);
