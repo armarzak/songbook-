@@ -33,7 +33,7 @@ window.FireAlbumShelf=(()=>{
     root.innerHTML='<div class="album-shelf-head"><h2>Твоя музыка</h2></div><div class="album-shelf-stage" role="group" aria-roledescription="карусель" aria-label="Песни по обложкам альбомов. Можно листать свайпом или клавишами со стрелками."></div><p class="album-shelf-caption"><strong></strong><span></span></p>';
     const stage=root.querySelector('.album-shelf-stage'),caption=root.querySelector('.album-shelf-caption');
     stage.style.opacity='0';
-    let pos=savedPosition,raf=0,last=0,visible=true,hover=false,focused=false,pointer=null,dragged=false,width=0,size=132,selected=-1,closed=false,ready=false,momentum=0,settleTarget=null,resumeAt=0;
+    let pos=savedPosition,raf=0,last=0,visible=true,hover=false,focused=false,pointer=null,dragged=false,width=0,size=132,selected=-1,closed=false,ready=false,momentum=0,settleTarget=null,resumeAt=0,touchId=null;
     const buttons=Array.from({length:Math.min(items.length,9)},()=>{
       const b=document.createElement('button');b.type='button';b.className='album-cover';b.songIndex=-1;b.imageReady=false;b.imageFailed=false;b.loadToken=0;b.style.visibility='hidden';
       const img=document.createElement('img');img.width=300;img.height=300;img.draggable=false;b.append(img);
@@ -92,7 +92,7 @@ window.FireAlbumShelf=(()=>{
     function resize(){width=stage.clientWidth;size=buttons[0].offsetWidth;draw()}
     const ro=new ResizeObserver(resize);ro.observe(stage);
     const io=new IntersectionObserver(([e])=>{visible=e.isIntersecting;sync()});io.observe(stage);
-    const visibility=()=>sync();document.addEventListener('visibilitychange',visibility);
+    const visibility=()=>{if(document.hidden){pointer=null;touchId=null;momentum=0;settleTarget=null;dragged=false}sync()};document.addEventListener('visibilitychange',visibility);
     stage.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse'){hover=true;sync()}});
     stage.addEventListener('pointerleave',()=>{hover=false;sync()});
     stage.addEventListener('focusin',()=>{focused=true;sync()});stage.addEventListener('focusout',e=>{focused=stage.contains(e.relatedTarget);sync()});
@@ -102,41 +102,79 @@ window.FireAlbumShelf=(()=>{
       }
     });
     const stamp=e=>Number.isFinite(e.timeStamp)?e.timeStamp:performance.now();
-    stage.addEventListener('pointerdown',e=>{
-      if(e.button>0||pointer)return;
+    const nativeTouch='ontouchstart' in window;
+    function beginGesture(id,x,y,type,time,source){
+      if(pointer)return false;
       momentum=0;settleTarget=null;
-      pointer={id:e.pointerId,type:e.pointerType,x:e.clientX,y:e.clientY,pos,lastX:e.clientX,t:stamp(e),velocity:0};
-      dragged=false;sync();
-    });
-    stage.addEventListener('pointermove',e=>{
-      if(!pointer||e.pointerId!==pointer.id)return;
-      const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;
-      if(!dragged&&Math.abs(dx)>6&&Math.abs(dx)>Math.abs(dy)){
-        dragged=true;focused=false;stage.setPointerCapture(e.pointerId);
+      pointer={id,type,source,x,y,pos,lastX:x,t:time,velocity:0};
+      dragged=false;sync();return true;
+    }
+    function moveGesture(id,x,y,time){
+      if(!pointer||id!==pointer.id)return false;
+      const dx=x-pointer.x,dy=y-pointer.y;
+      if(!dragged&&Math.abs(dy)>6&&Math.abs(dy)>Math.abs(dx)){
+        // Let Safari own a vertical page scroll for the rest of this gesture.
+        pointer=null;focused=false;sync();return false;
       }
-      if(dragged){
-        if(e.cancelable)e.preventDefault();
-        const now=stamp(e),dt=Math.max(8,now-pointer.t),step=size*.92;
-        const velocity=-(e.clientX-pointer.lastX)/dt*1.8/step;
-        pointer.velocity=Math.max(-.012,Math.min(.012,pointer.velocity*.35+velocity*.65));
-        pointer.lastX=e.clientX;pointer.t=now;
-        pos=pointer.pos-dx*1.8/step;draw();
+      if(!dragged&&Math.abs(dx)>4&&Math.abs(dx)>Math.abs(dy)){
+        dragged=true;focused=false;
+        if(pointer.source==='pointer')try{stage.setPointerCapture(id)}catch{}
       }
-    });
-    const end=e=>{
-      if(!pointer||e.pointerId!==pointer.id)return;
-      const p=pointer;pointer=null;
-      if(dragged){
+      if(!dragged)return false;
+      const dt=Math.max(8,time-pointer.t),step=size*.92;
+      const velocity=-(x-pointer.lastX)/dt*1.8/step;
+      pointer.velocity=Math.max(-.012,Math.min(.012,pointer.velocity*.35+velocity*.65));
+      pointer.lastX=x;pointer.t=time;
+      pos=pointer.pos-dx*1.8/step;draw();return true;
+    }
+    function finishGesture(id,time,released){
+      if(!pointer||id!==pointer.id)return false;
+      const p=pointer,wasDrag=dragged;pointer=null;
+      if(wasDrag){
         focused=false;if(p.type!=='mouse')hover=false;
-        const fresh=stamp(e)-p.t<100;
-        momentum=e.type==='pointerup'&&fresh?p.velocity:0;
+        momentum=released&&time-p.t<100?p.velocity:0;
         if(Math.abs(momentum)<=.00015){momentum=0;settleTarget=Math.round(pos)}
         resumeAt=performance.now()+1200;
       }
-      sync();
+      sync();return wasDrag;
+    }
+    stage.addEventListener('pointerdown',e=>{
+      if(e.button>0||(nativeTouch&&e.pointerType==='touch'))return;
+      beginGesture(e.pointerId,e.clientX,e.clientY,e.pointerType,stamp(e),'pointer');
+    });
+    stage.addEventListener('pointermove',e=>{
+      if(!pointer||pointer.source!=='pointer')return;
+      if(moveGesture(e.pointerId,e.clientX,e.clientY,stamp(e))&&e.cancelable)e.preventDefault();
+    });
+    const end=e=>{
+      if(!pointer||pointer.source!=='pointer')return;
+      finishGesture(e.pointerId,stamp(e),e.type==='pointerup');
     };
     window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);stage.addEventListener('lostpointercapture',end);
-    dispose=()=>{savedPosition=pos;closed=true;cancelAnimationFrame(raf);ro.disconnect();io.disconnect();document.removeEventListener('visibilitychange',visibility);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',end)};
+    // Native Touch Events keep iPhone drags alive when Safari cancels Pointer Events.
+    const findTouch=(list,id)=>Array.from(list||[]).find(t=>t.identifier===id);
+    const touchStart=e=>{
+      if(e.touches.length!==1){if(pointer&&pointer.source==='touch')finishGesture(pointer.id,stamp(e),false);touchId=null;return}
+      if(!nativeTouch||touchId!==null)return;
+      const t=e.touches[0];
+      if(beginGesture(t.identifier,t.clientX,t.clientY,'touch',stamp(e),'touch'))touchId=t.identifier;
+    };
+    const touchMove=e=>{
+      if(touchId===null)return;
+      if(e.touches.length!==1){finishGesture(touchId,stamp(e),false);touchId=null;return}
+      const t=findTouch(e.touches,touchId);
+      if(t&&moveGesture(t.identifier,t.clientX,t.clientY,stamp(e))&&e.cancelable)e.preventDefault();
+    };
+    const touchEnd=e=>{
+      if(touchId===null||!findTouch(e.changedTouches,touchId))return;
+      const id=touchId;touchId=null;
+      if(finishGesture(id,stamp(e),e.type==='touchend')&&e.cancelable)e.preventDefault();
+    };
+    stage.addEventListener('touchstart',touchStart,{passive:true});
+    stage.addEventListener('touchmove',touchMove,{passive:false});
+    window.addEventListener('touchend',touchEnd,{passive:false});
+    window.addEventListener('touchcancel',touchEnd,{passive:false});
+    dispose=()=>{window.removeEventListener('touchend',touchEnd);window.removeEventListener('touchcancel',touchEnd);savedPosition=pos;closed=true;cancelAnimationFrame(raf);ro.disconnect();io.disconnect();document.removeEventListener('visibilitychange',visibility);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',end)};
     resize();sync();
   }
   return {mount,stop};
