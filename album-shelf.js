@@ -177,5 +177,9 @@ window.FireAlbumShelf=(()=>{
     dispose=()=>{window.removeEventListener('touchend',touchEnd);window.removeEventListener('touchcancel',touchEnd);savedPosition=pos;closed=true;cancelAnimationFrame(raf);ro.disconnect();io.disconnect();document.removeEventListener('visibilitychange',visibility);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',end)};
     resize();sync();
   }
-  return {mount,stop};
+  function artFor(song){
+    const a=song&&lookup.get(norm(song.artist)+'|'+norm(song.title));
+    return a?{src:'album-art/'+a.key+'.jpg',alt:a.artist+' — '+a.album}:null;
+  }
+  return {mount,stop,artFor};
 })();
