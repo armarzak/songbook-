@@ -10,8 +10,9 @@
 <meta name="theme-color" content="#F1F2EE" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111312" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="playback-tools.css?v=115">
-<link rel="stylesheet" href="album-shelf.css?v=115">
+<link rel="stylesheet" href="playback-tools.css?v=116">
+<link rel="stylesheet" href="album-shelf.css?v=116">
+<link rel="stylesheet" href="touch-guitar.css?v=116">
 <link rel="apple-touch-icon" href="fire-180.png">
 <link rel="icon" type="image/png" href="fire-180.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
@@ -920,10 +921,11 @@ input.mono{font-family:var(--f-mono)}
 <div id="sheet" class="sheet" hidden></div>
 <div id="toast" class="toast" hidden role="status"></div>
 
-<script src="album-shelf.js?v=115"></script>
-<script src="tempo-core.js?v=115"></script>
-<script src="backing-tempo.js?v=115"></script>
-<script src="gtp-fretboard.js?v=115"></script>
+<script src="album-shelf.js?v=116"></script>
+<script src="touch-guitar.js?v=116"></script>
+<script src="tempo-core.js?v=116"></script>
+<script src="backing-tempo.js?v=116"></script>
+<script src="gtp-fretboard.js?v=116"></script>
 <script>
 /* ---------- music theory ---------- */
 const SPEED_MIN=3,SPEED_MAX=70; // autoscroll, pixels per second (the old slowest step was 12)
@@ -3451,6 +3453,7 @@ function renderSong(id,keepScroll){
       ${songLinks(s)}
       <div class="meta" id="meta"></div>
     </div>
+    <button class="btn" data-act="touch-guitar">${ICON.guitar} Гитара</button>
     <div class="strip" id="strip"></div>
     <div class="sheet-body" id="body" style="--fs:${S.stage?S.sfs:S.fs}px"></div>
     <div id="gtpbox"></div>
@@ -4006,6 +4009,17 @@ async function deleteShape(name,btn){
 }
 
 /* ---------- sheets ---------- */
+function openTouchGuitar(){
+  const chords=[...document.querySelectorAll('#strip [data-c]')].map(b=>b.dataset.c);
+  FireTouchGuitar.open({host:sheet,chords,voicing:name=>getVoicings(name).list[0]?.frets,voice:(midi,delay=0,volume=.65)=>{
+    const ctx=audioCtx();guitarSamples();const sound=noteSound(ctx,midi),src=ctx.createBufferSource(),gain=ctx.createGain();
+    src.buffer=sound.buf;src.playbackRate.value=sound.rate;src.connect(gain);gain.connect(acOut);
+    let stopped=false;const t=ctx.currentTime+delay;
+    gain.gain.setValueAtTime(volume*(sound.rec?2:.7),t);gain.gain.setTargetAtTime(0,t+2.5,.4);
+    whenRunning(ctx,()=>{if(!stopped){src.start(Math.max(ctx.currentTime,t));src.stop(ctx.currentTime+delay+5)}});
+    return {bend:semi=>src.playbackRate.setTargetAtTime(sound.rate*Math.pow(2,semi/12),ctx.currentTime,.015),stop:()=>{stopped=true;gain.gain.cancelScheduledValues(ctx.currentTime);gain.gain.setTargetAtTime(0,ctx.currentTime,.06)}};
+  }});
+}
 function openChord(name){
   const {list,approx}=getVoicings(name);
   if(list[0]&&list[0].alts&&list[0].alts.length){openChartChord(name);return} // the user's chord with several variants: show them all
@@ -4221,6 +4235,7 @@ document.addEventListener('click',e=>{
   else if(a==='share')shareSong();
   else if(a==='copy')copySong(false);
   else if(a==='sort'){S.sort=b.dataset.v;lsSet('sb.sort',S.sort);fillList()}
+  else if(a==='touch-guitar')openTouchGuitar();
   else if(a==='metro')openMetro();
   else if(a==='m-toggle'){M.on?metroStop():metroStart()}
   else if(a==='m-step')metroSet(M.bpm+ +b.dataset.d);
@@ -4482,6 +4497,6 @@ initStore().then(st=>{
 });
 </script>
 
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=115',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=116',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
