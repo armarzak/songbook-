@@ -32,7 +32,7 @@ window.FireAlbumShelf=(()=>{
       if(i!==selected){selected=i;caption.firstElementChild.textContent=items[i].s.title;caption.lastElementChild.textContent=items[i].s.artist}
     }
     function tick(t){raf=0;if(closed)return;if(last)pos=(pos+Math.min(t-last,50)/6500)%items.length;last=t;draw();if(!closed)raf=requestAnimationFrame(tick)}
-    function sync(){cancelAnimationFrame(raf);raf=0;last=0;if(!closed&&visible&&!document.hidden&&!manual&&!motion.matches&&!hover&&!focused&&!pointer)raf=requestAnimationFrame(tick)}
+    function sync(){cancelAnimationFrame(raf);raf=0;last=0;if(!closed&&visible&&!document.hidden&&!manual&&!hover&&!focused&&!pointer)raf=requestAnimationFrame(tick)}
     function resize(){width=stage.clientWidth;size=buttons[0].offsetWidth;draw()}
     const ro=new ResizeObserver(resize);ro.observe(stage);
     const io=new IntersectionObserver(([e])=>{visible=e.isIntersecting;sync()});io.observe(stage);
@@ -40,7 +40,7 @@ window.FireAlbumShelf=(()=>{
     document.addEventListener('visibilitychange',visibility);motion.addEventListener('change',motionChange);
     function updatePause(){pause.textContent=manual?'▷':'Ⅱ';pause.setAttribute('aria-pressed',String(manual));pause.setAttribute('aria-label',manual?'Включить движение обложек':'Приостановить движение обложек')}
     root.querySelectorAll('[data-shelf]').forEach(b=>b.addEventListener('click',()=>{
-      if(b.dataset.shelf==='pause'){manual=!manual;updatePause()}
+      if(b.dataset.shelf==='pause'){manual=!manual;if(!manual){hover=false;focused=false;pointer=null}updatePause()}
       else{pos=Math.round(pos)+(b.dataset.shelf==='next'?1:-1);pos=(pos+items.length)%items.length;draw()}
       sync();
     }));
@@ -50,8 +50,8 @@ window.FireAlbumShelf=(()=>{
     stage.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();pos+=e.key==='ArrowRight'?1:-1;draw()}});
     stage.addEventListener('pointerdown',e=>{if(e.button>0)return;pointer={id:e.pointerId,x:e.clientX,y:e.clientY,pos};dragged=false;sync()});
     stage.addEventListener('pointermove',e=>{if(!pointer||e.pointerId!==pointer.id)return;const dx=e.clientX-pointer.x;if(!dragged&&Math.abs(dx)>8&&Math.abs(dx)>Math.abs(e.clientY-pointer.y)){dragged=true;stage.setPointerCapture(e.pointerId)}if(dragged){pos=pointer.pos-dx/(size*.92);draw()}});
-    const end=()=>{pointer=null;sync()};stage.addEventListener('pointerup',end);stage.addEventListener('pointercancel',end);
-    dispose=()=>{closed=true;cancelAnimationFrame(raf);ro.disconnect();io.disconnect();document.removeEventListener('visibilitychange',visibility);motion.removeEventListener('change',motionChange)};
+    const end=e=>{if(!pointer||e.pointerId!==pointer.id)return;pointer=null;sync()};window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);stage.addEventListener('lostpointercapture',end);
+    dispose=()=>{window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',end);closed=true;cancelAnimationFrame(raf);ro.disconnect();io.disconnect();document.removeEventListener('visibilitychange',visibility);motion.removeEventListener('change',motionChange)};
     updatePause();resize();sync();
   }
   return {mount,stop};

@@ -1,4 +1,4 @@
-const V='songbook-v105';
+const V='songbook-v106';
 const SHELL=['./','./index.html','./manifest.json','./fire-180.png','./fire-512.png','./album-shelf.css','./album-shelf.js','./album-art/stadium.jpg','./album-art/californication.jpg','./album-art/ok-computer.jpg','./album-art/parachutes.jpg','./album-art/origin.jpg','./album-art/morning-glory.jpg','./album-art/in-your-honor.jpg','./album-art/the-bends.jpg'];
 const GTR='fc-guitar-1'; // recorded guitar notes: their own cache, kept across app versions
 const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
