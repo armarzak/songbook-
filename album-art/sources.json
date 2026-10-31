@@ -1,75 +1,2526 @@
 [
   {
-    "key": "stadium",
-    "album": "Stadium Arcadium",
-    "artist": "Red Hot Chili Peppers",
-    "titles": [
-      "snow hey oh"
+    "key": "album-1200809979",
+    "album": "Family бізнес",
+    "artist": "Бумбокс",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/4b/cd/12/4bcd12d2-5292-f4b5-b948-08ff7cacf5cd/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Бумбокс",
+        "title": "Вахтерам"
+      }
     ],
-    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music5/v4/5e/49/35/5e493511-d87b-5aa2-b379-30fffbae902b/093624932154.jpg/300x300bb.jpg"
+    "tracks": [
+      {
+        "id": 1200810425,
+        "title": "Вахтерам"
+      }
+    ]
   },
   {
-    "key": "californication",
-    "album": "Greatest Hits",
-    "artist": "Red Hot Chili Peppers",
-    "titles": [
-      "californication"
+    "key": "album-6778730184",
+    "album": "Сансара (feat. Диана Арбенина, Александр Ф. Скляр, Сергей Бобунец, SUNSAY, Скриптонит & АНТ) - Single",
+    "artist": "Баста",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/22/c2/4c/22c24c22-5e2f-cbe6-8d6a-bc17941f5db1/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Баста",
+        "title": "Сансара"
+      }
     ],
-    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/94/d4/24/94d42473-eb0e-229b-dd84-900a1874a91d/093624931980.jpg/300x300bb.jpg"
+    "tracks": [
+      {
+        "id": 6778730185,
+        "title": "Сансара (feat. Диана Арбенина, Александр Ф. Скляр, Сергей Бобунец, SUNSAY, Скриптонит & АНТ)"
+      }
+    ]
   },
   {
-    "key": "ok-computer",
-    "album": "OK Computer",
-    "artist": "Radiohead",
-    "titles": [
-      "no surprises",
-      "karma police"
+    "key": "album-1122773394",
+    "album": "Viva La Vida or Death and All His Friends",
+    "artist": "Coldplay",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/52/aa/85/52aa851f-15b7-6322-f91f-df84b15b7b19/190295978044.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Coldplay",
+        "title": "Viva La Vida"
+      }
     ],
-    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/07/60/ba/0760ba0f-148c-b18f-d0ff-169ee96f3af5/634904078164.png/300x300bb.jpg"
+    "tracks": [
+      {
+        "id": 1122773680,
+        "title": "Viva La Vida"
+      }
+    ]
   },
   {
-    "key": "parachutes",
+    "key": "album-1122775993",
+    "album": "A Rush of Blood to the Head",
+    "artist": "Coldplay",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/b9/b4/2a/b9b42ad1-1e25-5096-da43-497a247e69a3/190295978051.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Coldplay",
+        "title": "The Scientist"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1122776155,
+        "title": "The Scientist"
+      }
+    ]
+  },
+  {
+    "key": "album-1122782080",
     "album": "Parachutes",
     "artist": "Coldplay",
-    "titles": [
-      "yellow"
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/f5/93/8c/f5938c49-964c-31d1-4b33-78b634f71fb7/190295978075.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Coldplay",
+        "title": "Yellow"
+      }
     ],
-    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/f5/93/8c/f5938c49-964c-31d1-4b33-78b634f71fb7/190295978075.jpg/300x300bb.jpg"
+    "tracks": [
+      {
+        "id": 1122782283,
+        "title": "Yellow"
+      }
+    ]
   },
   {
-    "key": "origin",
-    "album": "Origin of Symmetry",
-    "artist": "Muse",
-    "titles": [
-      "feeling good"
-    ],
-    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/0c/c8/0b/0cc80b73-aa09-492d-4fcc-984cab29acfa/825646096909.jpg/300x300bb.jpg"
-  },
-  {
-    "key": "morning-glory",
+    "key": "album-1517447039",
     "album": "(What's the Story) Morning Glory?",
     "artist": "Oasis",
-    "titles": [
-      "wonderwall"
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music113/v4/04/92/e0/0492e08b-cbcc-9969-9ad6-8f5a0888068c/5051961007107.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Oasis",
+        "title": "Wonderwall"
+      }
     ],
-    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music113/v4/04/92/e0/0492e08b-cbcc-9969-9ad6-8f5a0888068c/5051961007107.jpg/300x300bb.jpg"
+    "tracks": [
+      {
+        "id": 1517447333,
+        "title": "Wonderwall"
+      }
+    ]
   },
   {
-    "key": "in-your-honor",
+    "key": "album-1594677532",
+    "album": "Encanto (Original Motion Picture Soundtrack)",
+    "artist": "Sebastián Yatra",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/94/4d/9a/944d9a8d-0549-f537-5706-5b083bd84a7d/21UM1IM38949.rgb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Misc Cartoons",
+        "title": "Encanto - Two Oruguitas"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1594677763,
+        "title": "Dos Oruguitas"
+      }
+    ]
+  },
+  {
+    "key": "album-1022164257",
+    "album": "Dream Your Life Away (Special Edition)",
+    "artist": "Vance Joy",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/7a/1c/65/7a1c6571-34e9-bb77-32be-90c72ba003c0/075679920355.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Vance Joy",
+        "title": "Riptide"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1022164261,
+        "title": "Riptide"
+      }
+    ]
+  },
+  {
+    "key": "album-171708494",
+    "album": "Desireless",
+    "artist": "Eagle-Eye Cherry",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/f1/37/c6/f137c6b7-8253-0ade-01a0-f0146bdf5cf9/mzi.fuhnxhna.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Eagle-Eye Cherry",
+        "title": "Save Tonight"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 171708539,
+        "title": "Save Tonight"
+      }
+    ]
+  },
+  {
+    "key": "album-1193673068",
+    "album": "Лошадка",
+    "artist": "Найк Борзов",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/87/39/01/873901bc-7c74-5aa5-4b68-4c6b3ee1844f/190295884239.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Найк Борзов",
+        "title": "Последняя Песня"
+      },
+      {
+        "artist": "Найк Борзов",
+        "title": "Лошадка"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1193673083,
+        "title": "Последняя песня"
+      },
+      {
+        "id": 1193673082,
+        "title": "Лошадка"
+      }
+    ]
+  },
+  {
+    "key": "album-1193672358",
+    "album": "Супермен",
+    "artist": "Найк Борзов",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/f2/df/26/f2df2652-edf2-ea2e-3cb0-7cbd03b63e71/190295884222.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Найк Борзов",
+        "title": "Супермен"
+      },
+      {
+        "artist": "Найк Борзов",
+        "title": "Верхом На Звезде"
+      },
+      {
+        "artist": "Найк Борзов",
+        "title": "Бардак В Голове"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1193672366,
+        "title": "Супермен"
+      },
+      {
+        "id": 1193672365,
+        "title": "Верхом на звезде"
+      },
+      {
+        "id": 1193672364,
+        "title": "Бардак в голове"
+      }
+    ]
+  },
+  {
+    "key": "album-945578420",
+    "album": "By the Way",
+    "artist": "Red Hot Chili Peppers",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/73/ec/27/73ec2771-a008-e55b-8ccd-faf6257d5cd0/093624932178.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Red Hot Chili Peppers",
+        "title": "Cant Stop"
+      },
+      {
+        "artist": "Red hot chilli peppers",
+        "title": "Can’t stop"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 945578427,
+        "title": "Can't Stop"
+      },
+      {
+        "id": 945578427,
+        "title": "Can't Stop"
+      }
+    ]
+  },
+  {
+    "key": "album-1452975975",
+    "album": "Chess Pieces: The Very Best of Chess Records",
+    "artist": "Chuck Berry",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/67/c8/33/67c83356-08b8-e3c0-34cd-ee084db91f59/06UMGIM60693.rgb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Chuck Berry",
+        "title": "Johnny B Goode"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1452976390,
+        "title": "Johnny B. Goode"
+      }
+    ]
+  },
+  {
+    "key": "album-1193662822",
+    "album": "Заноза",
+    "artist": "Найк Борзов",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/94/b5/3e/94b53e94-4000-100e-3f45-8d392de8355c/190295884260.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Найк Борзов",
+        "title": "Одна Она"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1193662919,
+        "title": "Одна она"
+      }
+    ]
+  },
+  {
+    "key": "album-1440739556",
+    "album": "Away from the Sun",
+    "artist": "3 Doors Down",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/0a/c0/0d/0ac00d65-4327-29b1-6a1e-4f1e2684d758/06UMGIM23627.rgb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "3 Doors Down",
+        "title": "Here Without You"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1440739980,
+        "title": "Here Without You"
+      }
+    ]
+  },
+  {
+    "key": "album-1440725629",
+    "album": "Time of My Life (Deluxe Edition)",
+    "artist": "3 Doors Down",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/e5/12/3b/e5123bf6-d957-2eca-2e23-5f995f08eb80/11UMGIM13778.rgb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "3 Doors Down",
+        "title": "When Youre Young"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1440725636,
+        "title": "When You're Young"
+      }
+    ]
+  },
+  {
+    "key": "album-863843525",
+    "album": "The Best",
+    "artist": "Мумий Тролль",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/ad/3c/71/ad3c7138-f58b-a08b-02cd-670db7b77594/Mumiy_Troll_The_Best_Cover_2000x2000.png/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Мумий Тролль",
+        "title": "Владивосток 2000"
+      },
+      {
+        "artist": "Мумий Тролль",
+        "title": "Контрабанды"
+      },
+      {
+        "artist": "Мумий Тролль",
+        "title": "Такие девчонки"
+      },
+      {
+        "artist": "Мумий Тролль",
+        "title": "Фантастика"
+      },
+      {
+        "artist": "Мумий Тролль",
+        "title": "Это по любви"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 863843597,
+        "title": "Владивосток 2000"
+      },
+      {
+        "id": 863843583,
+        "title": "Контрабанды"
+      },
+      {
+        "id": 863843599,
+        "title": "Такие девчонки"
+      },
+      {
+        "id": 863843592,
+        "title": "Фантастика"
+      },
+      {
+        "id": 863843606,
+        "title": "Это по любви"
+      }
+    ]
+  },
+  {
+    "key": "album-912363222",
+    "album": "Акустика",
+    "artist": "Lumen",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music3/v4/10/31/b5/1031b57b-dd39-028c-4ae3-26310060d30a/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Lumen",
+        "title": "Небеса"
+      },
+      {
+        "artist": "Lumen",
+        "title": "Между Строчек"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 912363364,
+        "title": "Небеса"
+      },
+      {
+        "id": 912363269,
+        "title": "Между строчек"
+      }
+    ]
+  },
+  {
+    "key": "album-710507518",
+    "album": "Нет времени для любви",
+    "artist": "Lumen",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music6/v4/b9/e6/55/b9e65521-1aab-73a4-e3f0-e7fcc62a4dae/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Lumen",
+        "title": "С Тобой"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 710507641,
+        "title": "С тобой"
+      }
+    ]
+  },
+  {
+    "key": "album-373220996",
+    "album": "The Rembrandts: L.P.",
+    "artist": "The Rembrandts",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/10/b0/d0/10b0d0fd-008c-b493-b9e2-ac579eb87393/mzi.unizvawf.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "The Rembrandts",
+        "title": "Ill Be There For You"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 373221221,
+        "title": "I'll Be There for You (Theme from Friends)"
+      }
+    ]
+  },
+  {
+    "key": "album-1440823766",
+    "album": "Sadnecessary (Bonus Track Version)",
+    "artist": "Milky Chance",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music123/v4/dd/bf/33/ddbf3362-6ee4-1e72-2839-41c883d46b5e/14UMGIM36148.rgb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Milky Chance",
+        "title": "Stolen Dance"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1440824347,
+        "title": "Stolen Dance"
+      }
+    ]
+  },
+  {
+    "key": "album-901876334",
+    "album": "Птица",
+    "artist": "Аукцыон",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/20/98/d9/2098d9d7-4300-6aa0-2b15-742f6fa31677/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "АукцЫон",
+        "title": "Дорога"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 901876491,
+        "title": "Дорога"
+      }
+    ]
+  },
+  {
+    "key": "album-1440737353",
+    "album": "Hopes and Fears",
+    "artist": "Keane",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/62/bf/6a/62bf6a98-4560-0299-8a45-35763e5ad4d3/06UMGIM13428.rgb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Keane",
+        "title": "Everybodys Changing"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1440737361,
+        "title": "Everybody's Changing"
+      }
+    ]
+  },
+  {
+    "key": "album-1445286850",
+    "album": "Somewhere Only We Know - EP",
+    "artist": "Keane",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/89/a6/f7/89a6f7be-a0e0-2524-a13b-6b5df7b7534a/06UMGIM24399.rgb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Keane",
+        "title": "Somewhere Only We Know"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1445287036,
+        "title": "Somewhere Only We Know"
+      }
+    ]
+  },
+  {
+    "key": "album-274782938",
+    "album": "From Dusk Till Dawn (Music from the Motion Picture)",
+    "artist": "Tito & Tarantula",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music/88/51/a2/mzi.xqzejhvj.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Tito & Tarantula",
+        "title": "After Dark"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 274783145,
+        "title": "After Dark"
+      }
+    ]
+  },
+  {
+    "key": "album-1680106960",
+    "album": "Оранжевое настроение-IV",
+    "artist": "Чайф",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/e7/67/82/e76782e3-1a66-53f8-8273-eaef7eb3b5cb/0.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Чайф",
+        "title": "Хей-Хей"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1680107123,
+        "title": "Хей-хей"
+      }
+    ]
+  },
+  {
+    "key": "album-1677600890",
+    "album": "Реальный мир",
+    "artist": "Чайф",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/2c/f0/a7/2cf0a770-641f-4a9e-a19b-317e7365877b/0.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Чайф",
+        "title": "Не Со Мной"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1677600891,
+        "title": "Не со мной"
+      }
+    ]
+  },
+  {
+    "key": "album-1678487092",
+    "album": "Шекогали",
+    "artist": "Чайф",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/c3/00/c2/c300c2c9-4b2f-80b4-f81b-b1e6d810430e/0.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Чайф",
+        "title": "Аргентина - Ямайка 5-0"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1678487099,
+        "title": "Аргентина-Ямайка - 5:0"
+      }
+    ]
+  },
+  {
+    "key": "album-1723344391",
+    "album": "Будь как дома, Путник...",
+    "artist": "Король и Шут",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/68/6c/25/686c255d-2916-a86d-dc2d-6de62b0a0ba4/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Король и Шут",
+        "title": "Лесник"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1723344398,
+        "title": "Лесник"
+      },
+      {
+        "id": 1723344398,
+        "title": "Лесник"
+      }
+    ]
+  },
+  {
+    "key": "album-1723343325",
+    "album": "Камнем по голове",
+    "artist": "Король и Шут",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/65/a5/20/65a520ed-7384-de28-569d-b1e36bea4de7/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "ороль и Шут",
+        "title": "Камнем по голове"
+      },
+      {
+        "artist": "Король и Шут",
+        "title": "Дурак и молния"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1723343575,
+        "title": "Камнем по голове"
+      },
+      {
+        "id": 1723343589,
+        "title": "Дурак и молния"
+      }
+    ]
+  },
+  {
+    "key": "album-1723347060",
+    "album": "Как в старой сказке",
+    "artist": "Король и Шут",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/07/c9/cd/07c9cd0a-4ae3-894c-1a71-d16231e5d4b0/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Король и Шут",
+        "title": "Проклятый старый дом"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1723347072,
+        "title": "Проклятый старый дом"
+      }
+    ]
+  },
+  {
+    "key": "album-1723344983",
+    "album": "Акустический альбом",
+    "artist": "Король и Шут",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/23/ad/1f/23ad1fa6-b7e1-f60f-3afc-3f45ec24205f/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Король и Шут",
+        "title": "Прыгну со скалы"
+      },
+      {
+        "artist": "Король и Шут",
+        "title": "Кукла колдуна"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1723344991,
+        "title": "Прыгну со скалы"
+      },
+      {
+        "id": 1723344992,
+        "title": "Кукла колдуна"
+      }
+    ]
+  },
+  {
+    "key": "album-1723341986",
+    "album": "Жаль, нет ружья",
+    "artist": "Король и Шут",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/5e/fe/43/5efe4315-7321-a679-9b9d-5e5c194997a7/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Король и Шут",
+        "title": "Медведь"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1723341987,
+        "title": "Медведь"
+      }
+    ]
+  },
+  {
+    "key": "album-1739752983",
+    "album": "Просвистела",
+    "artist": "ДДТ",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/7c/69/01/7c6901a1-2e64-af23-3610-5821a642a8d2/15_001_DDT-Prosvistela.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "ДДТ",
+        "title": "Что такое осень"
+      },
+      {
+        "artist": "ДДТ",
+        "title": "Это всё"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1739752988,
+        "title": "Что такое осень"
+      },
+      {
+        "id": 1739753027,
+        "title": "Это всё…"
+      }
+    ]
+  },
+  {
+    "key": "album-1739748431",
+    "album": "Мир номер ноль",
+    "artist": "ДДТ",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/fc/34/4d/fc344de3-858e-9a74-a52a-4de4ba09588f/14_001_DDT-Mir_nomer_nol.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "ДДТ",
+        "title": "Метель"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1739748857,
+        "title": "Метель"
+      }
+    ]
+  },
+  {
+    "key": "album-1739747110",
+    "album": "Метель августа",
+    "artist": "ДДТ",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/59/72/30/5972309c-a26f-14f2-d273-67535cd675af/14_001_DDT-Metel_avgusta.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "ДДТ",
+        "title": "Летели облака"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1739747113,
+        "title": "Летели облака"
+      }
+    ]
+  },
+  {
+    "key": "album-1458962126",
+    "album": "Би-2",
+    "artist": "Би-2",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/09/9f/bb/099fbb12-3a95-fc08-ea6d-5f73641b32e8/193483690865.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Би-2",
+        "title": "Серебро"
+      },
+      {
+        "artist": "Би-2",
+        "title": "Полковнику никто не пишет"
+      },
+      {
+        "artist": "Би-2",
+        "title": "Варвара"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1458962152,
+        "title": "Серебро"
+      },
+      {
+        "id": 1458962128,
+        "title": "Полковнику никто не пишет"
+      },
+      {
+        "id": 1458962131,
+        "title": "Варвара"
+      }
+    ]
+  },
+  {
+    "key": "album-1458962888",
+    "album": "Мяу кисс ми",
+    "artist": "Би-2",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music113/v4/d9/1f/6e/d91f6ef6-6fc2-4e12-0d06-517c8e67a328/193483691121.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Би-2",
+        "title": "Моя любовь"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1458962899,
+        "title": "Моя любовь"
+      }
+    ]
+  },
+  {
+    "key": "album-1483044159",
+    "album": "В городе N",
+    "artist": "Uma2rman",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/28/4c/98/284c98e5-31af-f4d1-076a-84d7a4fa6a40/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Уматурман",
+        "title": "Прасковья"
+      },
+      {
+        "artist": "Уматурман",
+        "title": "Проститься"
+      },
+      {
+        "artist": "Уматурман",
+        "title": "Ночной дозор"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1483044173,
+        "title": "Прасковья"
+      },
+      {
+        "id": 1483044270,
+        "title": "Проститься"
+      },
+      {
+        "id": 1483044272,
+        "title": "Ночной дозор"
+      }
+    ]
+  },
+  {
+    "key": "album-1094704982",
+    "album": "Пой, весна",
+    "artist": "Uma2rman",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music69/v4/34/e7/dd/34e7dd18-f9e7-ca3f-b8fe-f74d2158ed32/dj.saloljmb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Уматурман",
+        "title": "Налей мне"
+      },
+      {
+        "artist": "Уматурман",
+        "title": "Токсины"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1094705075,
+        "title": "Налей мне"
+      },
+      {
+        "id": 1094705117,
+        "title": "Токсины"
+      }
+    ]
+  },
+  {
+    "key": "album-1345371898",
+    "album": "Гранатовый альбом",
+    "artist": "Сплин",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/29/8e/d5/298ed5aa-1cc7-1303-8157-50adb3e77643/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Сплин",
+        "title": "Выхода нет"
+      },
+      {
+        "artist": "Сплин",
+        "title": "Орбит без сахара"
+      },
+      {
+        "artist": "Сплин",
+        "title": "Бог устал нас любить"
+      },
+      {
+        "artist": "Сплин",
+        "title": "Весь этот бред"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1345372354,
+        "title": "Выхода нет"
+      },
+      {
+        "id": 1345371903,
+        "title": "Орбит без сахара"
+      },
+      {
+        "id": 1345372331,
+        "title": "Бог устал нас любить"
+      },
+      {
+        "id": 1345371900,
+        "title": "Весь этот бред"
+      }
+    ]
+  },
+  {
+    "key": "album-1212111998",
+    "album": "25-й кадр",
+    "artist": "Сплин",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/db/4a/c5/db4ac58b-d8b3-ab9a-f77a-79810509c2e6/859719935307_cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Сплин",
+        "title": "Мое сердце"
+      },
+      {
+        "artist": "Сплин",
+        "title": "Пой мне еще"
+      },
+      {
+        "artist": "Сплин",
+        "title": "Линия жизни"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1212112126,
+        "title": "Моё сердце"
+      },
+      {
+        "id": 1212112269,
+        "title": "Пой мне ещё"
+      },
+      {
+        "id": 1212111999,
+        "title": "Линия жизни"
+      }
+    ]
+  },
+  {
+    "key": "album-1518191698",
+    "album": "Новые люди",
+    "artist": "Сплин",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/cc/63/41/cc63419b-8f68-1f2d-120a-b8ad4e353e7f/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Сплин",
+        "title": "Новые люди"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1518191703,
+        "title": "Новые люди"
+      }
+    ]
+  },
+  {
+    "key": "album-581098891",
+    "album": "Online",
+    "artist": "BrainStorm",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music/v4/6f/c0/b7/6fc0b7b3-2dbc-9bfa-1d53-c0ddbf83671f/887396557000.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Brainstorm",
+        "title": "Maybe"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 581098949,
+        "title": "Maybe"
+      }
+    ]
+  },
+  {
+    "key": "album-1754129231",
+    "album": "SWA",
+    "artist": "Калинов Мост",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/78/e0/82/78e08267-9288-aaa0-dcde-a873f8c07eca/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Калинов Мост",
+        "title": "Камчатка"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1754129311,
+        "title": "Камчатка"
+      }
+    ]
+  },
+  {
+    "key": "album-1440766028",
+    "album": "Flamingo (Deluxe Edition)",
+    "artist": "Brandon Flowers",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/cf/8f/5f/cf8f5f6b-f09b-7a0d-a5d6-de3ec899de6e/10UMGIM21575.rgb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Brandon Flowers",
+        "title": "Crossfire"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1440766445,
+        "title": "Crossfire"
+      }
+    ]
+  },
+  {
+    "key": "album-992088658",
+    "album": "Origin of Symmetry",
+    "artist": "Muse",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/0c/c8/0b/0cc80b73-aa09-492d-4fcc-984cab29acfa/825646096909.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Muse",
+        "title": "Feeling Good"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 992089118,
+        "title": "Feeling Good"
+      },
+      {
+        "id": 992089118,
+        "title": "Feeling Good"
+      }
+    ]
+  },
+  {
+    "key": "album-1138290493",
+    "album": "Дайвер",
+    "artist": "SUNSAY",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/76/c9/ab/76c9ab85-2854-8451-8b92-84b83b85fe5c/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "SunSay",
+        "title": "Дайвер"
+      },
+      {
+        "artist": "SunSay",
+        "title": "Будь слабей меня"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1138290825,
+        "title": "Дайвер"
+      },
+      {
+        "id": 1138290649,
+        "title": "Будь слабей меня"
+      }
+    ]
+  },
+  {
+    "key": "album-1138832699",
+    "album": "Легко",
+    "artist": "SUNSAY",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/59/96/21/5996217d-b393-aa03-3a67-0ff553201110/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "SunSay",
+        "title": "Wind Song (ft John Forte)"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1138833183,
+        "title": "Wind Song (feat. John Forte)"
+      }
+    ]
+  },
+  {
+    "key": "album-1759279649",
+    "album": "Все лучшее в одном",
+    "artist": "5'nizza",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/0d/a3/6b/0da36bed-b1d3-6d12-e4a9-0b6a48001191/4823034779553.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "5nizza",
+        "title": "Половина меня"
+      },
+      {
+        "artist": "5nizza",
+        "title": "Ты такая"
+      },
+      {
+        "artist": "5nizza",
+        "title": "Немає куль"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1759280574,
+        "title": "Половина меня"
+      },
+      {
+        "id": 1759280359,
+        "title": "Ты такая"
+      },
+      {
+        "id": 1759280046,
+        "title": "Немає Куль"
+      }
+    ]
+  },
+  {
+    "key": "album-1748566745",
+    "album": "Пятница",
+    "artist": "5'nizza",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/6f/4f/fe/6f4ffe88-f18a-51e7-81e3-a1068a89c249/4823034779232.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "5nizza",
+        "title": "Ушедшим слишком рано"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1748568642,
+        "title": "Ушедшим слишком рано"
+      }
+    ]
+  },
+  {
+    "key": "album-1754963530",
+    "album": "О5",
+    "artist": "5'nizza",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/8e/9f/f4/8e9ff480-f4a5-308c-cf2b-d7dd24c05faa/198588494974.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "5nizza",
+        "title": "Новый день"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1754964142,
+        "title": "Новый день"
+      }
+    ]
+  },
+  {
+    "key": "album-1458137859",
+    "album": "Singles",
+    "artist": "Travis",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/dc/77/7b/dc777b0c-2e73-8b1a-5e96-ade393a6844a/00888072093294.rgb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Travis",
+        "title": "Sing"
+      },
+      {
+        "artist": "Travis",
+        "title": "Flowers In The Window"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1458138151,
+        "title": "Sing"
+      },
+      {
+        "id": 1458138627,
+        "title": "Flowers in the Window"
+      }
+    ]
+  },
+  {
+    "key": "album-1443833959",
+    "album": "Lifehouse",
+    "artist": "Lifehouse",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/ee/e3/4c/eee34c4e-93ec-af8e-5d58-b435a519a6aa/00602557705249.rgb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Lifehouse",
+        "title": "You And Me"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1443833976,
+        "title": "You and Me"
+      }
+    ]
+  },
+  {
+    "key": "album-1440768163",
+    "album": "No Name Face",
+    "artist": "Lifehouse",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/28/f1/1f/28f11f2c-bea1-7b4f-a872-1d25c61086ef/00602527333472.rgb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Lifehouse",
+        "title": "Everything"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1440768816,
+        "title": "Everything"
+      }
+    ]
+  },
+  {
+    "key": "album-889074540",
+    "album": "Без консервантов",
+    "artist": "Lumen",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/03/5d/02/035d02eb-5db1-9e83-2acd-efeb10f67778/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Lumen",
+        "title": "Кофе"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 889074598,
+        "title": "Кофе"
+      }
+    ]
+  },
+  {
+    "key": "album-553455499",
+    "album": "Одной крови",
+    "artist": "Lumen",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music/v4/c8/44/8a/c8448ad5-f883-4360-933f-91adcc3ca2cf/odnoy_krovi.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Lumen",
+        "title": "Мечта"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 553455560,
+        "title": "Мечта"
+      }
+    ]
+  },
+  {
+    "key": "album-1440858222",
+    "album": "Bad Blood (Bonus Track Version)",
+    "artist": "Bastille",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/e6/d8/61/e6d86177-ae8c-e84e-dfcc-0042687066ed/13UAAIM41955.rgb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Bastille",
+        "title": "Pompeii"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1440858321,
+        "title": "Pompeii"
+      }
+    ]
+  },
+  {
+    "key": "album-6769439363",
+    "album": "Свобода",
+    "artist": "Lumen",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/c7/f0/1a/c7f01a68-89eb-a15e-32a3-bf9f4e86f862/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Lumen",
+        "title": "Назови мне свое имя"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 6769439373,
+        "title": "Назови мне своё имя"
+      }
+    ]
+  },
+  {
+    "key": "album-865978813",
+    "album": "Морская (Deluxe)",
+    "artist": "Мумий Тролль",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/9f/fc/2c/9ffc2c68-7a6a-5a2e-174e-fe6f8d597cf8/morskaya.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Мумий Тролль",
+        "title": "Девочка"
+      },
+      {
+        "artist": "Мумий Тролль",
+        "title": "Забавы"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 865978824,
+        "title": "Девочка"
+      },
+      {
+        "id": 865978830,
+        "title": "Забавы"
+      }
+    ]
+  },
+  {
+    "key": "album-869027888",
+    "album": "Икра (Deluxe)",
+    "artist": "Мумий Тролль",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music/v4/e6/62/9e/e6629ee3-236c-e67d-8b55-fa34364ef603/ikra.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Мумий Тролль",
+        "title": "Дельфины"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 869027934,
+        "title": "Дельфины"
+      }
+    ]
+  },
+  {
+    "key": "album-1485404456",
+    "album": "100 грамм для храбрости (Прими на грудь и слушай!)",
+    "artist": "Григорий Лепс",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music123/v4/c7/2e/b3/c72eb389-7b43-5cd4-afbc-797fa22f46aa/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Григорий Лепс",
+        "title": "Рюмка водки"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1485404463,
+        "title": "Рюмка водки на столе"
+      }
+    ]
+  },
+  {
+    "key": "album-1050950113",
+    "album": "Капитал",
+    "artist": "Ляпис Трубецкой",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music6/v4/8a/b1/0c/8ab10c83-eb61-f119-3380-63f0c8b33f5a/album_id_5682261.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Ляпис Трубецкой",
+        "title": "Капитал"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1050950117,
+        "title": "Капитал"
+      }
+    ]
+  },
+  {
+    "key": "album-1803164355",
+    "album": "Greatest Hits",
+    "artist": "Akvarium",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/fc/9b/6a/fc9b6a99-c08e-fa08-bb37-24b874f9737d/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Аквариум",
+        "title": "Козлодоев"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1803164893,
+        "title": "Козлодоев"
+      }
+    ]
+  },
+  {
+    "key": "album-1440769594",
+    "album": "Best of Hoobastank",
+    "artist": "Hoobastank",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/17/00/ae/1700ae0f-ba70-bf48-df89-12ab614c83f2/10UMGIM21716.rgb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Hoobastank",
+        "title": "The Reason"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1440769862,
+        "title": "The Reason"
+      },
+      {
+        "id": 1440769862,
+        "title": "The Reason"
+      }
+    ]
+  },
+  {
+    "key": "album-1589963740",
+    "album": "ПРОСТИ МЕНЯ МОЯ ЛЮБОВЬ",
+    "artist": "Земфира",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/bb/ca/d0/bbcad0b1-109b-f19b-e4f4-18a35e526ab4/3610154399133.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Земфира",
+        "title": "Хочешь"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1589963804,
+        "title": "ХОЧЕШЬ?"
+      }
+    ]
+  },
+  {
+    "key": "album-1652896563",
+    "album": "В диапазоне между отчаянием и надеждой",
+    "artist": "Порнофильмы",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/d8/b5/c8/d8b5c875-556f-4380-d07c-10135d82b719/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Порнофильмы",
+        "title": "Я так соскучился"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1652896876,
+        "title": "Я так соскучился"
+      }
+    ]
+  },
+  {
+    "key": "album-1532722533",
+    "album": "Человеко-часы",
+    "artist": "Дайте Танк (!)",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/ac/91/c5/ac91c578-6758-2344-8741-8b6cbd2d80ef/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Дайте танк",
+        "title": "Люди"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1532722814,
+        "title": "Люди"
+      }
+    ]
+  },
+  {
+    "key": "album-1724488123",
+    "album": "Beautiful Things - Single",
+    "artist": "Benson Boone",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/54/f4/92/54f49210-e260-b519-ebbd-f4f40ee710cd/054391342751.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Benson Boone",
+        "title": "Beautiful Things"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1724488124,
+        "title": "Beautiful Things"
+      }
+    ]
+  },
+  {
+    "key": "album-1440855456",
+    "album": "V (Deluxe)",
+    "artist": "Maroon 5",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/b7/25/76/b72576f1-072e-3da2-60d5-2724a9bccf4a/14UMGIM31673.rgb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Maroon 5",
+        "title": "Sugar"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1440855562,
+        "title": "Sugar"
+      }
+    ]
+  },
+  {
+    "key": "album-300855107",
     "album": "In Your Honor",
     "artist": "Foo Fighters",
-    "titles": [
-      "best of you"
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/03/15/58/0315584b-0c8d-93c8-2342-55b3fc3fa88b/828767967257.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Foo Fighters",
+        "title": "Best Of You"
+      }
     ],
-    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/03/15/58/0315584b-0c8d-93c8-2342-55b3fc3fa88b/828767967257.jpg/300x300bb.jpg"
+    "tracks": [
+      {
+        "id": 300855110,
+        "title": "Best of You"
+      }
+    ]
   },
   {
-    "key": "the-bends",
+    "key": "album-456563917",
+    "album": "Wasting Light",
+    "artist": "Foo Fighters",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/f3/0b/5a/f30b5a14-7bc9-e81a-fb7a-8a2783d15be5/884977880991.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Foo Fighters",
+        "title": "Walk"
+      },
+      {
+        "artist": "Foo Fighters",
+        "title": "Rope"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 456564025,
+        "title": "Walk"
+      },
+      {
+        "id": 456564013,
+        "title": "Rope"
+      }
+    ]
+  },
+  {
+    "key": "album-262743410",
+    "album": "Echoes, Silence, Patience & Grace",
+    "artist": "Foo Fighters",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/1a/a8/d2/1aa8d22d-f1ab-0462-e6f0-4f19b2594383/886971151626.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Foo Fighters",
+        "title": "The Pretender"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 262743414,
+        "title": "The Pretender"
+      }
+    ]
+  },
+  {
+    "key": "album-1440873107",
+    "album": "Night Visions",
+    "artist": "Imagine Dragons",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/1f/fa/09/1ffa092f-f52f-4a66-7d10-4cc5982dc747/12UMGIM46901.rgb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Imagine Dragons",
+        "title": "Radioactive"
+      },
+      {
+        "artist": "Imagine Dragons",
+        "title": "Demons"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1440873126,
+        "title": "Radioactive"
+      },
+      {
+        "id": 1440873339,
+        "title": "Demons"
+      }
+    ]
+  },
+  {
+    "key": "album-1440855747",
+    "album": "Night Visions (Deluxe Version)",
+    "artist": "Imagine Dragons",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/f3/0e/ae/f30eaee3-d049-05ff-8b46-9cc61f2e2524/12UMGIM46900.rgb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Imagine Dragons",
+        "title": "On Top Of The World"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1440855804,
+        "title": "On Top of the World"
+      }
+    ]
+  },
+  {
+    "key": "album-1443128938",
+    "album": "The Lateness Of The Hour",
+    "artist": "Alex Clare",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/8a/25/a8/8a25a8bb-1f83-9758-2f43-fd0621ee69a9/00602537039012.rgb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Alex Clare",
+        "title": "Too Close"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1443129077,
+        "title": "Too Close"
+      }
+    ]
+  },
+  {
+    "key": "album-1452497420",
+    "album": "Жить в кайф",
+    "artist": "Max Korzh",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/40/40/bf/4040bf4e-9649-dc36-f37b-e5d4aedb0be2/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Макс Корж",
+        "title": "Жить в кайф"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1452498050,
+        "title": "Жить в кайф"
+      }
+    ]
+  },
+  {
+    "key": "album-1112971476",
+    "album": "Баста 5, Часть 2",
+    "artist": "Баста",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/fd/12/96/fd129611-14ab-fef9-3867-ae335d088d46/B5_2_iTunes.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Баста",
+        "title": "Выпускной (Медлячок)"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1112971495,
+        "title": "Выпускной (Медлячок)"
+      }
+    ]
+  },
+  {
+    "key": "album-1333012313",
+    "album": "Чёрный альбом",
+    "artist": "Кино",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music118/v4/ab/e9/ed/abe9eddc-1952-e7c5-c8d9-58176707e439/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Виктор Цой (Кино)",
+        "title": "Кукушка"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1333012320,
+        "title": "Кукушка"
+      }
+    ]
+  },
+  {
+    "key": "album-1224738148",
+    "album": "Вверх, Ч. 1",
+    "artist": "А-Мега",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/9d/ad/97/9dad97f6-da54-cc61-d00f-eb2a361e9594/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Амега",
+        "title": "Лететь"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1224738582,
+        "title": "Лететь"
+      }
+    ]
+  },
+  {
+    "key": "album-310527525",
+    "album": "Love Songs",
+    "artist": "Grover Washington, Jr.",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/74/bc/84/74bc8404-2438-8dea-8e55-1be0d7d68149/mzi.slifsmno.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Grover Washington Jr",
+        "title": "Just The Two Of Us"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 310527535,
+        "title": "Just the Two of Us (feat. Bill Withers)"
+      }
+    ]
+  },
+  {
+    "key": "album-290302885",
+    "album": "Only By the Night",
+    "artist": "Kings of Leon",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/74/25/4c/74254c8b-e03d-44e8-304d-4cde508b8cfb/dj.swemfdrr.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Kings of Leon",
+        "title": "Use Somebody"
+      },
+      {
+        "artist": "Kings Of Leon",
+        "title": "Sex On Fire"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 290303018,
+        "title": "Use Somebody"
+      },
+      {
+        "id": 290303003,
+        "title": "Sex On Fire"
+      }
+    ]
+  },
+  {
+    "key": "album-457503067",
+    "album": "Come Around Sundown (Expanded Edition)",
+    "artist": "Kings of Leon",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/80/5c/ab/805cab32-df9c-ce43-be39-9f5af0e075b2/mzi.bwjyitjb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Kings of Leon",
+        "title": "Pyro"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 457503078,
+        "title": "Pyro"
+      }
+    ]
+  },
+  {
+    "key": "album-207928114",
+    "album": "Snow (Hey Oh) - Single",
+    "artist": "Red Hot Chili Peppers",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/2a/24/8e/2a248e94-2b8e-3745-906a-084837c0d547/mzi.xeoqdinh.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Red Hot Chili Peppers",
+        "title": "Snow Hey Oh"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 207928116,
+        "title": "Snow (Hey Oh)"
+      }
+    ]
+  },
+  {
+    "key": "album-1444206214",
+    "album": "The Belt",
+    "artist": "In The Valley Below",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music118/v4/18/be/4b/18be4bbf-8957-7a6d-0b5b-078e6bc89e92/00602537528745.rgb.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "In The Valley Below",
+        "title": "Peaches"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1444206299,
+        "title": "Peaches"
+      }
+    ]
+  },
+  {
+    "key": "album-945575406",
+    "album": "Californication (Remastered)",
+    "artist": "Red Hot Chili Peppers",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/4c/86/1d/4c861dab-5428-f3b7-8068-82bb69db5e89/093624932130.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Red hot chili peppers",
+        "title": "Road tripping"
+      },
+      {
+        "artist": "Red Hot Chili Peppers",
+        "title": "Californication"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 945575422,
+        "title": "Road Trippin'"
+      },
+      {
+        "id": 945575413,
+        "title": "Californication"
+      }
+    ]
+  },
+  {
+    "key": "album-973481485",
+    "album": "The Best Of",
+    "artist": "BrainStorm",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/d0/7c/6b/d07c6b40-2516-e376-55c9-630f4278863a/4751019030064.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Brainstorm",
+        "title": "Ветер"
+      },
+      {
+        "artist": "Brainstorm",
+        "title": "Ты не один"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 973481493,
+        "title": "Ветер"
+      },
+      {
+        "id": 973481595,
+        "title": "Ты не один"
+      }
+    ]
+  },
+  {
+    "key": "album-1598185566",
+    "album": "13",
+    "artist": "Пилот",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/d2/76/e1/d276e10a-313c-395d-16a0-fd23e5d572cc/3610159572197.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Пилот",
+        "title": "Сердце машины"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1598185567,
+        "title": "Сердце машины"
+      }
+    ]
+  },
+  {
+    "key": "album-1754310149",
+    "album": "Оружие",
+    "artist": "Калинов Мост",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/74/73/87/7473871d-1d19-9ba2-b42b-5861b09d1c0b/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Калинов мост",
+        "title": "Родная"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1754310153,
+        "title": "Родная"
+      }
+    ]
+  },
+  {
+    "key": "album-1748086558",
+    "album": "Детям до 16",
+    "artist": "После 11",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/50/84/9b/50849bbc-3f2d-386b-2b16-2f155bd3afca/13_001_Posle_11-Detyam_do_16.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "После 11",
+        "title": "Крылья"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1748086560,
+        "title": "Крылья"
+      }
+    ]
+  },
+  {
+    "key": "album-1333010977",
+    "album": "Группа крови",
+    "artist": "Кино",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/a2/f7/13/a2f713de-4af3-9e21-da3f-c73d747cd847/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Виктор Цой (Кино)",
+        "title": "Группа крови"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1333011553,
+        "title": "Группа крови"
+      }
+    ]
+  },
+  {
+    "key": "album-1393041713",
+    "album": "Лето (Песня для Цоя)",
+    "artist": "Кино",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/76/19/61/761961fd-a2db-b899-5216-67087ca03e5b/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Виктор Цой (Кино)",
+        "title": "Восьмиклассница"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1393042220,
+        "title": "Восьмиклассница"
+      },
+      {
+        "id": 1393042220,
+        "title": "Восьмиклассница"
+      }
+    ]
+  },
+  {
+    "key": "album-1795795646",
+    "album": "Кухни - Single",
+    "artist": "Бонд с кнопкой",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/10/a2/68/10a26841-4a7c-e8b6-1b8d-04164a0b5b9d/0.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Бонд с кнопкой",
+        "title": "Кухни"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1795795647,
+        "title": "Кухни"
+      }
+    ]
+  },
+  {
+    "key": "album-1103393546",
+    "album": "Песня о безответной любви к родине",
+    "artist": "Nol",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music49/v4/84/c1/6e/84c16e1e-eb31-1edf-64a3-79095f591395/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Ноль",
+        "title": "Человек и кошка"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1103393618,
+        "title": "Человек и кошка"
+      }
+    ]
+  },
+  {
+    "key": "album-1053390705",
+    "album": "Ты кинула",
+    "artist": "Ляпис Трубецкой",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/d6/18/31/d6183181-f465-7df6-a9fe-3257ecc9eacc/mzm.uixskihu.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Ляпис Трубецкой",
+        "title": "В платье белом"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1053390713,
+        "title": "В платье белом"
+      }
+    ]
+  },
+  {
+    "key": "album-1871484306",
+    "album": "Кома",
+    "artist": "Крематорий",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/52/97/33/52973317-0f2d-1325-79d8-598e98f9f64f/0.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Крематорий",
+        "title": "Мусорный ветер"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1871484320,
+        "title": "Мусорный ветер"
+      }
+    ]
+  },
+  {
+    "key": "album-1534305212",
+    "album": "Одуванчики Для Канареек",
+    "artist": "Мёртвые Дельфины",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/b5/5f/80/b55f8061-8ce0-fba0-ef8e-1d7d049dad24/859742441530_cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Мертвые Дельфины",
+        "title": "На моей луне"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1534305213,
+        "title": "На Моей Луне"
+      }
+    ]
+  },
+  {
+    "key": "album-1117387490",
+    "album": "AZXV: Акустика",
+    "artist": "Animal Jazz",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music18/v4/29/4e/2e/294e2e91-5d0c-6e9c-c18f-f2ac16bd2176/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Animal ДжаZ",
+        "title": "Три Полоски"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1117388009,
+        "title": "Три полоски"
+      }
+    ]
+  },
+  {
+    "key": "album-1482666167",
+    "album": "Время любить",
+    "artist": "Animal Jazz",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music113/v4/58/d9/1c/58d91c4e-7392-eb8e-ed68-91b9ecc58dd9/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Animal ДжаZ",
+        "title": "Чувства"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1482666171,
+        "title": "Чувства"
+      }
+    ]
+  },
+  {
+    "key": "album-1108054225",
+    "album": "Stereotest",
+    "artist": "BoBRy",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music30/v4/cc/01/0c/cc010cc7-0a11-a480-a1d6-280a4e26caed/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Бобры",
+        "title": "Тихой сапой"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1108056481,
+        "title": "Тихой сапой"
+      }
+    ]
+  },
+  {
+    "key": "album-1108078541",
+    "album": "Музыку давай!",
+    "artist": "БоБРы",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music60/v4/ba/27/57/ba27576b-d8b2-3ab2-ddca-23b2beb2c083/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Бобры",
+        "title": "Эй, музыкант"
+      },
+      {
+        "artist": "Бобры",
+        "title": "Юра едет в ЮАР"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1108080653,
+        "title": "Эй музыкант"
+      },
+      {
+        "id": 1108080589,
+        "title": "Юра едет в ЮАР"
+      }
+    ]
+  },
+  {
+    "key": "album-1626576324",
+    "album": "Диссонанс (неполная версия)",
+    "artist": "Lumen",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/2f/01/8f/2f018f35-a6b7-5639-8664-01b8612f99d5/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Lumen",
+        "title": "Догонять"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1626577050,
+        "title": "Догонять"
+      }
+    ]
+  },
+  {
+    "key": "album-1753998374",
+    "album": "Руда",
+    "artist": "Калинов Мост",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/ee/bf/da/eebfda65-0a93-d2e8-7e54-2489408ff8ee/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Калинов Мост",
+        "title": "Брату"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1753998378,
+        "title": "Брату"
+      }
+    ]
+  },
+  {
+    "key": "album-1615638052",
+    "album": "В мире много сказок. Песни для детей.",
+    "artist": "Владимир Ферапонтов",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/26/b5/91/26b5911a-7730-e59f-2b15-602f5cee0e21/190296216091.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Песни из кино и мультфильмов",
+        "title": "Я играю на гармошке"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1615638055,
+        "title": "Песенка крокодила Гены (из м/ф \"Чебурашка\")"
+      }
+    ]
+  },
+  {
+    "key": "album-1575660901",
+    "album": "Песни для детей и их родителей. Выпуск 1",
+    "artist": "Оля Королькова & Big Children's Choir",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/5a/bc/bb/5abcbb33-f187-ee61-7c06-d6a5ebfa6c88/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Песни из кино и мультфильмов",
+        "title": "Прекрасное далеко"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1575661462,
+        "title": "Прекрасное далёко"
+      }
+    ]
+  },
+  {
+    "key": "album-708387537",
+    "album": "Лучшие Песни",
+    "artist": "Marina Devyatova",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/4c/cd/6f/4ccd6f54-4e3f-b1ad-6684-953d536a64c3/5051813988622_cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Песни из кино и мультфильмов",
+        "title": "Кабы не было зимы"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 708387549,
+        "title": "Кабы Не Было Зимы"
+      }
+    ]
+  },
+  {
+    "key": "album-1237739780",
+    "album": "Актер и песня",
+    "artist": "Pavel Smeyan",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/04/34/0f/04340f1a-8c9e-cc4f-aa63-cb9fc8944bc3/191773137625.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Песни из кино и мультфильмов",
+        "title": "Ветер перемен"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1237741305,
+        "title": "Ветер перемен (feat. Татьяна Воронина)"
+      }
+    ]
+  },
+  {
+    "key": "album-1586357662",
+    "album": "Кофе и сигареты",
+    "artist": "Сегодняночью",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/58/88/1f/58881faf-363a-8492-9810-fbf0b8035120/196292516838.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Сегодня ночью",
+        "title": "Сигареты и кофе"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1586357675,
+        "title": "Сигареты и кофе"
+      }
+    ]
+  },
+  {
+    "key": "album-1793776899",
+    "album": "Хиты 90-х",
+    "artist": "Валерий Сюткин",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/b0/61/cb/b061cba9-7ff7-b5e8-2724-51795a1a9d20/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Валерий Сюткин",
+        "title": "Я то что надо"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1793777080,
+        "title": "Я - то, что надо"
+      }
+    ]
+  },
+  {
+    "key": "album-1046951875",
+    "album": "Дорога в облака",
+    "artist": "Bravo",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/ea/e9/ed/eae9edfe-4413-4a08-ea3e-d03d18ba9518/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Браво",
+        "title": "Дорога в облака"
+      },
+      {
+        "artist": "Браво",
+        "title": "Любите Девушки"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1046952356,
+        "title": "Дорога в облака"
+      },
+      {
+        "id": 1046952358,
+        "title": "Любите, девушки"
+      }
+    ]
+  },
+  {
+    "key": "album-1565157915",
+    "album": "Ветер знает... - EP",
+    "artist": "Браво",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/f2/f0/a2/f2f0a20e-d6af-8a05-dfd2-0a48ff962e76/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Браво",
+        "title": "Этот город"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1565157922,
+        "title": "Этот город"
+      }
+    ]
+  },
+  {
+    "key": "album-1047210295",
+    "album": "На перекрёстках весны",
+    "artist": "Браво",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music3/v4/75/a7/eb/75a7eb1d-2652-9b3d-6248-a5976958e1c2/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Браво",
+        "title": "Ветер Знает"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1047211339,
+        "title": "Ветер знает..."
+      }
+    ]
+  },
+  {
+    "key": "album-1126308161",
+    "album": "The Best Of",
+    "artist": "Браво",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/5a/12/40/5a1240d5-5e67-7ea0-a73d-1e9c6c972167/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Браво",
+        "title": "Как Жаль"
+      },
+      {
+        "artist": "Браво",
+        "title": "Это За Окном Рассвет"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1126308628,
+        "title": "Как жаль"
+      },
+      {
+        "id": 1126308779,
+        "title": "Это за окном рассвет"
+      }
+    ]
+  },
+  {
+    "key": "album-1046951806",
+    "album": "Стиляги из Москвы",
+    "artist": "Браво",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music42/v4/3d/46/f2/3d46f2b6-ee25-5b70-fb40-1589213e170c/mzm.tuecmeww.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Браво",
+        "title": "Черный Кот"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1046951908,
+        "title": "Чёрный кот"
+      }
+    ]
+  },
+  {
+    "key": "album-1679849414",
+    "album": "Creep - EP",
+    "artist": "Radiohead",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/28/7a/7c/287a7ca9-ed95-1a21-e3bb-4559a1a0ac0e/191404134351.png/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Radiohead",
+        "title": "Creep"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1679849823,
+        "title": "Creep (Acoustic)"
+      }
+    ]
+  },
+  {
+    "key": "album-1097862703",
     "album": "The Bends",
     "artist": "Radiohead",
-    "titles": [
-      "fake plastic trees"
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/1b/a9/5c/1ba95cac-b245-d386-63fb-6b857aa9dce8/634904078065.png/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Radiohead",
+        "title": "Fake plastic trees"
+      }
     ],
-    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/1b/a9/5c/1ba95cac-b245-d386-63fb-6b857aa9dce8/634904078065.png/300x300bb.jpg"
+    "tracks": [
+      {
+        "id": 1097862845,
+        "title": "Fake Plastic Trees"
+      }
+    ]
+  },
+  {
+    "key": "album-1097861387",
+    "album": "OK Computer",
+    "artist": "Radiohead",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/07/60/ba/0760ba0f-148c-b18f-d0ff-169ee96f3af5/634904078164.png/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Radiohead",
+        "title": "Karma Police"
+      },
+      {
+        "artist": "Radiohead",
+        "title": "No Surprises"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1097861836,
+        "title": "Karma Police"
+      },
+      {
+        "id": 1097861842,
+        "title": "No Surprises"
+      }
+    ]
+  },
+  {
+    "key": "album-380907762",
+    "album": "Hunting High and Low (Deluxe Edition)",
+    "artist": "a-ha",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music/c6/e1/c8/mzi.ixgzfcmc.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "A-ha",
+        "title": "Take On Me"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 380907765,
+        "title": "Take On Me"
+      }
+    ]
+  },
+  {
+    "key": "album-392429592",
+    "album": "25 (Deluxe Version)",
+    "artist": "a-ha",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/3e/0a/38/3e0a38d9-b138-429a-61e1-aeac2fad3263/mzi.iefykuuf.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "a-ha",
+        "title": "Summer Moved On"
+      },
+      {
+        "artist": "a-ha",
+        "title": "Lifelines"
+      },
+      {
+        "artist": "a-ha",
+        "title": "Forever Not Yours"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 392429618,
+        "title": "Summer Moved On"
+      },
+      {
+        "id": 392429623,
+        "title": "Lifelines"
+      },
+      {
+        "id": 392429622,
+        "title": "Forever Not Yours"
+      }
+    ]
+  },
+  {
+    "key": "album-1612543823",
+    "album": "Violator  The 12\" Singles",
+    "artist": "Depeche Mode",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/a1/67/9c/a1679c06-1050-239c-bd3a-c374f7c6459e/886449952601.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Depeche Mode",
+        "title": "Enjoy The Silence"
+      },
+      {
+        "artist": "Depeche Mode",
+        "title": "Personal Jesus Acoustic"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1612544004,
+        "title": "Enjoy the Silence"
+      },
+      {
+        "id": 1612543834,
+        "title": "Personal Jesus (Acoustic)"
+      }
+    ]
+  },
+  {
+    "key": "album-394992805",
+    "album": "Young the Giant",
+    "artist": "Young the Giant",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/ac/1f/32/ac1f32cf-5951-aaa9-f029-9a80b8aad061/dj.pscqbrtu.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Young the Giant",
+        "title": "Cough Syrup"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 394992810,
+        "title": "Cough Syrup"
+      }
+    ]
+  },
+  {
+    "key": "album-1854584759",
+    "album": "Бременские музыканты. Трилогия",
+    "artist": "Gennadiy Gladkov",
+    "source": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/74/72/16/7472162b-e637-d00d-d20e-6a216eb3fb01/cover.jpg/300x300bb.jpg",
+    "songs": [
+      {
+        "artist": "Песни из кино и мультфильмов",
+        "title": "Говорят, мы бяки-буки"
+      }
+    ],
+    "tracks": [
+      {
+        "id": 1854585363,
+        "title": "Песня и танец Атаманши и разбойников (feat. Олег Анофриев) [Говорят, мы бяки буки Remastered 2025]"
+      }
+    ]
   }
 ]
