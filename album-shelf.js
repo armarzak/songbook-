@@ -33,11 +33,11 @@ window.FireAlbumShelf=(()=>{
     root.innerHTML='<div class="album-shelf-head"><h2>Твоя музыка</h2></div><div class="album-shelf-stage" role="group" aria-roledescription="карусель" aria-label="Песни по обложкам альбомов. Можно листать свайпом или клавишами со стрелками."></div><p class="album-shelf-caption"><strong></strong><span></span></p>';
     const stage=root.querySelector('.album-shelf-stage'),caption=root.querySelector('.album-shelf-caption');
     stage.style.opacity='0';
-    let pos=savedPosition,raf=0,last=0,visible=true,hover=false,focused=false,pointer=null,dragged=false,width=0,size=132,selected=-1,closed=false,ready=false;
+    let pos=savedPosition,raf=0,last=0,visible=true,hover=false,focused=false,pointer=null,dragged=false,width=0,size=132,selected=-1,closed=false,ready=false,momentum=0,settleTarget=null,resumeAt=0;
     const buttons=Array.from({length:Math.min(items.length,9)},()=>{
       const b=document.createElement('button');b.type='button';b.className='album-cover';b.songIndex=-1;b.imageReady=false;b.imageFailed=false;b.loadToken=0;b.style.visibility='hidden';
       const img=document.createElement('img');img.width=300;img.height=300;img.draggable=false;b.append(img);
-      b.addEventListener('click',()=>{if(!dragged&&b.songIndex>=0)open(items[b.songIndex].s.id)});stage.append(b);return b;
+      b.addEventListener('click',e=>{if((!dragged||e.detail===0)&&b.songIndex>=0)open(items[b.songIndex].s.id)});stage.append(b);return b;
     });
     function draw(){
       if(!root.isConnected){stop();return}
@@ -72,8 +72,23 @@ window.FireAlbumShelf=(()=>{
       const i=Math.round(pos)%total;
       if(i!==selected){selected=i;caption.firstElementChild.textContent=items[i].s.title;caption.lastElementChild.textContent=items[i].s.artist}
     }
-    function tick(t){raf=0;if(closed)return;if(last)pos+=Math.min(t-last,50)/4800;last=t;draw();if(!closed)raf=requestAnimationFrame(tick)}
-    function sync(){cancelAnimationFrame(raf);raf=0;last=0;if(!closed&&ready&&visible&&!document.hidden&&!hover&&!focused&&!pointer)raf=requestAnimationFrame(tick)}
+    function canRun(){
+      return !closed&&ready&&visible&&!document.hidden&&!pointer&&
+        (Math.abs(momentum)>.00015||settleTarget!==null||(!hover&&!focused));
+    }
+    function tick(t){
+      raf=0;if(closed)return;const dt=last?Math.min(t-last,40):0;last=t;
+      if(Math.abs(momentum)>.00015){
+        pos+=momentum*dt;momentum*=Math.exp(-dt/180);
+        if(Math.abs(momentum)<=.00015){momentum=0;settleTarget=Math.round(pos)}
+      }else if(settleTarget!==null){
+        let distance=settleTarget-pos;distance-=Math.round(distance/items.length)*items.length;
+        if(Math.abs(distance)<.003){pos=settleTarget;settleTarget=null;resumeAt=t+1200}
+        else pos+=distance*(1-Math.exp(-dt/60));
+      }else if(t>=resumeAt&&!hover&&!focused)pos+=dt/4800;
+      draw();if(canRun())raf=requestAnimationFrame(tick);
+    }
+    function sync(){cancelAnimationFrame(raf);raf=0;last=0;if(canRun())raf=requestAnimationFrame(tick)}
     function resize(){width=stage.clientWidth;size=buttons[0].offsetWidth;draw()}
     const ro=new ResizeObserver(resize);ro.observe(stage);
     const io=new IntersectionObserver(([e])=>{visible=e.isIntersecting;sync()});io.observe(stage);
@@ -81,10 +96,46 @@ window.FireAlbumShelf=(()=>{
     stage.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse'){hover=true;sync()}});
     stage.addEventListener('pointerleave',()=>{hover=false;sync()});
     stage.addEventListener('focusin',()=>{focused=true;sync()});stage.addEventListener('focusout',e=>{focused=stage.contains(e.relatedTarget);sync()});
-    stage.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();pos+=e.key==='ArrowRight'?1:-1;draw()}});
-    stage.addEventListener('pointerdown',e=>{if(e.button>0)return;pointer={id:e.pointerId,x:e.clientX,y:e.clientY,pos};dragged=false;sync()});
-    stage.addEventListener('pointermove',e=>{if(!pointer||e.pointerId!==pointer.id)return;const dx=e.clientX-pointer.x;if(!dragged&&Math.abs(dx)>8&&Math.abs(dx)>Math.abs(e.clientY-pointer.y)){dragged=true;stage.setPointerCapture(e.pointerId)}if(dragged){pos=pointer.pos-dx/(size*.92);draw()}});
-    const end=e=>{if(!pointer||e.pointerId!==pointer.id)return;pointer=null;sync()};window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);stage.addEventListener('lostpointercapture',end);
+    stage.addEventListener('keydown',e=>{
+      if(e.key==='ArrowRight'||e.key==='ArrowLeft'){
+        e.preventDefault();dragged=false;momentum=0;settleTarget=Math.round(pos)+(e.key==='ArrowRight'?1:-1);sync();
+      }
+    });
+    const stamp=e=>Number.isFinite(e.timeStamp)?e.timeStamp:performance.now();
+    stage.addEventListener('pointerdown',e=>{
+      if(e.button>0||pointer)return;
+      momentum=0;settleTarget=null;
+      pointer={id:e.pointerId,type:e.pointerType,x:e.clientX,y:e.clientY,pos,lastX:e.clientX,t:stamp(e),velocity:0};
+      dragged=false;sync();
+    });
+    stage.addEventListener('pointermove',e=>{
+      if(!pointer||e.pointerId!==pointer.id)return;
+      const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;
+      if(!dragged&&Math.abs(dx)>6&&Math.abs(dx)>Math.abs(dy)){
+        dragged=true;focused=false;stage.setPointerCapture(e.pointerId);
+      }
+      if(dragged){
+        if(e.cancelable)e.preventDefault();
+        const now=stamp(e),dt=Math.max(8,now-pointer.t),step=size*.92;
+        const velocity=-(e.clientX-pointer.lastX)/dt*1.8/step;
+        pointer.velocity=Math.max(-.012,Math.min(.012,pointer.velocity*.35+velocity*.65));
+        pointer.lastX=e.clientX;pointer.t=now;
+        pos=pointer.pos-dx*1.8/step;draw();
+      }
+    });
+    const end=e=>{
+      if(!pointer||e.pointerId!==pointer.id)return;
+      const p=pointer;pointer=null;
+      if(dragged){
+        focused=false;if(p.type!=='mouse')hover=false;
+        const fresh=stamp(e)-p.t<100;
+        momentum=e.type==='pointerup'&&fresh?p.velocity:0;
+        if(Math.abs(momentum)<=.00015){momentum=0;settleTarget=Math.round(pos)}
+        resumeAt=performance.now()+1200;
+      }
+      sync();
+    };
+    window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);stage.addEventListener('lostpointercapture',end);
     dispose=()=>{savedPosition=pos;closed=true;cancelAnimationFrame(raf);ro.disconnect();io.disconnect();document.removeEventListener('visibilitychange',visibility);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',end)};
     resize();sync();
   }
