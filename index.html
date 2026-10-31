@@ -10,7 +10,8 @@
 <meta name="theme-color" content="#F1F2EE" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111312" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="album-shelf.css?v=112">
+<link rel="stylesheet" href="playback-tools.css?v=113">
+<link rel="stylesheet" href="album-shelf.css?v=113">
 <link rel="apple-touch-icon" href="fire-180.png">
 <link rel="icon" type="image/png" href="fire-180.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
@@ -916,7 +917,10 @@ input.mono{font-family:var(--f-mono)}
 <div id="sheet" class="sheet" hidden></div>
 <div id="toast" class="toast" hidden role="status"></div>
 
-<script src="album-shelf.js?v=112"></script>
+<script src="album-shelf.js?v=113"></script>
+<script src="tempo-core.js?v=113"></script>
+<script src="backing-tempo.js?v=113"></script>
+<script src="gtp-fretboard.js?v=113"></script>
 <script>
 /* ---------- music theory ---------- */
 const SPEED_MIN=3,SPEED_MAX=70; // autoscroll, pixels per second (the old slowest step was 12)
@@ -2390,6 +2394,7 @@ function openMetro(){
       <button class="btn primary" id="m-toggle" data-act="m-toggle">${M.on?'Стоп':'Старт'}</button>
     </div>
     <div class="m-row"><span class="cap">Отсчёт перед стартом</span><div class="seg" role="group" aria-label="Отсчёт перед стартом"><button data-act="ci" data-v="1" aria-pressed="${countInOn()}">Вкл</button><button data-act="ci" data-v="0" aria-pressed="${!countInOn()}">Выкл</button></div></div>
+    ${FCBackingTempo.html(findSong(S.cur))}
     <p class="hint" id="m-listen-st" role="status"></p>
     <p class="hint">«Темп на слух»: включите песню, песенник 12 секунд послушает её через микрофон и поставит темп. Если музыка играет на этом же телефоне, iOS может приостановить её, когда включится микрофон, тогда включите песню на другом устройстве.</p>
     <p class="hint">Отсчёт: перед минусом и автопрокруткой метроном отсчитывает один такт в темпе песни. Быстро включить или выключить — кнопка «1·2·3·4» внизу песни.</p>
@@ -2564,6 +2569,7 @@ async function trackLoad(s){
   TR.el=a; TR.has=true;
   if(S.view==='song')renderTools();
   wavePeaks(s.id,rec);
+  // Existing files can be analyzed explicitly; newly imported files are analyzed after save.
 }
 function trackStop(){
   if(TR.marking&&TR.k>0&&TR.id&&store){const now=Date.now(),o=TR.wordMode?wordMarksOut():TR.from?markMerged():{marks:TR.marks.slice(0,TR.k),wmarks:null};store.patch(TR.id,{marks:o.marks,wmarks:o.wmarks,marksAt:now,updatedAt:now}).catch(()=>{})}
@@ -2706,6 +2712,7 @@ async function trackAdd(file){
   const sentPath=s.track&&s.track.path;
   try{await store.patch(s.id,{track:{name:file.name,dur:Math.round(dur)},updatedAt:Date.now()})}catch(e){saveErr(e);return}
   closeSheet(); await trackLoad(findSong(s.id)); toast('Минус добавлен');
+  void FCBackingTempo.analyze(s.id);
   if(sentPath&&ghOn())trackSend(s.id);
 }
 async function trackRemove(btn){
@@ -2952,7 +2959,7 @@ function trackMenu(s){
   }
   const marked=TR.marks.filter(x=>x!=null).length;
   const sw=findSong(S.cur),hasW=sw&&Array.isArray(sw.wmarks)&&sw.wmarks.some(a=>Array.isArray(a)&&a.some(x=>x!=null));
-  return `<button class="btn" data-act="t-mark">${ICON.metro}${marked?'Разметить строки заново':'Разметить строки под минус'}</button>`+
+  return FCBackingTempo.html(s)+`<button class="btn" data-act="t-mark">${ICON.metro}${marked?'Разметить строки заново':'Разметить строки под минус'}</button>`+
     (marked?`<button class="btn" data-act="t-markfrom">${ICON.metro}Доразметить с выбранной строки</button>`:'')+
     `<button class="btn" data-act="t-markw">${ICON.metro}${hasW?'Разметить по словам заново':'Разметить по словам'}</button><p class="hint">По словам: нажимаете в начале каждого слова, и при игре слова закрашиваются точно в момент, когда их поют. Без этого слова внутри строки закрашиваются примерно, по разметке строк.</p>`+add+
     (ghOn()?(s.track&&s.track.path?`<button class="btn" data-act="t-unsend">${ICON.share}Убрать минус с GitHub</button><p class="hint">Минус отправлен на GitHub: на iPad его можно скачать в этой песне.</p>`:`<button class="btn" data-act="t-send">${ICON.share}Отправить минус на iPad</button>`):'')+
@@ -3037,6 +3044,7 @@ async function gpOpen(){
       <select id="gp-track" aria-label="Дорожка" hidden></select>
     </div>
     <div class="gp-wrap" id="gp-wrap"><p class="gp-msg" id="gp-msg">Загружаю табулатуру…</p><div id="gp-at"></div></div>
+    <section class="fc-neck" id="gp-neck" aria-label="Ноты на грифе"></section>
     <div class="gp-bar">
       <button class="btn icon" data-act="gp-play" id="gp-play" disabled aria-label="Играть">${ICON.play}</button>
       <button class="btn icon" data-act="gp-stop" aria-label="В начало">■</button>
@@ -3055,6 +3063,7 @@ async function gpOpen(){
       enableCursor:true,enableUserInteraction:true,outputMode:'WebAudioScriptProcessor'}
   });
   AT.api=api;
+  AT.fretboard=new FCFretboard(api,document.getElementById('gp-neck'));
   api.scoreLoaded.on(score=>{
     const t=document.getElementById('gp-title'); if(t)t.textContent=[score.title,score.artist].filter(Boolean).join(' — ')||G.file.name;
     const sel=document.getElementById('gp-track');
@@ -3068,12 +3077,13 @@ async function gpOpen(){
   try{api.load(new Uint8Array(await G.file.arrayBuffer()))}catch(e){gpMsg('Не получилось прочитать файл.')}
 }
 function gpClose(){
+  if(AT.fretboard){AT.fretboard.destroy();AT.fretboard=null}
   if(AT.api){try{AT.api.stop()}catch{};try{AT.api.destroy()}catch{};AT.api=null}
   const ov=document.getElementById('gpview'); if(ov)ov.remove();
   document.body.classList.remove('gp-on');
 }
 function gpPlay(){if(!AT.api)return;unlockAudio(6*3600);AT.api.playPause()}
-function gpTrack(i){const a=AT.api;if(a&&a.score&&a.score.tracks[i])a.renderTracks([a.score.tracks[i]])}
+function gpTrack(i){const a=AT.api;if(a&&a.score&&a.score.tracks[i]){a.renderTracks([a.score.tracks[i]]);if(AT.fretboard)AT.fretboard.select(+i)}}
 function gpProfile(btn){
   AT.profile=AT.profile==='Tab'?'Default':'Tab'; lsSet('sb.gpprofile',AT.profile);
   btn.textContent=AT.profile==='Tab'?'Ноты + табы':'Только табы';
@@ -4510,6 +4520,6 @@ initStore().then(st=>{
 });
 </script>
 
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=112',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=113',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>

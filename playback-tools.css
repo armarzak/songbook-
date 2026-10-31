@@ -1,0 +1,10 @@
+.fc-neck{flex:none;border-top:1px solid var(--line);background:var(--bar);padding:7px 12px 4px;overflow:hidden}
+.fc-neck-top{display:flex;gap:9px;align-items:center;font-size:12px;min-height:30px}
+.fc-neck-top .btn{font-size:11px;padding:4px 9px;min-height:28px}
+.fc-neck-tuning{flex:1;color:var(--muted);font:11px var(--f-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc-neck-scroll{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.fc-neck-scroll[hidden]{display:none}
+.fc-neck-scroll svg{display:block;width:100%;min-width:850px;height:auto;max-height:190px}
+.fc-neck-status{font-size:11px;color:var(--muted);margin:3px 0;min-height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fc-tempo{margin:8px 0}.fc-tempo .actions{justify-content:flex-start;gap:7px;flex-wrap:wrap}.fc-tempo .hint:empty{display:none}
+@media(max-width:600px){.fc-neck{padding:5px 8px 2px}.fc-neck-top{gap:6px}.fc-neck-scroll svg{min-width:780px}.fc-neck-tuning{font-size:10px}}
