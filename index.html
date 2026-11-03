@@ -152,7 +152,14 @@ body.has-tools .wrap{padding-block-end:calc(var(--toolsh,120px) + 28px)}
 .bar-in{max-width:760px;margin:0 auto;padding:10px 16px;display:flex;gap:8px;align-items:center;min-height:60px}
 .bar-title{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .brand{flex:1;display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-weight:700;font-size:19px;letter-spacing:-.01em}
-.brand .logo{width:28px;height:28px;flex:none}
+.brand{border:0;background:none;color:var(--fg);text-align:left;padding:0;min-height:40px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.brand:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:8px}
+.brand .logo{width:28px;height:28px;flex:none;filter:drop-shadow(0 0 2px #ff982744);transition:filter .3s}
+.brand .logo path:last-child{transform-box:fill-box;transform-origin:50% 90%;animation:brand-flame 3.6s ease-in-out infinite}
+.brand.ignite .logo{animation:brand-ignite .9s ease-out}
+@keyframes brand-flame{0%,100%{transform:scale(1) rotate(-1deg);opacity:.94}35%{transform:scale(.97,1.06) rotate(1.5deg);opacity:1}65%{transform:scale(1.03,.98) rotate(-.5deg);opacity:.9}}
+@keyframes brand-ignite{0%,100%{transform:scale(1);filter:drop-shadow(0 0 2px #ff982744)}35%{transform:scale(1.09);filter:drop-shadow(0 0 7px #ff9b42aa)}65%{transform:scale(1.03);filter:drop-shadow(0 0 4px #ffb95088)}}
+@media(prefers-reduced-motion:reduce){.brand .logo path:last-child,.brand.ignite .logo{animation:none}}
 
 .btn{font:500 15px var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:8px 13px;min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .btn.primary{background:var(--accent);color:var(--on-accent);border-color:transparent;font-weight:600}
@@ -1572,7 +1579,7 @@ function cofSvg(){
 function renderCircle(){
   stopScroll(); S.view='circle'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
-  <header class="bar"><div class="bar-in"><div class="brand">${LOGO}Fire Chords</div></div></header>
+  <header class="bar"><div class="bar-in"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни">${LOGO}<span>Fire Chords</span></button></div></header>
   <div class="wrap">
     ${tabsHtml('circle')}
     <div class="cof-wrap"><div id="cof-svg"></div><div id="cof-info" class="cof-info"></div></div>
@@ -1681,7 +1688,7 @@ function fretboardSvg(){
 function renderScales(){
   stopScroll(); S.view='scales'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
-  <header class="bar"><div class="bar-in"><div class="brand">${LOGO}Fire Chords</div></div></header>
+  <header class="bar"><div class="bar-in"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни">${LOGO}<span>Fire Chords</span></button></div></header>
   <div class="wrap wide">
     ${tabsHtml('scales')}
     <div class="sc-ctrl">
@@ -2006,7 +2013,7 @@ function renderTuner(){
       <div class="t-help" id="t-help"></div>
     </div>`;
   app.innerHTML=`
-  <header class="bar"><div class="bar-in"><div class="brand">${LOGO}Fire Chords</div></div></header>
+  <header class="bar"><div class="bar-in"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни">${LOGO}<span>Fire Chords</span></button></div></header>
   <div class="wrap">
     ${tabsHtml('tuner')}
     ${tuViewSeg()}
@@ -2181,7 +2188,7 @@ function renderChart(){
   stopScroll(); S.view='chart'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
   <header class="bar"><div class="bar-in">
-    <div class="brand">${LOGO}Fire Chords</div>
+    <button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни">${LOGO}<span>Fire Chords</span></button>
     <button class="btn primary" data-act="new-shape">${ICON.plus}Своя схема</button>
   </div></header>
   <div class="wrap wide">
@@ -3232,11 +3239,18 @@ function stageTap(e){
 }
 document.addEventListener('visibilitychange',async()=>{if(!document.hidden&&S.stage&&!stageWake){try{stageWake=await navigator.wakeLock.request('screen')}catch{}}});
 
+function brandHome(){
+  closeSheet();if(S.stage)exitStage();
+  S.q='';S.tag=null;S.cur=null;
+  pageTurn('back');renderList();SCR.scrollTo({top:0,behavior:'instant'});
+  const brand=document.querySelector('.brand');
+  if(brand){brand.classList.add('ignite');setTimeout(()=>brand.classList.remove('ignite'),900)}
+}
 function renderList(){
   stopScroll(); S.view='list'; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
   <header class="bar"><div class="bar-in">
-    <div class="brand">${LOGO}Fire Chords</div>
+    <button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни">${LOGO}<span>Fire Chords</span></button>
     <button class="btn" data-act="import">Импорт</button>
     <button class="btn primary" data-act="new">${ICON.plus}Песня</button>
   </div></header>
@@ -4271,7 +4285,8 @@ document.addEventListener('click',e=>{
   }
   if(!b){if(e.target===sheet)closeSheet();return}
   const a=b.dataset.act;
-  if(a==='new')renderEditor(null);
+  if(a==='brand-home')brandHome();
+  else if(a==='new')renderEditor(null);
   else if(a==='tab-list'){S.cur=null;renderList()}
   else if(a==='hitmos-play'){e.preventDefault();openHitmos()}
   else if(a==='hitmos-expand'){const hb=document.getElementById('hitmosbox');const expanded=hb.classList.toggle('hitmos-expanded');b.setAttribute('aria-pressed',String(expanded));b.textContent=expanded?'Свернуть плеер':'Развернуть плеер'}
@@ -4602,6 +4617,6 @@ initStore().then(st=>{
 });
 </script>
 
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=125',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=126',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
