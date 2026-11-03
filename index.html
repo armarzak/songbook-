@@ -3412,10 +3412,29 @@ function hitmosLink(value,audio=false){
 const HITMOS_TRACKS={
   '9795511':'https://plc1.hitmos.fm/L21wMy8yNzUzMjAzL3RyYWNrLm1wMw==.mp3'
 };
+const hitmosKey=s=>[s.artist,s.title].map(x=>String(x||'').normalize('NFKC').toLowerCase().replace(/ё/g,'е').replace(/[^\p{L}\p{N}]+/gu,' ').trim()).join('|');
+let HITMOS_CATALOG=(()=>{try{return JSON.parse(lsGet('sb.hitmos.catalog')||'null')}catch{return null}})();
+async function loadHitmosCatalog(){
+  if(!ghOn())return;
+  const repo=GH.cfg.repo;
+  try{
+    const file=await ghFetch('/contents/hitmos-tracks.json?ts='+Date.now());
+    const data=JSON.parse(b64decUtf8(file.content));
+    if(data.version!==1||!data.tracks||typeof data.tracks!=='object'||GH.cfg?.repo!==repo)return;
+    const before=S.cur&&findSong(S.cur)?hitmosAudioFor(findSong(S.cur)):'';
+    HITMOS_CATALOG={repo,tracks:data.tracks,generatedAt:data.generatedAt};
+    lsSet('sb.hitmos.catalog',JSON.stringify(HITMOS_CATALOG));
+    const current=S.cur&&findSong(S.cur),player=document.querySelector('#hitmosbox audio');
+    if(S.view==='song'&&current&&before!==hitmosAudioFor(current)&&(!player||player.paused)&&!document.querySelector('#hitmosbox iframe'))renderSong(S.cur,true);
+  }catch{ /* Retain cached links offline or while the first Actions run is pending. */ }
+}
 function hitmosAudioFor(s){
   const explicit=hitmosLink(s.hitmosAudio,true);if(explicit)return explicit;
   const page=hitmosLink(s.hitmosUrl),id=page&&new URL(page).pathname.match(/^\/song\/(\d+)/);
-  return id?HITMOS_TRACKS[id[1]]||'':'';
+  if(id&&HITMOS_TRACKS[id[1]])return HITMOS_TRACKS[id[1]];
+  const record=GH.cfg&&HITMOS_CATALOG?.repo===GH.cfg.repo?HITMOS_CATALOG.tracks[hitmosKey(s)]:null;
+  if(!record||(page&&record.page!==page))return '';
+  return hitmosLink(record.audio,true);
 }
 function openHitmos(){
   const s=findSong(S.cur);if(!s)return;
@@ -4440,6 +4459,7 @@ async function ghSync(report){
       try{await ghFetch('/contents/songbook.json',{method:'PUT',body:JSON.stringify({message:'Песенник: синхронизация',content:b64encUtf8(JSON.stringify(out,null,1)),...(file?{sha:file.sha}:{})})});break}
       catch(e){if((e.status===409||e.status===422)&&attempt<2)continue;throw e}  // changed on another device meanwhile: merge again
     }
+    await loadHitmosCatalog();
     GH.cfg.last=Date.now(); lsSet('sb.gh',JSON.stringify(GH.cfg)); ghStatus('',false);
     setTimeout(gtpPending,0);
     if(report){const n=S.songs.length,m=S.songs.filter(x=>Array.isArray(x.marks)&&x.marks.some(v=>v!=null)).length;
@@ -4543,6 +4563,6 @@ initStore().then(st=>{
 });
 </script>
 
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=119',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=120',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
