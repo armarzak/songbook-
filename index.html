@@ -3385,6 +3385,7 @@ function pageTurn(dir){
 /* ---------- quick links beside the song title: YouTube (lesson, fingerstyle), Instagram, Yandex Music, Ultimate Guitar, ToneBridge ---------- */
 const TONEBRIDGE_APP='https://apps.apple.com/app/id1117291846'; // Tonebridge Guitar Effects (Ultimate Guitar) — it has no search link, so the song name is copied first
 const BRAND={
+  hitmos:'<svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="36" height="36" rx="9" fill="#fff"/><g stroke="#a84b69" stroke-linecap="round"><path d="M8 10v16" stroke-width="3"/><path d="M12 8v20M16 11v14M20 14v8M24 16v4M28 17v2" stroke-width="2.5"/></g></svg>',
   yts:'<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="4.5" y="9.5" width="27" height="19" rx="6" fill="none" stroke="#FF0033" stroke-width="2.4"/><path d="M15 14.5v9l7.5-4.5z" fill="#FF0033"/><circle cx="29" cy="27" r="6" fill="var(--bg)" stroke="currentColor" stroke-width="2.4"/><path d="M33.3 31.3l3.5 3.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>',
   yt:'<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="4" y="9" width="32" height="22" rx="7" fill="#FF0033"/><path d="M17 14.5v11l9.5-5.5z" fill="#fff"/></svg>',
   ig:'<svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="igGrad" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#FEDA75"/><stop offset=".3" stop-color="#FA7E1E"/><stop offset=".55" stop-color="#D62976"/><stop offset=".8" stop-color="#962FBF"/><stop offset="1" stop-color="#4F5BD5"/></linearGradient></defs><rect x="5" y="5" width="30" height="30" rx="9" fill="url(#igGrad)"/><rect x="11" y="11" width="18" height="18" rx="5.5" fill="none" stroke="#fff" stroke-width="2.4"/><circle cx="20" cy="20" r="4.3" fill="none" stroke="#fff" stroke-width="2.4"/><circle cx="25.6" cy="14.4" r="1.4" fill="#fff"/></svg>',
@@ -3399,11 +3400,30 @@ const UG_TAB_RE=/https?:\/\/(?:tabs|www)\.ultimate-guitar\.com\/tab\/[^\s"'<>)]+
 const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const inSafari=u=>IS_IOS&&/^https:\/\//i.test(u)?'x-safari-'+u:u;
 const isEnglishSong=s=>{const t=((s&&s.title)||'')+' '+((s&&s.artist)||'');return /[A-Za-z]/.test(t)&&!/[А-Яа-яЁё]/.test(t)};
+function hitmosLink(value,audio=false){
+  try{
+    const u=new URL((value||'').trim());
+    if(u.protocol!=='https:'||u.username||u.password)return '';
+    if(audio)return /(^|\.)hitmos\.fm$/i.test(u.hostname)&&/\.mp3$/i.test(u.pathname)?u.href:'';
+    return /(^|\.)hitmos\.(fm|me)$/i.test(u.hostname)&&/^\/(song|artist)\/\d+\/?$/.test(u.pathname)?u.href:'';
+  }catch{return ''}
+}
+// Verified page-to-audio references; page HTML cannot be fetched cross-origin by the web app.
+const HITMOS_TRACKS={
+  '9795511':'https://plc1.hitmos.fm/L21wMy8yNzUzMjAzL3RyYWNrLm1wMw==.mp3'
+};
+function hitmosAudioFor(s){
+  const explicit=hitmosLink(s.hitmosAudio,true);if(explicit)return explicit;
+  const page=hitmosLink(s.hitmosUrl),id=page&&new URL(page).pathname.match(/^\/song\/(\d+)/);
+  return id?HITMOS_TRACKS[id[1]]||'':'';
+}
 function songLinks(s){
   if(!s||s.demo)return '';
   const q=[s.artist,s.title].map(x=>(x||'').trim()).filter(Boolean).join(' ');
   const a=(href,icon,label,extra)=>`<a class="slink" href="${esc(href)}" target="_blank" rel="noopener"${extra||''}>${icon}<span>${esc(label)}</span></a>`;
   let h='';
+  const hm=hitmosLink(s.hitmosUrl)||(q?'https://rus.hitmos.fm/search?q='+encodeURIComponent(q):'');
+  if(hm)h+=a(hm,BRAND.hitmos,'Hitmos',hitmosAudioFor(s)?' data-act="hitmos-play"':'');
   if(s.ytLesson)h+=a(s.ytLesson,BRAND.yt,'Разбор');
   if(s.ytFinger)h+=a(s.ytFinger,BRAND.yt,'Fingerstyle');
   const vids=videoLinks(s).map(videoInfo).filter(Boolean);
@@ -3545,6 +3565,15 @@ function fillSong(){
     <div class="vlinks">${trackCan()?`<button class="btn primary gtpbtn" data-act="gp-open">${ICON.play}GTP</button>`:''}</div>
     <p class="hint">Табулатура с бегущим курсором и звуком.</p>
   </section>`:'';
+  let hb=document.getElementById('hitmosbox');
+  if(!hb){hb=document.createElement('section');hb.id='hitmosbox';hb.className='video';document.getElementById('videobox').before(hb)}
+  const ha=hitmosAudioFor(s);hb.hidden=!ha;
+  if(hb.dataset.audio!==ha){
+    hb.querySelector('audio')?.pause();hb.dataset.audio=ha;
+    hb.innerHTML=ha?`<h3 class="sec-h">Слушать · Hitmos</h3><audio controls preload="none" style="width:100%" src="${esc(ha)}"></audio><p class="hint" hidden>Не удалось загрузить аудио. Откройте страницу Hitmos по ссылке в карточке песни.</p>`:'';
+    const player=hb.querySelector('audio');
+    if(player){player.addEventListener('error',()=>{hb.querySelector('.hint').hidden=false});player.addEventListener('play',()=>trackStop())}
+  }
   const vb=document.getElementById('videobox'); if(vb&&vb.dataset.v!==(s.video||'')){vb.dataset.v=s.video||'';vb.innerHTML=videoHtml(s)}
   document.getElementById('strip').innerHTML=seen.map(n=>{
     const v=getVoicings(n).list[0];
@@ -3630,6 +3659,8 @@ function renderEditor(id,draft){
     </div>
     <div class="field"><label>Метки</label><div class="tagpick" id="tagpick"></div>
       <div class="tagadd"><input id="f-tag" placeholder="Новая метка" autocomplete="off" maxlength="24"><button class="btn" type="button" data-act="tag-add">Добавить</button></div></div>
+    <div class="field"><label for="f-hitmos">Hitmos — ссылка на песню (необязательно)</label><input id="f-hitmos" type="url" inputmode="url" placeholder="https://rus.hitmos.fm/song/…" value="${esc((s&&!s.demo&&s.hitmosUrl)||'')}"><div class="hint">Без ссылки кнопка Hitmos ищет по исполнителю и названию песни.</div></div>
+    <div class="field"><label for="f-hitmos-audio">Hitmos — аудиоссылка (необязательно)</label><input id="f-hitmos-audio" type="url" inputmode="url" placeholder="https://…hitmos.fm/….mp3" value="${esc((s&&!s.demo&&s.hitmosAudio)||'')}"><div class="hint">Прямая MP3-ссылка включает прослушивание в песеннике. Ссылка на страницу сюда не подходит.</div></div>
     <div class="field"><label for="f-yt-lesson">YouTube — разбор</label><input id="f-yt-lesson" type="url" inputmode="url" autocapitalize="off" spellcheck="false" placeholder="https://youtu.be/…" value="${esc((s&&!s.demo&&s.ytLesson)||'')}"></div>
     <div class="field"><label for="f-yt-finger">YouTube — Fingerstyle</label><input id="f-yt-finger" type="url" inputmode="url" autocapitalize="off" spellcheck="false" placeholder="https://youtu.be/…" value="${esc((s&&!s.demo&&s.ytFinger)||'')}"></div>
     <div class="field"><label for="f-ug">Ultimate Guitar — ссылка на эту песню</label><input id="f-ug" type="url" inputmode="url" autocapitalize="off" spellcheck="false" placeholder="https://tabs.ultimate-guitar.com/tab/…" value="${esc((s&&!s.demo&&s.ugUrl)||'')}"><div class="hint">Тогда иконка «Guitar Tabs» откроет сразу эту песню, а приложение Ultimate Guitar — её страницу, откуда есть переход в ToneBridge. Ссылку можно скопировать в приложении Ultimate Guitar: «Поделиться» → «Скопировать ссылку».</div></div>
@@ -3650,8 +3681,9 @@ async function doSave(id){
   document.getElementById('e-title').textContent=title?'':'Введите название песни.';
   document.getElementById('e-body').textContent=body?'':'Вставьте текст с аккордами.';
   if(!title||!body)return;
+  for(const [field,audio] of [['f-hitmos',false],['f-hitmos-audio',true]]){const v=document.getElementById(field).value.trim();if(v&&!hitmosLink(v,audio)){toast(audio?'Нужна HTTPS-ссылка Hitmos на MP3':'Нужна ссылка Hitmos на песню или исполнителя');document.getElementById(field).focus();return}}
   saveSong(id,{title,artist:document.getElementById('f-artist').value.trim(),capo:+document.getElementById('f-capo').value,body,tags:[...ED.tags],video:(document.getElementById('f-video').value||'').split(/\s+/).filter(x=>/^https?:\/\//i.test(x)).join('\n'),
-    ytLesson:linkOf('f-yt-lesson'),ytFinger:linkOf('f-yt-finger'),ugUrl:linkOf('f-ug')});
+    hitmosUrl:hitmosLink(linkOf('f-hitmos')),hitmosAudio:hitmosLink(linkOf('f-hitmos-audio'),true),ytLesson:linkOf('f-yt-lesson'),ytFinger:linkOf('f-yt-finger'),ugUrl:linkOf('f-ug')});
 }
 function linkOf(id){const v=(document.getElementById(id).value||'').trim();return /^https?:\/\/\S+$/i.test(v)?v:''
 }
@@ -4141,7 +4173,7 @@ function tick(t){
 }
 async function startScroll(){S.scroll.on=true;lastT=null;acc=0;raf=requestAnimationFrame(tick);
   try{wake=await navigator.wakeLock.request('screen')}catch{wake=null}}
-function stopScroll(){FireAlbumShelf.stop();micStop();songWakeOff();countInStop();gpClose();if(document.body.classList.contains('vfull-on'))videoExit();tunerStop();metroStop();trackStop();stopAuto()}
+function stopScroll(){document.querySelector('#hitmosbox audio')?.pause();FireAlbumShelf.stop();micStop();songWakeOff();countInStop();gpClose();if(document.body.classList.contains('vfull-on'))videoExit();tunerStop();metroStop();trackStop();stopAuto()}
 function stopAuto(){S.scroll.on=false;cancelAnimationFrame(raf);if(wake){wake.release().catch(()=>{});wake=null}}
 
 /* ---------- events ---------- */
@@ -4174,6 +4206,7 @@ document.addEventListener('click',e=>{
   const a=b.dataset.act;
   if(a==='new')renderEditor(null);
   else if(a==='tab-list'){S.cur=null;renderList()}
+  else if(a==='hitmos-play'){e.preventDefault();const player=document.querySelector('#hitmosbox audio');if(player){player.play().catch(()=>toast('Нажмите ▶ в плеере Hitmos'));player.scrollIntoView({behavior:'smooth',block:'center'})}}
   else if(a==='tonebridge')toneBridgeCopy(b.dataset.q);
   else if(a==='ci-toggle'){const on=!countInOn();lsSet('sb.countin',on?'1':'0');renderTools();toast(on?'Отсчёт перед стартом включён':'Отсчёт выключен')}
   else if(a==='ci'){lsSet('sb.countin',b.dataset.v);openMetro()}
@@ -4497,6 +4530,6 @@ initStore().then(st=>{
 });
 </script>
 
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=117',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=118',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
