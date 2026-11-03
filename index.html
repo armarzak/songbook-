@@ -630,6 +630,9 @@ body.stage .video{display:none}
 .ln .w[data-s="1"]{background:linear-gradient(90deg,var(--accent) var(--p,0%),var(--fg) var(--p,0%));-webkit-background-clip:text;background-clip:text;color:transparent}
 .ln .w.wnext{outline:2px solid var(--accent);outline-offset:1px;border-radius:3px}
 .markbar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--bar);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.timing-picker{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);margin:6px 0}
+.timing-picker select{max-width:170px;min-height:34px;font:500 12px var(--f-body);color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:4px}
+.trackgrp .timing-picker{margin:0 4px}.trackgrp .timing-picker>span{display:none}
 .mark-player{width:100%;max-width:728px}
 .mark-player .grp strong{padding-inline:8px;font-size:13px}
 .mark-player .tools-in{width:100%}
@@ -2561,7 +2564,7 @@ function drawWave(tick){
 })();
 
 async function trackLoad(s){
-  trackStop(); TR.id=s.id; TR.marks=Array.isArray(s.marks)?s.marks.slice():[]; TR.peaks=null; TR.glideOff=0;
+  trackStop(); TR.id=s.id; TR.marks=playbackTiming(s,'backing').marks.slice(); TR.peaks=null; TR.glideOff=0;
   if(S.view==='song')renderTools();
   if(!trackCan()||!s.track)return;
   let rec=await trackGet(s.id);
@@ -2590,7 +2593,7 @@ async function trackLoad(s){
   // Existing files can be analyzed explicitly; newly imported files are analyzed after save.
 }
 function trackStop(){
-  if(TR.marking&&TR.k>0&&TR.id&&store){const now=Date.now(),o=TR.wordMode?wordMarksOut():TR.from?markMerged():{marks:TR.marks.slice(0,TR.k),wmarks:null};store.patch(TR.id,{marks:o.marks,wmarks:o.wmarks,marksAt:now,updatedAt:now}).catch(()=>{})}
+  if(TR.marking&&TR.k>0&&TR.id&&store){const now=Date.now(),o=TR.wordMode?wordMarksOut():TR.from?markMerged():{marks:TR.marks.slice(0,TR.k),wmarks:null};store.patch(TR.id,{marks:o.marks,wmarks:o.wmarks,marksAt:now,backingTimingSource:'backing',backingTimingSourceAt:now,updatedAt:now}).catch(()=>{})}
   wordClear(); TR.wordMode=false;
   if(TR.el){try{TR.el.pause();TR.el.removeAttribute('src');TR.el.load()}catch{}}
   if(TR.url)URL.revokeObjectURL(TR.url);
@@ -2610,7 +2613,7 @@ function trackTools(){
   const d=isFinite(TR.el.duration)?TR.el.duration:0,t=TR.el.currentTime||0,on=!TR.el.paused;
   return `<div class="grp trackgrp" aria-label="Минус">
     <button data-act="t-play" class="${on?'on':''}" aria-label="${on?'Пауза':'Играть минус'}">${on?ICON.pause:ICON.play}</button>
-    <span class="tt" id="t-time">${fmtTime(t)} / ${fmtTime(d)}</span>${TR.marking?'':ciBtn()}
+    <span class="tt" id="t-time">${fmtTime(t)} / ${fmtTime(d)}</span>${TR.marking?'':ciBtn()+timingPicker(findSong(TR.id||S.cur),'backing')}
     </div><div class="wavebar"><canvas id="t-wave" class="wave" role="slider" aria-label="Минус: нажмите или проведите, чтобы перемотать" aria-valuemin="0" aria-valuemax="${Math.round(d)}" aria-valuenow="${Math.round(t)}"></canvas></div>`;
 }
 function trackToggle(){
@@ -2787,13 +2790,46 @@ function micFailText(k){
   if(k==='unsupported')return 'Здесь нет доступа к микрофону. Откройте песенник с экрана «Домой».';
   return 'Не получилось включить микрофон.';
 }
+/* Pick timing data without copying or overwriting either recording's marks. */
+function playbackTiming(song,target,audio){
+  const s=song||{},source=s[target+'TimingSource']||(target==='hitmos'?'hitmos':'backing');
+  if(source==='hitmos'){
+    const valid=target!=='hitmos'||!audio||s.hitmosMarksAudio===audio;
+    return {source,marks:valid&&Array.isArray(s.hitmosMarks)?s.hitmosMarks:[],wmarks:null};
+  }
+  return {source:'backing',marks:Array.isArray(s.marks)?s.marks:[],wmarks:Array.isArray(s.wmarks)?s.wmarks:null};
+}
+function timingPicker(song,target){
+  if(!song)return '';
+  const source=song[target+'TimingSource']||(target==='hitmos'?'hitmos':'backing');
+  const count=a=>Array.isArray(a)?a.filter(x=>x!=null).length:0;
+  return `<label class="timing-picker"><span>Разметка</span><select data-timing-player="${target}" aria-label="Разметка ${target==='hitmos'?'Hitmos':'минуса'}"><option value="backing"${source==='backing'?' selected':''}>Минус · ${count(song.marks)} ${plural(count(song.marks),'строка','строки','строк')}</option><option value="hitmos"${source==='hitmos'?' selected':''}>Hitmos · ${count(song.hitmosMarks)} ${plural(count(song.hitmosMarks),'строка','строки','строк')}</option></select></label>`;
+}
+function refreshTimingPickers(song){
+  if(!song||S.cur!==song.id)return;
+  document.querySelectorAll('[data-timing-player]').forEach(el=>{const target=el.dataset.timingPlayer;el.closest('.timing-picker').outerHTML=timingPicker(song,target)});
+}
+async function changeTimingSource(select){
+  const song=findSong(S.cur),target=select.dataset.timingPlayer,source=select.value;
+  if(!song||!['backing','hitmos'].includes(target)||!['backing','hitmos'].includes(source))return;
+  if(TR.marking||window.FCHitmosMark?.marking){toast('Сначала завершите разметку');refreshTimingPickers(song);return}
+  const now=Date.now();
+  try{
+    await store.patch(song.id,{[target+'TimingSource']:source,[target+'TimingSourceAt']:now,updatedAt:now});
+    const current=findSong(song.id);refreshTimingPickers(current);
+    if(target==='backing'&&TR.id===song.id){wordClear();TR.marks=playbackTiming(current,'backing').marks.slice();TR.cur=-2;if(TR.el&&!TR.el.paused){cancelAnimationFrame(TR.raf);TR.raf=requestAnimationFrame(trackFollow)}renderTools()}
+    else if(target==='hitmos')window.FCHitmosMark?.refresh();
+    if(!playbackTiming(current,target).marks.length)toast('В выбранной разметке пока нет отметок строк');
+  }catch(e){refreshTimingPickers(findSong(song.id));saveErr(e)}
+}
+
 /* ---------- karaoke by words: the sung words fill with color, word by word, inside the current line ---------- */
 const wordsHtml=t=>t.split(/(\s+)/).map(p=>!p?'':/^\s+$/.test(p)?p:`<span class="w">${esc(p)}</span>`).join('');
-function wordClear(){(TR.wEls||[]).concat(TR.wMirror||[]).forEach(el=>{delete el.dataset.s;el.style.removeProperty('--p');el._p=null});TR.wEls=[];TR.wMirror=[];TR.wLine=-1}
+function wordClear(ctx=TR){(ctx.wEls||[]).concat(ctx.wMirror||[]).forEach(el=>{delete el.dataset.s;el.style.removeProperty('--p');el._p=null});ctx.wEls=[];ctx.wMirror=[];ctx.wLine=-1}
 /* when each word of line i starts: from the word marks if the line has them all, otherwise spread over the line by word length */
-function wordTimes(i,els){
-  const s=findSong(TR.id||S.cur)||{},wm=Array.isArray(s.wmarks)&&Array.isArray(s.wmarks[i])?s.wmarks[i]:null;
-  const st=TR.marks[i],nx=TR.marks.slice(i+1).find(x=>x!=null);
+function wordTimes(i,els,ctx=TR){
+  const words=ctx===TR?playbackTiming(findSong(TR.id||S.cur),'backing').wmarks:ctx.wordMarks,wm=Array.isArray(words)&&Array.isArray(words[i])?words[i]:null;
+  const st=ctx.marks[i],nx=ctx.marks.slice(i+1).find(x=>x!=null);
   let end=nx!=null?nx:st+Math.max(2.5,els.length*0.45);
   if(wm&&wm.length===els.length&&wm.every(x=>x!=null)){
     const last=wm[wm.length-1],avg=wm.length>1?(last-wm[0])/(wm.length-1):0.5;
@@ -2803,17 +2839,17 @@ function wordTimes(i,els){
   const w=els.map(e=>e.textContent.length+1),tot=w.reduce((a,b)=>a+b,0)||1; let acc=st;
   const r=w.map(x=>{const v=acc;acc+=(end-st)*x/tot;return v}); r.end=end; return r;
 }
-function wordFollow(t){
-  const i=TR.cur;
-  if(i==null||i<0){if(TR.wLine>=0)wordClear();return}
-  if(TR.wLine!==i){
-    wordClear(); TR.wLine=i;
+function wordFollow(t,ctx=TR){
+  const i=ctx.cur;
+  if(i==null||i<0){if(ctx.wLine>=0)wordClear(ctx);return}
+  if(ctx.wLine!==i||(ctx.wEls?.length&&!ctx.wEls[0].isConnected)){
+    wordClear(ctx); ctx.wLine=i;
     const ly=liEl(i);
-    TR.wEls=ly?[...ly.querySelectorAll('.w')]:[]; TR.wTimes=TR.wEls.length?wordTimes(i,TR.wEls):[];
+    ctx.wEls=ly?[...ly.querySelectorAll('.w')]:[]; ctx.wTimes=ctx.wEls.length?wordTimes(i,ctx.wEls,ctx):[];
     // a tab block (or a part with tabs under it) is one "word": every stave fills along with it, not just the first
-    TR.wMirror=ly&&TR.wEls.length===1?[...document.querySelectorAll(`.ln.tab[data-pli="${ly.dataset.li}"] .w`)]:[];
+    ctx.wMirror=ly&&ctx.wEls.length===1?[...document.querySelectorAll(`.ln.tab[data-pli="${ly.dataset.li}"] .w`)]:[];
   }
-  const ws=TR.wEls,tm=TR.wTimes; if(!ws||!ws.length)return;
+  const ws=ctx.wEls,tm=ctx.wTimes; if(!ws||!ws.length)return;
   // only what changed is written, in 5% steps: repainting the words every frame made the phone lag
   const set=(el,s,p)=>{
     if(s){if(el.dataset.s!==s)el.dataset.s=s}else if(el.dataset.s)delete el.dataset.s;
@@ -2823,7 +2859,7 @@ function wordFollow(t){
     const a=tm[k],b=tm[k+1]!=null?tm[k+1]:tm.end;
     let s='',p=null;
     if(t>=b)s='2'; else if(t>=a){s='1';p=Math.max(0,Math.min(100,Math.round((t-a)/Math.max(0.05,b-a)*20)*5))}
-    set(ws[k],s,p); if(k===0)TR.wMirror.forEach(el=>set(el,s,p));
+    set(ws[k],s,p); if(k===0)ctx.wMirror.forEach(el=>set(el,s,p));
   }
 }
 /* marking by words: one tap at the start of every word; the first word of a line also marks the line */
@@ -2925,7 +2961,7 @@ async function markDone(){
   const byWords=TR.wordMode; TR.wordMode=false;
   const out=byWords?wordMarksOut():TR.from?markMerged():{marks:TR.marks.slice(0,TR.k),wmarks:null},marks=out.marks; TR.from=0;
   try{
-    const now=Date.now(); await store.patch(s.id,{marks,wmarks:out.wmarks,marksAt:now,updatedAt:now}); TR.marks=marks; TR.wLine=-1; if(S.view==='song')renderTools();
+    const now=Date.now(); await store.patch(s.id,{marks,wmarks:out.wmarks,marksAt:now,backingTimingSource:'backing',backingTimingSourceAt:now,updatedAt:now}); TR.marks=marks;refreshTimingPickers(findSong(s.id)); TR.wLine=-1; if(S.view==='song')renderTools();
     toast(marks.length?'Разметка сохранена: '+(byWords?'по словам, ':'')+marks.filter(x=>x!=null).length+' '+plural(marks.filter(x=>x!=null).length,'строка','строки','строк')+(ghOn()?'. Отправляю на GitHub…':''):'Разметка очищена');
     if(ghOn()){clearTimeout(GH.timer);ghSync(true)}
   }catch(e){saveErr(e)}
@@ -2935,7 +2971,7 @@ function markCancel(){
   document.querySelectorAll('.w.wnext').forEach(e=>e.classList.remove('wnext')); TR.wordMode=false;
   TR.marking=false; const mb=document.getElementById('markbar'); if(mb)mb.remove();
   lineHL(-1,'next'); if(TR.el)TR.el.pause();
-  const s=findSong(S.cur); TR.marks=s&&Array.isArray(s.marks)?s.marks.slice():[];renderTools();
+  const s=findSong(S.cur); TR.marks=playbackTiming(s,'backing').marks.slice();renderTools();
 }
 function trackMenu(s){
   if(s.demo)return '';
@@ -2946,7 +2982,7 @@ function trackMenu(s){
     return add+(s.track?`<p class="hint">Минус «${esc(s.track.name)}» хранится на другом устройстве. Выберите здесь тот же файл, и текст пойдёт за ним по готовой разметке.</p>`:'')
       +(nm?`<p class="hint">Разметка строк есть (${nm}). Без файла её можно запустить кнопкой ▶ «по разметке» в нижней панели: текст пойдёт по сохранённому таймингу без звука.</p>`:'');
   }
-  const marked=TR.marks.filter(x=>x!=null).length;
+  const marked=(Array.isArray(s.marks)?s.marks:[]).filter(x=>x!=null).length;
   const sw=findSong(S.cur),hasW=sw&&Array.isArray(sw.wmarks)&&sw.wmarks.some(a=>Array.isArray(a)&&a.some(x=>x!=null));
   return FCBackingTempo.html(s)+`<button class="btn" data-act="t-mark">${ICON.metro}${marked?'Разметить строки заново':'Разметить строки под минус'}</button>`+
     (marked?`<button class="btn" data-act="t-markfrom">${ICON.metro}Доразметить с выбранной строки</button>`:'')+
@@ -3550,7 +3586,7 @@ function renderSong(id,keepScroll){
   if((G.id!==id||(!G.file&&s.gtp&&s.gtp.path&&!G.fetching))&&!s.demo){G.fetching=true;gtpLoad(s).finally(()=>{G.fetching=false})}
   if(!s.gtp&&!s.demo&&G.autoId!==id){G.autoId=id;gtpAutoAttach(s).then(ok=>{if(ok&&S.cur===id){G.id=null;gtpLoad(findSong(id)).then(()=>{fillSong();toast('Нашёл GTP-файл для этой песни на GitHub')})}})}
   if(TR.id!==id&&!s.demo)trackLoad(s);
-  else if(TR.id===id){const m=Array.isArray(s.marks)?s.marks:[];if(!TR.marking&&JSON.stringify(m)!==JSON.stringify(TR.marks)){TR.marks=m.slice();renderTools()}}
+  else if(TR.id===id){const m=playbackTiming(s,'backing').marks;if(!TR.marking&&JSON.stringify(m)!==JSON.stringify(TR.marks)){TR.marks=m.slice();renderTools()}}
   document.body.classList.add('has-tools');
   SCR.scrollTo(0,y);
 }
@@ -3638,7 +3674,7 @@ function fillSong(){
   const ha=hitmosAudioFor(s);hb.hidden=hb.dataset.open!=='1';
   if(hb.dataset.audio!==ha){
     hb.querySelector('audio')?.pause();hb.dataset.audio=ha;
-    hb.innerHTML=ha?`<div class="actions"><h3 class="sec-h">Слушать · Hitmos</h3><button class="btn" data-act="hitmos-close">Закрыть</button></div><audio controls preload="none" style="width:100%" src="${esc(ha)}"></audio><div class="actions"><button class="btn" data-act="hm-start">${s.hitmosMarksAudio===ha&&s.hitmosMarks?.length?'Разметить строки Hitmos заново':'Разметить строки Hitmos'}</button><button class="btn" data-act="hitmos-retry">Повторить</button><a class="btn" href="${esc(hitmosLink(s.hitmosUrl)||'https://rus.hitmos.fm/search?q='+encodeURIComponent([s.artist,s.title].filter(Boolean).join(' ')))}" target="_blank" rel="noopener">Открыть Hitmos ↗</a></div><p class="hint" hidden></p>`:'';
+    hb.innerHTML=ha?`<div class="actions"><h3 class="sec-h">Слушать · Hitmos</h3><button class="btn" data-act="hitmos-close">Закрыть</button></div><audio controls preload="none" style="width:100%" src="${esc(ha)}"></audio>${timingPicker(s,'hitmos')}<div class="actions"><button class="btn" data-act="hm-start">${s.hitmosMarksAudio===ha&&s.hitmosMarks?.length?'Разметить строки Hitmos заново':'Разметить строки Hitmos'}</button><button class="btn" data-act="hitmos-retry">Повторить</button><a class="btn" href="${esc(hitmosLink(s.hitmosUrl)||'https://rus.hitmos.fm/search?q='+encodeURIComponent([s.artist,s.title].filter(Boolean).join(' ')))}" target="_blank" rel="noopener">Открыть Hitmos ↗</a></div><p class="hint" hidden></p>`:'';
     const player=hb.querySelector('audio');
     if(player){window.FCHitmosMark?.bind(player,s,ha);player.addEventListener('error',()=>hitmosError(player));player.addEventListener('loadedmetadata',()=>{hb.querySelector('.hint').hidden=true});player.addEventListener('play',pauseBackingForHitmos)}
   }
@@ -4420,6 +4456,7 @@ document.addEventListener('change',e=>{
   if(e.target.id==='imp-pdf'&&e.target.files&&e.target.files[0]){importPdf(e.target.files[0]);e.target.value=''}
 });
 let impT;
+document.addEventListener('change',e=>{if(e.target.matches('[data-timing-player]'))changeTimingSource(e.target)});
 document.addEventListener('input',e=>{
   const id=e.target.id;
   if(id==='search'){S.q=e.target.value;fillList()}
@@ -4475,6 +4512,7 @@ function mergeData(local,remote){
     let w=(s.updatedAt||0)>=(o.updatedAt||0)?s:o; const l=w===s?o:s;
     if((l.marksAt||0)>(w.marksAt||0))w={...w,marks:l.marks,wmarks:l.wmarks,marksAt:l.marksAt};
     if((l.hitmosMarksAt||0)>(w.hitmosMarksAt||0))w={...w,hitmosMarks:l.hitmosMarks,hitmosMarksAudio:l.hitmosMarksAudio,hitmosMarksAt:l.hitmosMarksAt};
+    for(const target of ['backing','hitmos'])if((l[target+'TimingSourceAt']||0)>(w[target+'TimingSourceAt']||0))w={...w,[target+'TimingSource']:l[target+'TimingSource'],[target+'TimingSourceAt']:l[target+'TimingSourceAt']};
     map.set(s.id,w);
   }
   const songs=[...map.values()].filter(s=>!(del[s.id]>=(s.updatedAt||0))).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
@@ -4616,7 +4654,7 @@ initStore().then(st=>{
 });
 </script>
 
-<script src="hitmos-marking.js?v=130"></script>
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=130',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script src="hitmos-marking.js?v=131"></script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=131',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>

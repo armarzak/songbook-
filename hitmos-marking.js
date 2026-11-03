@@ -1,7 +1,6 @@
 /* Original recording timings are deliberately independent of the backing track's TR state. */
 window.FCHitmosMark=(()=>{
   const state={marking:false,id:null,audio:'',player:null,marks:[],n:0,raf:0,current:-1};
-  const saved=(song,audio)=>song&&song.hitmosMarksAudio===audio&&Array.isArray(song.hitmosMarks)?song.hitmosMarks:[];
   function update(){
     const p=state.player;if(!p)return;
     const t=p.currentTime||0,d=Number.isFinite(p.duration)?p.duration:0;
@@ -15,17 +14,19 @@ window.FCHitmosMark=(()=>{
     cancelAnimationFrame(state.raf);state.raf=0;
     const p=state.player;if(!p||!p.isConnected)return;
     if(state.marking)update();
-    else if(S.view==='song'&&S.cur===state.id){
-      const marks=saved(findSong(state.id),state.audio);let current=-1;
+    else if(S.view==='song'&&S.cur===state.id&&(!TR.el||TR.el.paused)){
+      const timing=playbackTiming(findSong(state.id),'hitmos',state.audio),marks=timing.marks;let current=-1;
       marks.forEach((time,i)=>{if(time!=null&&time<=p.currentTime+.05)current=i});
       if(current!==state.current){state.current=current;lineHL(current,'cur',!p.paused)}
+      state.cur=current;state.marks=marks;state.wordMarks=timing.wmarks;
+      wordFollow(p.currentTime,state);
     }
     if(!p.paused)state.raf=requestAnimationFrame(follow);
   }
   function bind(player,song,audio){
     player.addEventListener('play',()=>{
       if(state.marking&&state.player!==player)finish(true);
-      Object.assign(state,{id:song.id,audio,player,current:-1});follow();
+      wordClear();wordClear(state);Object.assign(state,{id:song.id,audio,player,current:-1});follow();
     });
     player.addEventListener('pause',update);
     player.addEventListener('loadedmetadata',update);
@@ -39,7 +40,7 @@ window.FCHitmosMark=(()=>{
     if(state.marking)return;
     const n=document.querySelectorAll('.ln[data-li]').length;
     if(!n){toast('В песне нет строк текста');return}
-    closeSheet();pauseBackingForHitmos();exitStage();
+    closeSheet();pauseBackingForHitmos();exitStage();wordClear();wordClear(state);
     Object.assign(state,{marking:true,id:song.id,audio:box.dataset.audio,player,marks:[],n,current:-1});
     document.getElementById('markbar')?.remove();lineHL(-1,'cur');lineHL(0,'next',true);
     const bar=document.createElement('div');bar.id='markbar';bar.className='markbar';
@@ -69,12 +70,14 @@ window.FCHitmosMark=(()=>{
     if(S.view==='song')renderTools();
     if(!save||!result.length)return;
     try{
-      const now=Date.now();await store.patch(id,{hitmosMarks:result,hitmosMarksAudio:audio,hitmosMarksAt:now,updatedAt:now});
+      const now=Date.now();await store.patch(id,{hitmosMarks:result,hitmosMarksAudio:audio,hitmosMarksAt:now,hitmosTimingSource:'hitmos',hitmosTimingSourceAt:now,updatedAt:now});
+      refreshTimingPickers(findSong(id));
       const button=document.querySelector('[data-act="hm-start"]');if(button&&S.cur===id)button.textContent='Разметить строки Hitmos заново';
       toast('Разметка Hitmos сохранена: '+result.length+' '+plural(result.length,'строка','строки','строк'));
     }catch(e){saveErr(e)}
   }
-  function close(){if(state.marking)finish(true);cancelAnimationFrame(state.raf);state.raf=0;state.current=-1;lineHL(-1,'cur')}
+  function close(){if(state.marking)finish(true);cancelAnimationFrame(state.raf);state.raf=0;state.current=-1;wordClear(state);lineHL(-1,'cur')}
+  function refresh(){if(state.marking)return;wordClear(state);state.current=-1;if(state.player?.isConnected)follow()}
   document.addEventListener('pointerdown',e=>{
     if(e.button>0||!e.target.closest?.('[data-act="hm-tap"]'))return;
     tap();e.preventDefault();
@@ -89,5 +92,5 @@ window.FCHitmosMark=(()=>{
     else if(action==='hm-toggle'&&state.player){if(state.player.paused)state.player.play().then(follow).catch(()=>toast('Не удалось запустить Hitmos'));else state.player.pause()}
   });
   document.addEventListener('input',e=>{if(e.target.id==='hm-mark-seek'&&state.marking){state.player.currentTime=+e.target.value;update()}});
-  return {bind,start,close,finish,get marking(){return state.marking}};
+  return {bind,start,close,finish,refresh,get marking(){return state.marking}};
 })();
