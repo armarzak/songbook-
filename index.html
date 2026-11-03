@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="referrer" content="origin">
+<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -3434,7 +3434,7 @@ function hitmosAudioFor(s){
   const page=hitmosLink(s.hitmosUrl),id=page&&new URL(page).pathname.match(/^\/song\/(\d+)/);
   if(id&&HITMOS_TRACKS[id[1]])return HITMOS_TRACKS[id[1]];
   const record=GH.cfg&&HITMOS_CATALOG?.repo===GH.cfg.repo?HITMOS_CATALOG.tracks[hitmosKey(s)]:null;
-  if(!record||(page&&record.page!==page))return '';
+  if(!record||record.available===false||(page&&record.page!==page))return '';
   return hitmosLink(record.audio,true);
 }
 function retryHitmos(){
@@ -4578,6 +4578,6 @@ initStore().then(st=>{
 });
 </script>
 
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=121',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=122',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
