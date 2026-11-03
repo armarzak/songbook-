@@ -197,6 +197,9 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
 #hitmosbox:not([hidden]){animation:hitmos-reveal .22s ease-out}
 @keyframes hitmos-reveal{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){#hitmosbox:not([hidden]){animation:none}}
+#hitmosbox.hitmos-expanded{position:fixed;inset:calc(env(safe-area-inset-top,0px) + 8px) 8px calc(env(safe-area-inset-bottom,0px) + 8px);z-index:1000;display:flex;flex-direction:column;gap:8px;margin:0;padding:12px;background:var(--bg);border:1px solid var(--muted);border-radius:16px;box-shadow:0 8px 40px #0008;overflow:auto}
+#hitmosbox.hitmos-expanded .hitmos-frame{flex:1;min-height:180px;height:auto}
+#hitmosbox.hitmos-expanded .sec-h{margin:0}
 .hitmos-frame{height:65vh;min-height:360px;overflow:hidden;border-radius:12px;background:white}
 .hitmos-frame iframe{display:block;width:100%;height:100%;border:0;background:white}
 @media(max-width:639px){.hitmos-frame:not(.full) iframe{height:calc(100% + 450px);transform:translateY(-450px)}}
@@ -3464,7 +3467,7 @@ function pauseBackingForHitmos(){
 }
 function closeHitmos(){
   const hb=document.getElementById('hitmosbox');if(!hb)return;
-  hb.querySelector('audio')?.pause();hb.hidden=true;delete hb.dataset.open;
+  hb.querySelector('audio')?.pause();hb.hidden=true;hb.classList.remove('hitmos-expanded');delete hb.dataset.open;
   if(hb.querySelector('iframe')){hb.innerHTML='';delete hb.dataset.web;delete hb.dataset.audio}
 }
 function openHitmos(){
@@ -3477,7 +3480,7 @@ function openHitmos(){
   const q=[s.artist,s.title].filter(Boolean).join(' ');
   const url=hitmosLink(s.hitmosUrl)||'https://rus.hitmos.fm/search?q='+encodeURIComponent(q);
   hb.hidden=false;hb.dataset.web='1';
-  hb.innerHTML=`<h3 class="sec-h">Слушать · Hitmos</h3><div class="actions"><button class="btn" data-act="hitmos-close">Закрыть</button><a class="btn" href="${esc(url)}" target="_blank" rel="noopener">Открыть на сайте ↗</a></div><button class="btn" data-act="hitmos-frame-top" aria-expanded="false">Показать верх страницы</button><p class="hint">Выберите трек и нажмите ▶. Поиск можно вернуть кнопкой выше.</p><div class="hitmos-frame"><iframe title="Поиск и плеер Hitmos" src="${esc(url)}" allow="autoplay" referrerpolicy="strict-origin-when-cross-origin" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" ></iframe></div>`;
+  hb.innerHTML=`<h3 class="sec-h">Слушать · Hitmos</h3><div class="actions"><button class="btn" data-act="hitmos-close">Закрыть</button><a class="btn" href="${esc(url)}" target="_blank" rel="noopener">Открыть на сайте ↗</a></div><button class="btn" data-act="hitmos-expand" aria-pressed="false">Развернуть плеер</button><button class="btn" data-act="hitmos-frame-top" aria-expanded="false">Показать верх страницы</button><p class="hint">Выберите трек и нажмите ▶. Перемотка — тонкая полоса над нижней панелью Hitmos. Если её не видно, разверните плеер.</p><div class="hitmos-frame"><iframe title="Поиск и плеер Hitmos" src="${esc(url)}" allow="autoplay" referrerpolicy="strict-origin-when-cross-origin" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" ></iframe></div>`;
   hb.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function songLinks(s){
@@ -4271,6 +4274,7 @@ document.addEventListener('click',e=>{
   if(a==='new')renderEditor(null);
   else if(a==='tab-list'){S.cur=null;renderList()}
   else if(a==='hitmos-play'){e.preventDefault();openHitmos()}
+  else if(a==='hitmos-expand'){const hb=document.getElementById('hitmosbox');const expanded=hb.classList.toggle('hitmos-expanded');b.setAttribute('aria-pressed',String(expanded));b.textContent=expanded?'Свернуть плеер':'Развернуть плеер'}
   else if(a==='hitmos-frame-top'){const frame=document.querySelector('#hitmosbox .hitmos-frame');if(frame){const full=frame.classList.toggle('full');b.setAttribute('aria-expanded',String(full));b.textContent=full?'Скрыть верх страницы':'Показать верх страницы'}}
   else if(a==='hitmos-retry')retryHitmos();
   else if(a==='hitmos-close')closeHitmos();
@@ -4598,6 +4602,6 @@ initStore().then(st=>{
 });
 </script>
 
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=124',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=125',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
