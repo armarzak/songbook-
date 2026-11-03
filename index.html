@@ -194,6 +194,9 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
 .slink.find{color:var(--fg)}
 .slink.find span{color:var(--fg);font-weight:600}
 .slink span{max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hitmosbox:not([hidden]){animation:hitmos-reveal .22s ease-out}
+@keyframes hitmos-reveal{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){#hitmosbox:not([hidden]){animation:none}}
 .hitmos-frame{height:65vh;min-height:360px;overflow:hidden;border-radius:12px;background:white}
 .hitmos-frame iframe{display:block;width:100%;height:100%;border:0;background:white}
 @media(max-width:639px){.hitmos-frame:not(.full) iframe{height:calc(100% + 450px);transform:translateY(-450px)}}
@@ -2568,6 +2571,7 @@ async function trackLoad(s){
   const a=new Audio(); TR.url=URL.createObjectURL(rec.blob||new Blob([rec.buf],{type:rec.type||'audio/mp4'}));
   a.preload='auto'; a.setAttribute('playsinline',''); a.src=TR.url;
   a.addEventListener('loadedmetadata',()=>{if(S.view==='song')renderTools()});
+  a.addEventListener('play',closeHitmos);
   // while the minus plays, keep the line-follow loop alive (iOS can drop it; this brings it back)
   const heal=()=>{if(TR.el===a&&!a.paused&&!TR.marking&&performance.now()-(TR.beat||0)>400){cancelAnimationFrame(TR.raf);TR.raf=requestAnimationFrame(trackFollow)}};
   a.addEventListener('playing',heal); a.addEventListener('timeupdate',heal);
@@ -2606,6 +2610,7 @@ function trackToggle(){
   if(!TR.el)return;
   if(CI.on){countInStop();renderTools();return}
   if(TR.el.paused){
+    closeHitmos();
     stopAuto();
     if(countInOn()&&!M.on){
       const el=TR.el,pos=el.currentTime;
@@ -3453,12 +3458,22 @@ function hitmosError(player){
   const messages={1:'Загрузка прервана',2:'Сбой сети или аудиосервера',3:'Не удалось декодировать аудио',4:'Аудиоссылка недоступна или формат не поддерживается'};
   hint.textContent=(messages[code]||'Не удалось загрузить аудио')+(code?' (код '+code+')':'')+'. Нажмите «Повторить» или откройте Hitmos.';hint.hidden=false;
 }
+function pauseBackingForHitmos(){
+  countInStop();if(TR.el)TR.el.pause();stopAuto();FireAlbumShelf.stop();
+  if(S.view==='song')renderTools();
+}
+function closeHitmos(){
+  const hb=document.getElementById('hitmosbox');if(!hb)return;
+  hb.querySelector('audio')?.pause();hb.hidden=true;delete hb.dataset.open;
+  if(hb.querySelector('iframe')){hb.innerHTML='';delete hb.dataset.web;delete hb.dataset.audio}
+}
 function openHitmos(){
   const s=findSong(S.cur);if(!s)return;
   const hb=document.getElementById('hitmosbox'),player=hb&&hb.querySelector('audio');
-  if(player){player.play().catch(()=>toast('Нажмите ▶ в плеере Hitmos'));hb.scrollIntoView({behavior:'smooth',block:'center'});return}
+  if(hb){hb.hidden=false;hb.dataset.open='1'}
+  if(player){pauseBackingForHitmos();player.play().catch(()=>toast('Нажмите ▶ в плеере Hitmos'));hb.scrollIntoView({behavior:'smooth',block:'center'});return}
   if(!hb)return;
-  trackStop();FireAlbumShelf.stop();
+  pauseBackingForHitmos();
   const q=[s.artist,s.title].filter(Boolean).join(' ');
   const url=hitmosLink(s.hitmosUrl)||'https://rus.hitmos.fm/search?q='+encodeURIComponent(q);
   hb.hidden=false;hb.dataset.web='1';
@@ -3615,12 +3630,13 @@ function fillSong(){
   </section>`:'';
   let hb=document.getElementById('hitmosbox');
   if(!hb){hb=document.createElement('section');hb.id='hitmosbox';hb.className='video';document.getElementById('videobox').before(hb)}
-  const ha=hitmosAudioFor(s);hb.hidden=!ha&&hb.dataset.web!=='1';
+  if(hb.dataset.song!==s.id){closeHitmos();hb.dataset.song=s.id;delete hb.dataset.audio}
+  const ha=hitmosAudioFor(s);hb.hidden=hb.dataset.open!=='1';
   if(hb.dataset.audio!==ha){
     hb.querySelector('audio')?.pause();hb.dataset.audio=ha;
-    hb.innerHTML=ha?`<h3 class="sec-h">Слушать · Hitmos</h3><audio controls preload="none" style="width:100%" src="${esc(ha)}"></audio><div class="actions"><button class="btn" data-act="hitmos-retry">Повторить</button><a class="btn" href="${esc(hitmosLink(s.hitmosUrl)||'https://rus.hitmos.fm/search?q='+encodeURIComponent([s.artist,s.title].filter(Boolean).join(' ')))}" target="_blank" rel="noopener">Открыть Hitmos ↗</a></div><p class="hint" hidden></p>`:'';
+    hb.innerHTML=ha?`<div class="actions"><h3 class="sec-h">Слушать · Hitmos</h3><button class="btn" data-act="hitmos-close">Закрыть</button></div><audio controls preload="none" style="width:100%" src="${esc(ha)}"></audio><div class="actions"><button class="btn" data-act="hitmos-retry">Повторить</button><a class="btn" href="${esc(hitmosLink(s.hitmosUrl)||'https://rus.hitmos.fm/search?q='+encodeURIComponent([s.artist,s.title].filter(Boolean).join(' ')))}" target="_blank" rel="noopener">Открыть Hitmos ↗</a></div><p class="hint" hidden></p>`:'';
     const player=hb.querySelector('audio');
-    if(player){player.addEventListener('error',()=>hitmosError(player));player.addEventListener('loadedmetadata',()=>{hb.querySelector('.hint').hidden=true});player.addEventListener('play',()=>trackStop())}
+    if(player){player.addEventListener('error',()=>hitmosError(player));player.addEventListener('loadedmetadata',()=>{hb.querySelector('.hint').hidden=true});player.addEventListener('play',pauseBackingForHitmos)}
   }
   const vb=document.getElementById('videobox'); if(vb&&vb.dataset.v!==(s.video||'')){vb.dataset.v=s.video||'';vb.innerHTML=videoHtml(s)}
   document.getElementById('strip').innerHTML=seen.map(n=>{
@@ -4221,7 +4237,7 @@ function tick(t){
 }
 async function startScroll(){S.scroll.on=true;lastT=null;acc=0;raf=requestAnimationFrame(tick);
   try{wake=await navigator.wakeLock.request('screen')}catch{wake=null}}
-function stopScroll(){document.querySelector('#hitmosbox audio')?.pause();document.querySelector('#hitmosbox iframe')?.remove();FireAlbumShelf.stop();micStop();songWakeOff();countInStop();gpClose();if(document.body.classList.contains('vfull-on'))videoExit();tunerStop();metroStop();trackStop();stopAuto()}
+function stopScroll(){closeHitmos();FireAlbumShelf.stop();micStop();songWakeOff();countInStop();gpClose();if(document.body.classList.contains('vfull-on'))videoExit();tunerStop();metroStop();trackStop();stopAuto()}
 function stopAuto(){S.scroll.on=false;cancelAnimationFrame(raf);if(wake){wake.release().catch(()=>{});wake=null}}
 
 /* ---------- events ---------- */
@@ -4257,7 +4273,7 @@ document.addEventListener('click',e=>{
   else if(a==='hitmos-play'){e.preventDefault();openHitmos()}
   else if(a==='hitmos-frame-top'){const frame=document.querySelector('#hitmosbox .hitmos-frame');if(frame){const full=frame.classList.toggle('full');b.setAttribute('aria-expanded',String(full));b.textContent=full?'Скрыть верх страницы':'Показать верх страницы'}}
   else if(a==='hitmos-retry')retryHitmos();
-  else if(a==='hitmos-close'){const hb=document.getElementById('hitmosbox');if(hb){hb.innerHTML='';hb.hidden=true;delete hb.dataset.web;delete hb.dataset.audio}}
+  else if(a==='hitmos-close')closeHitmos();
   else if(a==='tonebridge')toneBridgeCopy(b.dataset.q);
   else if(a==='ci-toggle'){const on=!countInOn();lsSet('sb.countin',on?'1':'0');renderTools();toast(on?'Отсчёт перед стартом включён':'Отсчёт выключен')}
   else if(a==='ci'){lsSet('sb.countin',b.dataset.v);openMetro()}
@@ -4582,6 +4598,6 @@ initStore().then(st=>{
 });
 </script>
 
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=123',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=124',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
