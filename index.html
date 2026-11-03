@@ -155,9 +155,19 @@ body.has-tools .wrap{padding-block-end:calc(var(--toolsh,120px) + 28px)}
 .brand{border:0;background:none;color:var(--fg);text-align:left;padding:0;min-height:40px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .brand:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:8px}
 .brand .logo{width:28px;height:28px;flex:none;filter:drop-shadow(0 0 2px #ff982744);transition:filter .3s}
-.brand.ignite .logo{animation:brand-ignite .9s ease-out}
-@keyframes brand-ignite{0%,100%{transform:scale(1);filter:drop-shadow(0 0 2px #ff982744)}35%{transform:scale(1.09);filter:drop-shadow(0 0 7px #ff9b42aa)}65%{transform:scale(1.03);filter:drop-shadow(0 0 4px #ffb95088)}}
-@media(prefers-reduced-motion:reduce){.brand .logo path:last-child,.brand.ignite .logo{animation:none}}
+/* The click feedback animates HTML layers, including in iOS Safari. */
+.brand-mark{position:relative;display:inline-flex;width:28px;height:28px;flex:none;isolation:isolate}
+.brand-mark::before{content:'';position:absolute;inset:-13px;border-radius:50%;background:radial-gradient(circle,#ffca57aa 0%,#ff862b66 30%,#ff5b1800 70%);opacity:0;pointer-events:none;z-index:-1}
+.brand-mark::after{content:'';position:absolute;width:3px;height:3px;left:13px;top:3px;border-radius:50%;background:#ffb33f;box-shadow:-8px 8px 0 #ff8d29,8px 4px 0 #ffd273;opacity:0;pointer-events:none}
+.brand.ignite .brand-mark::before{animation:brand-glow 1.25s ease-out}
+.brand.ignite .brand-mark::after{animation:brand-sparks 1.1s ease-out}
+.brand.ignite .brand-mark{animation:brand-pop 1.1s ease-out}
+.brand.ignite>span:last-child{animation:brand-text-glow 1.25s ease-out}
+@keyframes brand-glow{0%{opacity:0}20%,40%{opacity:1}100%{opacity:0}}
+@keyframes brand-sparks{0%{opacity:0;transform:translateY(2px)}20%{opacity:1}100%{opacity:0;transform:translateY(-22px)}}
+@keyframes brand-pop{0%,100%{transform:scale(1)}30%{transform:scale(1.2)}60%{transform:scale(1.06)}}
+@keyframes brand-text-glow{0%,100%{text-shadow:none}30%{text-shadow:0 0 12px #ff9922aa}}
+@media(prefers-reduced-motion:reduce){.brand.ignite .brand-mark{animation:none}.brand.ignite .brand-mark::after{display:none}}
 
 .btn{font:500 15px var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:8px 13px;min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .btn.primary{background:var(--accent);color:var(--on-accent);border-color:transparent;font-weight:600}
@@ -1565,7 +1575,7 @@ function cofSvg(){
 function renderCircle(){
   stopScroll(); S.view='circle'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
-  <header class="bar"><div class="bar-in"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни">${LOGO}<span>Fire Chords</span></button></div></header>
+  <header class="bar"><div class="bar-in"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button></div></header>
   <div class="wrap">
     ${tabsHtml('circle')}
     <div class="cof-wrap"><div id="cof-svg"></div><div id="cof-info" class="cof-info"></div></div>
@@ -1674,7 +1684,7 @@ function fretboardSvg(){
 function renderScales(){
   stopScroll(); S.view='scales'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
-  <header class="bar"><div class="bar-in"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни">${LOGO}<span>Fire Chords</span></button></div></header>
+  <header class="bar"><div class="bar-in"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button></div></header>
   <div class="wrap wide">
     ${tabsHtml('scales')}
     <div class="sc-ctrl">
@@ -1999,7 +2009,7 @@ function renderTuner(){
       <div class="t-help" id="t-help"></div>
     </div>`;
   app.innerHTML=`
-  <header class="bar"><div class="bar-in"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни">${LOGO}<span>Fire Chords</span></button></div></header>
+  <header class="bar"><div class="bar-in"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button></div></header>
   <div class="wrap">
     ${tabsHtml('tuner')}
     ${tuViewSeg()}
@@ -2174,7 +2184,7 @@ function renderChart(){
   stopScroll(); S.view='chart'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
   <header class="bar"><div class="bar-in">
-    <button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни">${LOGO}<span>Fire Chords</span></button>
+    <button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button>
     <button class="btn primary" data-act="new-shape">${ICON.plus}Своя схема</button>
   </div></header>
   <div class="wrap wide">
@@ -3236,13 +3246,13 @@ function brandHome(){
   S.q='';S.tag=null;S.cur=null;
   pageTurn('back');renderList();SCR.scrollTo({top:0,behavior:'instant'});
   const brand=document.querySelector('.brand');
-  if(brand){brand.classList.add('ignite');setTimeout(()=>brand.classList.remove('ignite'),900)}
+  if(brand)requestAnimationFrame(()=>requestAnimationFrame(()=>{if(!brand.isConnected)return;brand.classList.add('ignite');setTimeout(()=>brand.classList.remove('ignite'),1300)}));
 }
 function renderList(){
   stopScroll(); S.view='list'; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
   <header class="bar"><div class="bar-in">
-    <button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни">${LOGO}<span>Fire Chords</span></button>
+    <button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button>
     <button class="btn" data-act="import">Импорт</button>
     <button class="btn primary" data-act="new">${ICON.plus}Песня</button>
   </div></header>
@@ -4601,6 +4611,6 @@ initStore().then(st=>{
 });
 </script>
 
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=128',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=129',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
