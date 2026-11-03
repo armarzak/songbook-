@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+<meta name="referrer" content="origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -3436,6 +3437,19 @@ function hitmosAudioFor(s){
   if(!record||(page&&record.page!==page))return '';
   return hitmosLink(record.audio,true);
 }
+function retryHitmos(){
+  const hb=document.getElementById('hitmosbox'),p=hb&&hb.querySelector('audio');if(!p)return;
+  const source=hb.dataset.audio;if(!hitmosLink(source,true))return;
+  const u=new URL(source);u.searchParams.set('fc_retry',Date.now());
+  hb.querySelector('.hint').hidden=true;p.pause();p.src=u.href;p.load();
+  p.play().catch(()=>{if(p.error)hitmosError(p);else toast('Нажмите ▶ в плеере Hitmos')});
+}
+function hitmosError(player){
+  const hint=player.closest('#hitmosbox')?.querySelector('.hint');if(!hint)return;
+  const code=player.error?.code;
+  const messages={1:'Загрузка прервана',2:'Сбой сети или аудиосервера',3:'Не удалось декодировать аудио',4:'Аудиоссылка недоступна или формат не поддерживается'};
+  hint.textContent=(messages[code]||'Не удалось загрузить аудио')+(code?' (код '+code+')':'')+'. Нажмите «Повторить» или откройте Hitmos.';hint.hidden=false;
+}
 function openHitmos(){
   const s=findSong(S.cur);if(!s)return;
   const hb=document.getElementById('hitmosbox'),player=hb&&hb.querySelector('audio');
@@ -3601,9 +3615,9 @@ function fillSong(){
   const ha=hitmosAudioFor(s);hb.hidden=!ha&&hb.dataset.web!=='1';
   if(hb.dataset.audio!==ha){
     hb.querySelector('audio')?.pause();hb.dataset.audio=ha;
-    hb.innerHTML=ha?`<h3 class="sec-h">Слушать · Hitmos</h3><audio controls preload="none" style="width:100%" src="${esc(ha)}"></audio><p class="hint" hidden>Не удалось загрузить аудио. Откройте страницу Hitmos по ссылке в карточке песни.</p>`:'';
+    hb.innerHTML=ha?`<h3 class="sec-h">Слушать · Hitmos</h3><audio controls preload="none" style="width:100%" src="${esc(ha)}"></audio><div class="actions"><button class="btn" data-act="hitmos-retry">Повторить</button><a class="btn" href="${esc(hitmosLink(s.hitmosUrl)||'https://rus.hitmos.fm/search?q='+encodeURIComponent([s.artist,s.title].filter(Boolean).join(' ')))}" target="_blank" rel="noopener">Открыть Hitmos ↗</a></div><p class="hint" hidden></p>`:'';
     const player=hb.querySelector('audio');
-    if(player){player.addEventListener('error',()=>{hb.querySelector('.hint').hidden=false});player.addEventListener('play',()=>trackStop())}
+    if(player){player.addEventListener('error',()=>hitmosError(player));player.addEventListener('loadedmetadata',()=>{hb.querySelector('.hint').hidden=true});player.addEventListener('play',()=>trackStop())}
   }
   const vb=document.getElementById('videobox'); if(vb&&vb.dataset.v!==(s.video||'')){vb.dataset.v=s.video||'';vb.innerHTML=videoHtml(s)}
   document.getElementById('strip').innerHTML=seen.map(n=>{
@@ -4238,6 +4252,7 @@ document.addEventListener('click',e=>{
   if(a==='new')renderEditor(null);
   else if(a==='tab-list'){S.cur=null;renderList()}
   else if(a==='hitmos-play'){e.preventDefault();openHitmos()}
+  else if(a==='hitmos-retry')retryHitmos();
   else if(a==='hitmos-close'){const hb=document.getElementById('hitmosbox');if(hb){hb.innerHTML='';hb.hidden=true;delete hb.dataset.web;delete hb.dataset.audio}}
   else if(a==='tonebridge')toneBridgeCopy(b.dataset.q);
   else if(a==='ci-toggle'){const on=!countInOn();lsSet('sb.countin',on?'1':'0');renderTools();toast(on?'Отсчёт перед стартом включён':'Отсчёт выключен')}
@@ -4563,6 +4578,6 @@ initStore().then(st=>{
 });
 </script>
 
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=120',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=121',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
