@@ -622,6 +622,10 @@ body.stage .video{display:none}
 .ln .w[data-s="1"]{background:linear-gradient(90deg,var(--accent) var(--p,0%),var(--fg) var(--p,0%));-webkit-background-clip:text;background-clip:text;color:transparent}
 .ln .w.wnext{outline:2px solid var(--accent);outline-offset:1px;border-radius:3px}
 .markbar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--bar);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.mark-player{width:100%;max-width:728px}
+.mark-player .tools-in{width:100%}
+.mark-player .tools-in>.wavebar{flex:0 0 100%;margin:0}
+.mark-player .wave{height:38px}
 .markbar p{margin:0;font-size:14px;color:var(--muted);max-width:52ch}
 .mk-btns{display:flex;gap:8px;width:100%;max-width:560px}
 .mk-btns .btn{min-height:52px}
@@ -2613,10 +2617,15 @@ function trackTools(){
   const d=isFinite(TR.el.duration)?TR.el.duration:0,t=TR.el.currentTime||0,on=!TR.el.paused;
   return `<div class="grp trackgrp" aria-label="Минус">
     <button data-act="t-play" class="${on?'on':''}" aria-label="${on?'Пауза':'Играть минус'}">${on?ICON.pause:ICON.play}</button>
-    <span class="tt" id="t-time">${fmtTime(t)} / ${fmtTime(d)}</span>${ciBtn()}
+    <span class="tt" id="t-time">${fmtTime(t)} / ${fmtTime(d)}</span>${TR.marking?'':ciBtn()}
     </div><div class="wavebar"><canvas id="t-wave" class="wave" role="slider" aria-label="Минус: нажмите или проведите, чтобы перемотать" aria-valuemin="0" aria-valuemax="${Math.round(d)}" aria-valuenow="${Math.round(t)}"></canvas></div>`;
 }
 function trackToggle(){
+  if(TR.marking&&TR.el){
+    if(TR.el.paused){closeHitmos();TR.el.play().then(()=>{if(!TR.raf)TR.raf=requestAnimationFrame(trackFollow);renderTools()}).catch(()=>toast('Не получилось включить минус'))}
+    else TR.el.pause();
+    return;
+  }
   if(!TR.el)return;
   if(CI.on){countInStop();renderTools();return}
   if(TR.el.paused){
@@ -2874,12 +2883,13 @@ function markStart(mode,from){
   const part=!byWords&&from>0&&from<n,s0=findSong(S.cur)||{},old=Array.isArray(s0.marks)?s0.marks:[];
   Object.assign(TR,{marking:true,marks:part?old.slice(0,from):[],k:part?from:0,from:part?from:0,n:byWords?seq.length:n,cur:-1,wordMode:byWords,wSeq:seq,wm:[],wLineNow:-1}); lineHL(-1,'cur');
   const bar=document.createElement('div'); bar.id='markbar'; bar.className='markbar';
-  bar.innerHTML=`<p>${byWords?'Нажимайте <b>«Слово»</b> в момент, когда начинается каждое слово (следующее обведено). Ошиблись — «Назад».':'Нажимайте <b>«Строка»</b> в момент, когда начинается каждая строка. Ошиблись — «Назад».'}</p>
+  bar.innerHTML=`<div class="mark-player" id="mark-player"><div class="tools-in">${trackTools()}</div></div><p>${byWords?'Нажимайте <b>«Слово»</b> в момент, когда начинается каждое слово (следующее обведено). Ошиблись — «Назад».':'Нажимайте <b>«Строка»</b> в момент, когда начинается каждая строка. Ошиблись — «Назад».'}</p>
     <div class="mk-btns"><button class="btn" data-act="mk-undo">Назад</button>
     <button class="btn primary mk-main" data-act="mk-tap" id="mk-main">${byWords?'Слово 1 из '+seq.length:'Строка '+(TR.k+1)+' из '+n}</button>
     <button class="btn" data-act="mk-done">Готово</button></div>
     <button class="link2" data-act="mk-cancel">Отменить разметку</button>`;
   document.body.appendChild(bar);
+  renderTools();
   if(byWords)wordNext(); else lineHL(TR.k,'next',true);
   // from a chosen line: a few seconds before it (its old mark, or the previous marked line)
   let t0=0; if(part){const prev=old.slice(0,from).filter(x=>x!=null).pop();t0=old[from]!=null?old[from]-3:prev!=null?prev:0}
@@ -2931,7 +2941,7 @@ function markCancel(){
   document.querySelectorAll('.w.wnext').forEach(e=>e.classList.remove('wnext')); TR.wordMode=false;
   TR.marking=false; const mb=document.getElementById('markbar'); if(mb)mb.remove();
   lineHL(-1,'next'); if(TR.el)TR.el.pause();
-  const s=findSong(S.cur); TR.marks=s&&Array.isArray(s.marks)?s.marks.slice():[];
+  const s=findSong(S.cur); TR.marks=s&&Array.isArray(s.marks)?s.marks.slice():[];renderTools();
 }
 function trackMenu(s){
   if(s.demo)return '';
@@ -3671,7 +3681,7 @@ function fillSong(){
   if(TR.marking)lineHL(TR.k,'next',false);
 }
 /* the song's bottom padding follows the bar's real height (it grows to two rows on a phone) */
-function fitTools(){const h=tools.hidden?0:tools.offsetHeight;if(h)document.documentElement.style.setProperty('--toolsh',h+'px')}
+function fitTools(){const mb=TR.marking&&document.getElementById('markbar');const h=mb?mb.offsetHeight:tools.hidden?0:tools.offsetHeight;if(h)document.documentElement.style.setProperty('--toolsh',h+'px')}
 if(window.ResizeObserver)new ResizeObserver(fitTools).observe(tools); addEventListener('resize',fitTools);
 function openTone(){
   sheet.innerHTML=`<div class="panel" role="dialog" aria-label="Тональность">
@@ -3684,6 +3694,12 @@ function openTone(){
   sheet.hidden=false;
 }
 function renderTools(){
+  if(TR.marking){
+    tools.innerHTML='';tools.hidden=true;
+    const player=document.getElementById('mark-player');
+    if(player)player.innerHTML=`<div class="tools-in">${trackTools()}</div>`;
+    requestAnimationFrame(()=>{drawWave();fitTools()});return;
+  }
   setTimeout(()=>{drawWave();fitTools()},0);
   const sp=S.scroll,minus=!!(TR.has&&TR.el); // a minus drives the text itself, so autoscroll is hidden then
   if(minus&&sp.on)stopAuto();
@@ -4617,6 +4633,6 @@ initStore().then(st=>{
 });
 </script>
 
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=126',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=127',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
