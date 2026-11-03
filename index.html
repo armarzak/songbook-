@@ -3417,13 +3417,25 @@ function hitmosAudioFor(s){
   const page=hitmosLink(s.hitmosUrl),id=page&&new URL(page).pathname.match(/^\/song\/(\d+)/);
   return id?HITMOS_TRACKS[id[1]]||'':'';
 }
+function openHitmos(){
+  const s=findSong(S.cur);if(!s)return;
+  const hb=document.getElementById('hitmosbox'),player=hb&&hb.querySelector('audio');
+  if(player){player.play().catch(()=>toast('Нажмите ▶ в плеере Hitmos'));hb.scrollIntoView({behavior:'smooth',block:'center'});return}
+  if(!hb)return;
+  trackStop();FireAlbumShelf.stop();
+  const q=[s.artist,s.title].filter(Boolean).join(' ');
+  const url=hitmosLink(s.hitmosUrl)||'https://rus.hitmos.fm/search?q='+encodeURIComponent(q);
+  hb.hidden=false;hb.dataset.web='1';
+  hb.innerHTML=`<h3 class="sec-h">Слушать · Hitmos</h3><div class="actions"><button class="btn" data-act="hitmos-close">Закрыть</button><a class="btn" href="${esc(url)}" target="_blank" rel="noopener">Открыть на сайте ↗</a></div><p class="hint">Выберите трек и нажмите ▶ на сайте Hitmos. Если страница не загрузилась, откройте её по ссылке выше.</p><iframe title="Поиск и плеер Hitmos" src="${esc(url)}" allow="autoplay" referrerpolicy="strict-origin-when-cross-origin" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" style="width:100%;height:65vh;min-height:360px;border:0;border-radius:12px;background:white"></iframe>`;
+  hb.scrollIntoView({behavior:'smooth',block:'start'});
+}
 function songLinks(s){
   if(!s||s.demo)return '';
   const q=[s.artist,s.title].map(x=>(x||'').trim()).filter(Boolean).join(' ');
   const a=(href,icon,label,extra)=>`<a class="slink" href="${esc(href)}" target="_blank" rel="noopener"${extra||''}>${icon}<span>${esc(label)}</span></a>`;
   let h='';
   const hm=hitmosLink(s.hitmosUrl)||(q?'https://rus.hitmos.fm/search?q='+encodeURIComponent(q):'');
-  if(hm)h+=a(hm,BRAND.hitmos,'Hitmos',hitmosAudioFor(s)?' data-act="hitmos-play"':'');
+  if(hm)h+=a(hm,BRAND.hitmos,'Hitmos',' data-act="hitmos-play"');
   if(s.ytLesson)h+=a(s.ytLesson,BRAND.yt,'Разбор');
   if(s.ytFinger)h+=a(s.ytFinger,BRAND.yt,'Fingerstyle');
   const vids=videoLinks(s).map(videoInfo).filter(Boolean);
@@ -3567,7 +3579,7 @@ function fillSong(){
   </section>`:'';
   let hb=document.getElementById('hitmosbox');
   if(!hb){hb=document.createElement('section');hb.id='hitmosbox';hb.className='video';document.getElementById('videobox').before(hb)}
-  const ha=hitmosAudioFor(s);hb.hidden=!ha;
+  const ha=hitmosAudioFor(s);hb.hidden=!ha&&hb.dataset.web!=='1';
   if(hb.dataset.audio!==ha){
     hb.querySelector('audio')?.pause();hb.dataset.audio=ha;
     hb.innerHTML=ha?`<h3 class="sec-h">Слушать · Hitmos</h3><audio controls preload="none" style="width:100%" src="${esc(ha)}"></audio><p class="hint" hidden>Не удалось загрузить аудио. Откройте страницу Hitmos по ссылке в карточке песни.</p>`:'';
@@ -4173,7 +4185,7 @@ function tick(t){
 }
 async function startScroll(){S.scroll.on=true;lastT=null;acc=0;raf=requestAnimationFrame(tick);
   try{wake=await navigator.wakeLock.request('screen')}catch{wake=null}}
-function stopScroll(){document.querySelector('#hitmosbox audio')?.pause();FireAlbumShelf.stop();micStop();songWakeOff();countInStop();gpClose();if(document.body.classList.contains('vfull-on'))videoExit();tunerStop();metroStop();trackStop();stopAuto()}
+function stopScroll(){document.querySelector('#hitmosbox audio')?.pause();document.querySelector('#hitmosbox iframe')?.remove();FireAlbumShelf.stop();micStop();songWakeOff();countInStop();gpClose();if(document.body.classList.contains('vfull-on'))videoExit();tunerStop();metroStop();trackStop();stopAuto()}
 function stopAuto(){S.scroll.on=false;cancelAnimationFrame(raf);if(wake){wake.release().catch(()=>{});wake=null}}
 
 /* ---------- events ---------- */
@@ -4206,7 +4218,8 @@ document.addEventListener('click',e=>{
   const a=b.dataset.act;
   if(a==='new')renderEditor(null);
   else if(a==='tab-list'){S.cur=null;renderList()}
-  else if(a==='hitmos-play'){e.preventDefault();const player=document.querySelector('#hitmosbox audio');if(player){player.play().catch(()=>toast('Нажмите ▶ в плеере Hitmos'));player.scrollIntoView({behavior:'smooth',block:'center'})}}
+  else if(a==='hitmos-play'){e.preventDefault();openHitmos()}
+  else if(a==='hitmos-close'){const hb=document.getElementById('hitmosbox');if(hb){hb.innerHTML='';hb.hidden=true;delete hb.dataset.web;delete hb.dataset.audio}}
   else if(a==='tonebridge')toneBridgeCopy(b.dataset.q);
   else if(a==='ci-toggle'){const on=!countInOn();lsSet('sb.countin',on?'1':'0');renderTools();toast(on?'Отсчёт перед стартом включён':'Отсчёт выключен')}
   else if(a==='ci'){lsSet('sb.countin',b.dataset.v);openMetro()}
@@ -4530,6 +4543,6 @@ initStore().then(st=>{
 });
 </script>
 
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=118',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=119',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
