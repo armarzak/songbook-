@@ -2817,7 +2817,7 @@ async function changeTimingSource(select){
   try{
     await store.patch(song.id,{[target+'TimingSource']:source,[target+'TimingSourceAt']:now,updatedAt:now});
     const current=findSong(song.id);refreshTimingPickers(current);
-    if(target==='backing'&&TR.id===song.id){wordClear();TR.marks=playbackTiming(current,'backing').marks.slice();TR.cur=-2;if(TR.el&&!TR.el.paused){cancelAnimationFrame(TR.raf);TR.raf=requestAnimationFrame(trackFollow)}renderTools()}
+    if(target==='backing'&&TR.id===song.id){wordClear();lineHL(-1,'cur');TR.marks=playbackTiming(current,'backing').marks.slice();TR.cur=-2;if(TR.el&&!TR.el.paused){cancelAnimationFrame(TR.raf);TR.raf=requestAnimationFrame(trackFollow)}renderTools()}
     else if(target==='hitmos')window.FCHitmosMark?.refresh();
     if(!playbackTiming(current,target).marks.length)toast('В выбранной разметке пока нет отметок строк');
   }catch(e){refreshTimingPickers(findSong(song.id));saveErr(e)}
@@ -4654,7 +4654,7 @@ initStore().then(st=>{
 });
 </script>
 
-<script src="hitmos-marking.js?v=131"></script>
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=131',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script src="hitmos-marking.js?v=132"></script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=132',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>

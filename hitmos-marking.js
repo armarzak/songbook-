@@ -26,7 +26,7 @@ window.FCHitmosMark=(()=>{
   function bind(player,song,audio){
     player.addEventListener('play',()=>{
       if(state.marking&&state.player!==player)finish(true);
-      wordClear();wordClear(state);Object.assign(state,{id:song.id,audio,player,current:-1});follow();
+      wordClear();wordClear(state);Object.assign(state,{id:song.id,audio,player,current:-2});follow();
     });
     player.addEventListener('pause',update);
     player.addEventListener('loadedmetadata',update);
@@ -77,7 +77,7 @@ window.FCHitmosMark=(()=>{
     }catch(e){saveErr(e)}
   }
   function close(){if(state.marking)finish(true);cancelAnimationFrame(state.raf);state.raf=0;state.current=-1;wordClear(state);lineHL(-1,'cur')}
-  function refresh(){if(state.marking)return;wordClear(state);state.current=-1;if(state.player?.isConnected)follow()}
+  function refresh(){if(state.marking)return;wordClear(state);state.current=-2;if(state.player?.isConnected)follow()}
   document.addEventListener('pointerdown',e=>{
     if(e.button>0||!e.target.closest?.('[data-act="hm-tap"]'))return;
     tap();e.preventDefault();
