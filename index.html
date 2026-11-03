@@ -631,6 +631,7 @@ body.stage .video{display:none}
 .ln .w.wnext{outline:2px solid var(--accent);outline-offset:1px;border-radius:3px}
 .markbar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--bar);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
 .mark-player{width:100%;max-width:728px}
+.mark-player .grp strong{padding-inline:8px;font-size:13px}
 .mark-player .tools-in{width:100%}
 .mark-player .tools-in>.wavebar{flex:0 0 100%;margin:0}
 .mark-player .wave{height:38px}
@@ -2864,6 +2865,7 @@ function markMerged(){
   return {marks,wmarks:wm};
 }
 function markStart(mode,from){
+  if(window.FCHitmosMark?.marking){toast('Сначала завершите разметку Hitmos');return}
   if(!TR.el)return; closeSheet(); TR.pick=false;
   const pb=document.getElementById('markbar'); if(pb)pb.remove();
   const n=document.querySelectorAll('.ln[data-li]').length;
@@ -3464,6 +3466,7 @@ function pauseBackingForHitmos(){
   if(S.view==='song')renderTools();
 }
 function closeHitmos(){
+  window.FCHitmosMark?.close();
   const hb=document.getElementById('hitmosbox');if(!hb)return;
   hb.querySelector('audio')?.pause();hb.hidden=true;hb.classList.remove('hitmos-expanded');delete hb.dataset.open;
   if(hb.querySelector('iframe')){hb.innerHTML='';delete hb.dataset.web;delete hb.dataset.audio}
@@ -3635,9 +3638,9 @@ function fillSong(){
   const ha=hitmosAudioFor(s);hb.hidden=hb.dataset.open!=='1';
   if(hb.dataset.audio!==ha){
     hb.querySelector('audio')?.pause();hb.dataset.audio=ha;
-    hb.innerHTML=ha?`<div class="actions"><h3 class="sec-h">Слушать · Hitmos</h3><button class="btn" data-act="hitmos-close">Закрыть</button></div><audio controls preload="none" style="width:100%" src="${esc(ha)}"></audio><div class="actions"><button class="btn" data-act="hitmos-retry">Повторить</button><a class="btn" href="${esc(hitmosLink(s.hitmosUrl)||'https://rus.hitmos.fm/search?q='+encodeURIComponent([s.artist,s.title].filter(Boolean).join(' ')))}" target="_blank" rel="noopener">Открыть Hitmos ↗</a></div><p class="hint" hidden></p>`:'';
+    hb.innerHTML=ha?`<div class="actions"><h3 class="sec-h">Слушать · Hitmos</h3><button class="btn" data-act="hitmos-close">Закрыть</button></div><audio controls preload="none" style="width:100%" src="${esc(ha)}"></audio><div class="actions"><button class="btn" data-act="hm-start">${s.hitmosMarksAudio===ha&&s.hitmosMarks?.length?'Разметить строки Hitmos заново':'Разметить строки Hitmos'}</button><button class="btn" data-act="hitmos-retry">Повторить</button><a class="btn" href="${esc(hitmosLink(s.hitmosUrl)||'https://rus.hitmos.fm/search?q='+encodeURIComponent([s.artist,s.title].filter(Boolean).join(' ')))}" target="_blank" rel="noopener">Открыть Hitmos ↗</a></div><p class="hint" hidden></p>`:'';
     const player=hb.querySelector('audio');
-    if(player){player.addEventListener('error',()=>hitmosError(player));player.addEventListener('loadedmetadata',()=>{hb.querySelector('.hint').hidden=true});player.addEventListener('play',pauseBackingForHitmos)}
+    if(player){window.FCHitmosMark?.bind(player,s,ha);player.addEventListener('error',()=>hitmosError(player));player.addEventListener('loadedmetadata',()=>{hb.querySelector('.hint').hidden=true});player.addEventListener('play',pauseBackingForHitmos)}
   }
   const vb=document.getElementById('videobox'); if(vb&&vb.dataset.v!==(s.video||'')){vb.dataset.v=s.video||'';vb.innerHTML=videoHtml(s)}
   document.getElementById('strip').innerHTML=seen.map(n=>{
@@ -3655,7 +3658,7 @@ function fillSong(){
   if(TR.marking)lineHL(TR.k,'next',false);
 }
 /* the song's bottom padding follows the bar's real height (it grows to two rows on a phone) */
-function fitTools(){const mb=TR.marking&&document.getElementById('markbar');const h=mb?mb.offsetHeight:tools.hidden?0:tools.offsetHeight;if(h)document.documentElement.style.setProperty('--toolsh',h+'px')}
+function fitTools(){const mb=(TR.marking||window.FCHitmosMark?.marking)&&document.getElementById('markbar');const h=mb?mb.offsetHeight:tools.hidden?0:tools.offsetHeight;if(h)document.documentElement.style.setProperty('--toolsh',h+'px')}
 if(window.ResizeObserver)new ResizeObserver(fitTools).observe(tools); addEventListener('resize',fitTools);
 function openTone(){
   sheet.innerHTML=`<div class="panel" role="dialog" aria-label="Тональность">
@@ -3668,6 +3671,7 @@ function openTone(){
   sheet.hidden=false;
 }
 function renderTools(){
+  if(window.FCHitmosMark?.marking){tools.innerHTML='';tools.hidden=true;requestAnimationFrame(fitTools);return}
   if(TR.marking){
     tools.innerHTML='';tools.hidden=true;
     const player=document.getElementById('mark-player');
@@ -4470,6 +4474,7 @@ function mergeData(local,remote){
     const o=map.get(s.id); if(!o){map.set(s.id,s);continue}
     let w=(s.updatedAt||0)>=(o.updatedAt||0)?s:o; const l=w===s?o:s;
     if((l.marksAt||0)>(w.marksAt||0))w={...w,marks:l.marks,wmarks:l.wmarks,marksAt:l.marksAt};
+    if((l.hitmosMarksAt||0)>(w.hitmosMarksAt||0))w={...w,hitmosMarks:l.hitmosMarks,hitmosMarksAudio:l.hitmosMarksAudio,hitmosMarksAt:l.hitmosMarksAt};
     map.set(s.id,w);
   }
   const songs=[...map.values()].filter(s=>!(del[s.id]>=(s.updatedAt||0))).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
@@ -4611,6 +4616,7 @@ initStore().then(st=>{
 });
 </script>
 
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=129',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script src="hitmos-marking.js?v=130"></script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=130',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
