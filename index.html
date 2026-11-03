@@ -155,9 +155,7 @@ body.has-tools .wrap{padding-block-end:calc(var(--toolsh,120px) + 28px)}
 .brand{border:0;background:none;color:var(--fg);text-align:left;padding:0;min-height:40px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .brand:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:8px}
 .brand .logo{width:28px;height:28px;flex:none;filter:drop-shadow(0 0 2px #ff982744);transition:filter .3s}
-.brand .logo path:last-child{transform-box:fill-box;transform-origin:50% 90%;animation:brand-flame 3.6s ease-in-out infinite}
 .brand.ignite .logo{animation:brand-ignite .9s ease-out}
-@keyframes brand-flame{0%,100%{transform:scale(1) rotate(-1deg);opacity:.94}35%{transform:scale(.97,1.06) rotate(1.5deg);opacity:1}65%{transform:scale(1.03,.98) rotate(-.5deg);opacity:.9}}
 @keyframes brand-ignite{0%,100%{transform:scale(1);filter:drop-shadow(0 0 2px #ff982744)}35%{transform:scale(1.09);filter:drop-shadow(0 0 7px #ff9b42aa)}65%{transform:scale(1.03);filter:drop-shadow(0 0 4px #ffb95088)}}
 @media(prefers-reduced-motion:reduce){.brand .logo path:last-child,.brand.ignite .logo{animation:none}}
 
@@ -751,22 +749,6 @@ input.mono{font-family:var(--f-mono)}
 
 .toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(70px + env(safe-area-inset-top,0px));z-index:60;background:var(--fg);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px)}
 
-/* page slide: a song comes in from the right over the list, and leaves to the right on the way back.
-   The old screen is frozen into a viewport-sized snapshot so both can move at once. */
-.pslide{position:fixed;top:0;left:0;width:100%;height:100%;z-index:59;pointer-events:none}
-.pslide>.pt-view{position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;background:var(--bg)}
-.pslide .bar{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
-.pslide>.pt-shade{position:absolute;top:0;left:0;width:100%;height:100%;background:#000;opacity:0}
-.pslide.fwd{animation:psAway .38s cubic-bezier(.2,.8,.2,1) forwards}
-.pslide.fwd>.pt-shade{animation:psDim .38s forwards}
-.pslide.back{z-index:61;box-shadow:-12px 0 30px rgba(0,0,0,.28);animation:psOut .34s cubic-bezier(.4,0,.8,.4) forwards}
-#app.slide-in{position:relative;z-index:60;min-height:100vh;background:var(--bg);box-shadow:-12px 0 30px rgba(0,0,0,.28);animation:psIn .38s cubic-bezier(.2,.8,.2,1)}
-#app.slide-under{animation:psBackIn .34s cubic-bezier(.2,.8,.2,1)}
-@keyframes psIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
-@keyframes psAway{from{transform:translateX(0)}to{transform:translateX(-28%)}}
-@keyframes psDim{to{opacity:.35}}
-@keyframes psOut{from{transform:translateX(0)}to{transform:translateX(100%)}}
-@keyframes psBackIn{from{transform:translateX(-28%)}to{transform:translateX(0)}}
 @media (prefers-reduced-motion:no-preference){
   .panel{animation:up .18s ease-out}
   @keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
@@ -1387,7 +1369,7 @@ function lsSet(k,v){try{localStorage.setItem(k,v)}catch{}}
 let toastT;
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2800)}
 /* app logo: a guitar pick with a flame, two colors taken from the theme (accent + its contrast color) */
-const LOGO='<svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--accent)" d="M12 1.2C5.9 1.2 2.5 3.9 2.5 8.3c0 5.8 4.9 11.6 9.5 14.5 4.6-2.9 9.5-8.7 9.5-14.5 0-4.4-3.4-7.1-9.5-7.1z"/><path fill="var(--on-accent)" d="M12.1 5.2c.9 2.4 3.9 3.8 3.9 7.5 0 2.6-1.8 4.6-4 4.6s-4-1.9-4-4.3c0-1.9 1-3.1 2.1-3.8 0 1.5.6 2.4 1.5 2.6-.6-2.3-.4-4.6.5-6.6z"/></svg>';
+const LOGO='<svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--accent)" d="M12 1.2C5.9 1.2 2.5 3.9 2.5 8.3c0 5.8 4.9 11.6 9.5 14.5 4.6-2.9 9.5-8.7 9.5-14.5 0-4.4-3.4-7.1-9.5-7.1z"/><path fill="var(--on-accent)" d="M12.1 5.2c.9 2.4 3.9 3.8 3.9 7.5 0 2.6-1.8 4.6-4 4.6s-4-1.9-4-4.3c0-1.9 1-3.1 2.1-3.8 0 1.5.6 2.4 1.5 2.6-.6-2.3-.4-4.6.5-6.6z"><animate attributeName="d" dur="1.8s" repeatCount="indefinite" values="M12.1 5.2c.9 2.4 3.9 3.8 3.9 7.5 0 2.6-1.8 4.6-4 4.6s-4-1.9-4-4.3c0-1.9 1-3.1 2.1-3.8 0 1.5.6 2.4 1.5 2.6-.6-2.3-.4-4.6.5-6.6z;M11.5 3.8c1.4 3.2 4.9 4.8 4.5 8.9 0 2.6-1.8 4.6-4 4.6s-4-1.9-4-4.3c0-1.9 1.4-3.8 2.4-4.2 0 1.5.3 2.8 1.2 3-1.2-2.6-1-5 .1-8z;M13.2 4.5c.3 3.1 3.1 4.4 2.8 8.2 0 2.6-1.8 4.6-4 4.6s-4-1.9-4-4.3c0-1.9 .6-2.5 1.8-3.4 0 1.5.9 2 1.8 2.2 .2-2.8 .5-4.2 1.6-7.3z;M12.1 5.2c.9 2.4 3.9 3.8 3.9 7.5 0 2.6-1.8 4.6-4 4.6s-4-1.9-4-4.3c0-1.9 1-3.1 2.1-3.8 0 1.5.6 2.4 1.5 2.6-.6-2.3-.4-4.6.5-6.6z"/></path></svg>';
 const ICON={
   back:'<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
   edit:'<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>',
@@ -3398,26 +3380,8 @@ function fillList(){
 }
 function plural(n,a,b,c){const m=n%10,h=n%100;return m===1&&h!==11?a:m>=2&&m<=4&&(h<10||h>=20)?b:c}
 
-/* freeze the visible screen into a snapshot; the new screen then slides in from the right ('fwd')
-   or the snapshot slides away to the right, uncovering the list ('back') */
-function pageTurn(dir){
-  try{
-    const y=SCR.scrollTop,snap=document.createElement('div'),view=document.createElement('div'),inner=app.cloneNode(true);
-    snap.className='pslide'; view.className='pt-view'; inner.removeAttribute('id'); inner.className='';
-    inner.querySelectorAll('[id]:not(linearGradient):not(radialGradient)').forEach(e=>e.removeAttribute('id'));
-    view.appendChild(inner);
-    const shade=document.createElement('div'); shade.className='pt-shade';
-    snap.appendChild(view); snap.appendChild(shade); document.body.appendChild(snap);
-    view.scrollTop=y;
-    snap.getBoundingClientRect();
-    snap.classList.add(dir);
-    const cls=dir==='fwd'?'slide-in':'slide-under';
-    app.classList.remove('slide-in','slide-under'); void app.offsetWidth; app.classList.add(cls);
-    let gone=false; const done=()=>{if(!gone){gone=true;snap.remove();app.classList.remove(cls)}};
-    app.addEventListener('animationend',function h(e){if(e.target===app){app.removeEventListener('animationend',h);done()}});
-    setTimeout(done,700);
-  }catch{}
-}
+function pageTurn(){app.classList.remove('slide-in','slide-under');document.querySelectorAll('.pslide').forEach(e=>e.remove())}
+
 /* ---------- quick links beside the song title: YouTube (lesson, fingerstyle), Instagram, Yandex Music, Ultimate Guitar, ToneBridge ---------- */
 const TONEBRIDGE_APP='https://apps.apple.com/app/id1117291846'; // Tonebridge Guitar Effects (Ultimate Guitar) — it has no search link, so the song name is copied first
 const BRAND={
@@ -4611,7 +4575,11 @@ function ghStart(){
 setTimeout(()=>{if(window.SONGBOOK_OFFLINE)guitarSamples()},4000);
 if(lsGet('sb.skin.mid')!=='1'){lsSet('sb.skin','midnight');lsSet('sb.skin.mid','1')}
 applySkin(lsGet('sb.skin')||'midnight');
-renderList();
+const brandMotion=matchMedia('(prefers-reduced-motion: reduce)');
+function syncBrandMotion(){document.querySelectorAll('.brand .logo').forEach(svg=>{if(brandMotion.matches)svg.pauseAnimations();else svg.unpauseAnimations()})}
+new MutationObserver(syncBrandMotion).observe(app,{childList:true});
+brandMotion.addEventListener('change',syncBrandMotion);
+renderList();syncBrandMotion();
 initStore().then(st=>{
   RAW=st; store=wrapStore(st);
   st.subscribe(list=>{
@@ -4633,6 +4601,6 @@ initStore().then(st=>{
 });
 </script>
 
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=127',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=128',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
