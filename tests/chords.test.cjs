@@ -17,15 +17,17 @@ const audit=plain(`(()=>{let count=0,bad=[],missing=[];for(const root of NS)for(
 assert.deepEqual(audit.bad,[]);assert.deepEqual(audit.missing,[]);
 run("setShapes({C:{frets:[-1,3,2,0,1,0],base:1,alts:[{frets:[8,10,10,9,8,8],base:8}]}})");assert.equal(run("getVoicings('C').list.length"),2);assert.equal(run("getVoicings('C').list[0].label"),'Мой вариант 1');run('setShapes({})');
 const svg=run("diagram({frets:[-1,-1,2,3,2,3],base:9},false)");assert(svg.includes('cy="86"'));assert(svg.includes('role="img"'));
-assert(run("diagram({frets:[1,3,3,2,1,1],barre:true},true)").includes('rx="11"'));
+assert(run("diagram({frets:[1,3,3,2,1,1],barre:true},true)").includes('rx="4"'));
 console.log(`PASS: ${audit.count} root/quality combinations, 132 reference cells, slash bass, independent note fixtures, saved shapes, SVG positions and script syntax`);
 
 
 
-// Formula composition, explicit interval sets and matching barre/dot thickness.
+// Formula composition, explicit interval sets and thin barre and equal fret cells.
 for(const [name,expected] of Object.entries({'Cadd#11':[0,4,7,6],'C7(b9,#11)':[0,4,7,10,1,6],'CmMaj13':[0,3,7,11,2,5,9],'C7no3':[0,7,10],'C(1,b3,b5,6)':[0,3,6,9]})){
  const result=plain("normQ(parseChord('"+name+"').q)");assert.equal(result.approx,false,name);assert.deepEqual(plain("TONES["+JSON.stringify(result.q)+"]").sort((a,b)=>a-b),expected.sort((a,b)=>a-b),name);
 }
-const barreSvg=run('diagram({frets:[1,3,3,2,1,1],barre:true},false)');assert(barreSvg.includes('height="22"'));assert(barreSvg.includes('r="11"'));
+const barreSvg=run('diagram({frets:[1,3,3,2,1,1],barre:true},false)');assert(barreSvg.includes('height="8"'));assert(barreSvg.includes('r="11"'));
 assert.deepEqual(plain("requiredTones(normQ('1,3,5,7').q)"),[0,4,7,11]);
-console.log('PASS: interval formulas, explicit required tones and uniform barre thickness');
+console.log('PASS: interval formulas, explicit required tones and equal fret cells with a thin barre');
+
+const fretYs=[...barreSvg.matchAll(/<line class="fr"[^>]*y1="(\d+)"/g)].map(m=>Number(m[1]));assert.deepEqual(fretYs,[70,102,134,166]);assert(barreSvg.includes('cy="54"'));

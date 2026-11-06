@@ -1238,7 +1238,7 @@ function diagram(v,mini){
   for(let j=base===1?1:0;j<=NF;j++)s+=`<line class="fr" x1="${X(0)}" x2="${X(5)}" y1="${Y0+j*FH}" y2="${Y0+j*FH}"/>`;
   for(let i=0;i<6;i++)s+=`<line class="st" x1="${X(i)}" x2="${X(i)}" y1="${Y0}" y2="${Y0+FH*NF}"/>`;
   if(base>1)s+=`<text class="pos" x="${X(0)-14}" y="${cy(base)+5}" text-anchor="end">${base}</text>`;
-  if(bar)s+=`<rect class="dot" x="${X(bar.a)-11}" y="${cy(bar.fret)-11}" width="${X(bar.b)-X(bar.a)+22}" height="22" rx="11"/>`;
+  if(bar)s+=`<rect class="dot" x="${X(bar.a)-11}" y="${cy(bar.fret)-4}" width="${X(bar.b)-X(bar.a)+22}" height="8" rx="4"/>`;
   f.forEach((x,i)=>{
     if(x<0)s+=`<text class="mute" x="${X(i)}" y="${Y0-12}" text-anchor="middle">×</text>`;
     else if(x===0)s+=`<circle class="open" cx="${X(i)}" cy="${Y0-17}" r="5.5"/>`;
@@ -4744,6 +4744,6 @@ initStore().then(st=>{
 </script>
 
 <script src="hitmos-marking.js?v=132"></script>
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=134',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=135',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
