@@ -321,6 +321,10 @@ body:has(.tabbar) .wrap{padding-bottom:calc(84px + env(safe-area-inset-bottom,0p
 .link:focus-visible{outline:2px solid var(--accent)}
 .chart-scroll{padding-block:0 10px}
 .chart-root{font:700 16px var(--f-display);color:var(--accent);margin:18px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.chord-browser{margin:22px 0;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:16px}
+.chord-pickers{display:flex;gap:12px;margin:12px 0}.chord-pickers label{display:grid;gap:5px;min-width:0;flex:1}.chord-pickers select{width:100%;min-width:0;padding:10px;font-size:16px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px}
+.chord-intervals{display:flex;flex-wrap:wrap;gap:12px;padding:12px 0}.chord-intervals label{display:flex;align-items:center;gap:4px;min-height:32px}
+.chord-browser .chart-row{grid-template-columns:repeat(2,minmax(0,1fr))}.chord-browser .cell .hint{font-size:11px;overflow-wrap:anywhere}.chord-browser summary{cursor:pointer;padding:10px 0}
 .chart-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 6px}
 .cell{all:unset;box-sizing:border-box;position:relative;cursor:pointer;text-align:center;border-radius:10px;padding:4px 2px 2px;border:1.5px solid transparent}
 .cell:hover{background:var(--sunk)}
@@ -951,7 +955,7 @@ const NFL=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
 const BASE={C:0,D:2,E:4,F:5,G:7,A:9,B:11,H:11};
 function noteIndex(n){let i=BASE[n[0]];if(n[1]==='#')i++;else if(n[1]==='b')i--;return (i+12)%12}
 const CHORD_RE=/^([A-H])([#b]?)([^\/\s]*)(?:\/([A-H][#b]?))?$/;
-const QUAL_OK=/^(?:maj|Maj|min|m|M|dim|aug|sus|add|no|[0-9]|b|#|\+|°|ø|Δ|\(|\)|-|o)*$/;
+const QUAL_OK=/^(?:maj|Maj|min|m|M|dim|aug|sus|add|no|[0-9]|b|#|\+|°|ø|Δ|\(|\)|-|o|,)*$/;
 function parseChord(t){
   const m=CHORD_RE.exec(t.replace(/6\/9(?=$|\/)/,'6add9'));  if(!m||!QUAL_OK.test(m[3]))return null;
   return {txt:t,root:noteIndex(m[1]+m[2]),q:m[3],bass:m[4]?noteIndex(m[4]):null};
@@ -974,9 +978,33 @@ const QMAP={'':'maj','M':'maj','maj':'maj','m':'m','min':'m','-':'m','7':'7','m7
   '9':'9','add9':'add9','add4':'add4','add11':'add4','5':'5','7sus4':'7sus4','7sus':'7sus4','m7b5':'m7b5','ø':'m7b5','m7-5':'m7b5','ø7':'m7b5', 'm9':'m9','min9':'m9','-9':'m9','maj9':'maj9','M9':'maj9','Δ9':'maj9',
   'madd9':'madd9','madd11':'madd11','madd4':'madd11','6/9':'6add9','6add9':'6add9','69':'6add9','mMaj7':'mMaj7','mmaj7':'mMaj7','mM7':'mMaj7','m(maj7)':'mMaj7',
   '11':'11','m11':'m11','maj11':'maj11','13':'13','m13':'m13','maj13':'maj13','7b5':'7b5','7#5':'7#5','7+':'7#5','7b9':'7b9','7#9':'7#9','9sus4':'9sus4','7sus2':'7sus2','b5':'b5','-5':'b5','5-':'b5','m7sus4':'7sus4','msus2':'sus2','m7add11':'m7add11','13#11':'13#11','maj7sus2':'maj7sus2','6sus':'6sus4','6sus4':'6sus4'};
+// Compose interval formulas without substituting a simpler chord.
+const DEGREE_PC={1:0,2:2,3:4,4:5,5:7,6:9,7:11,9:2,11:5,13:9};
+function qualityTones(q){
+  if(/^1(?:,[b#]?(?:2|3|4|5|6|7|9|11|13))*$/.test(q))return [...new Set(q.split(',').map(t=>degreePC(t)))];
+  q=q.replace(/,/g,'');
+  const m=/^(mMaj|mmaj|mM|augmaj|maj|Maj|M|Δ|min|m|-|dim|°|o|aug|\+|sus2|sus4|sus)?(13|11|9|7|6)?/.exec(q);
+  if(!m||(!m[0]&&!/^(add|no|[b#])/.test(q)))return null;
+  const prefix=m[1]||'',ext=Number(m[2])||0,minor=/^(mMaj|mmaj|mM|min|m|-)$/.test(prefix),major7=/^(mMaj|mmaj|mM|augmaj|maj|Maj|M|Δ)$/.test(prefix),dim=/^(dim|°|o)$/.test(prefix),aug=/^(augmaj|aug|\+)$/.test(prefix);
+  let tones=prefix==='sus2'?[0,2,7]:/^sus/.test(prefix)?[0,5,7]:dim?[0,3,6]:aug?[0,4,8]:[0,minor?3:4,7];
+  if(ext===6)tones.push(9);
+  if(ext>=7)tones.push(major7?11:dim?9:10);
+  if(ext>=9)tones.push(2);if(ext>=11)tones.push(5);if(ext>=13)tones.push(9);
+  const rest=q.slice(m[0].length);let at=0;
+  const token=/(?:add[b#]?(?:13|11|9|[234567])|no(?:13|11|9|[1234567])|[b#](?:13|11|9|[234567])|sus[24])/gy;
+  while(at<rest.length){token.lastIndex=at;const t=token.exec(rest);if(!t)return null;at=token.lastIndex;
+    if(t[0].startsWith('sus')){tones=tones.filter(x=>x!==3&&x!==4);tones.push(t[0]==='sus2'?2:5);continue}
+    const text=t[0].replace(/^(?:add|no)/,''),natural=DEGREE_PC[Number(text.replace(/[b#]/,''))];
+    if(t[0].startsWith('no'))tones=tones.filter(x=>x!==natural);
+    else{if(!t[0].startsWith('add'))tones=tones.filter(x=>x!==natural);tones.push(degreePC(text));}
+  }
+  return [...new Set(tones)].sort((a,b)=>a-b);
+}
+function degreePC(text){const n=Number(text.replace(/[b#]/,''));return (DEGREE_PC[n]+(text[0]==='b'?-1:text[0]==='#'?1:0)+12)%12}
 function normQ(q){
   q=q.replace(/[()]/g,'');
   if(q in QMAP)return {q:QMAP[q],approx:false};
+  const tones=qualityTones(q);if(tones){TONES[q]=tones;return {q,approx:false}};
   let r='maj';
   if(/^(maj|M|Δ)/.test(q))r='maj7';
   else if(/^(m|min|-)/.test(q))r=/\d/.test(q)?'m7':'m';
@@ -1077,6 +1105,7 @@ const TONES={maj:[0,4,7],m:[0,3,7],'7':[0,4,7,10],m7:[0,3,7,10],maj7:[0,4,7,11],
 // Required chord tones are checked independently from the shape source.
 function requiredTones(q){
   const tones=TONES[q];
+  if(/^1(?:,|$)/.test(q))return tones;
   return tones.filter(n=>!(tones.length>=4&&n===7)&&!(/^.*13/.test(q)&&(n===2||n===5)));
 }
 function checkShape(name,frets){
@@ -1098,21 +1127,25 @@ const generatedVoicings=new Map();
 function generateVoicings(name){
   if(generatedVoicings.has(name))return generatedVoicings.get(name);
   const c=parseChord(name),n=c&&normQ(c.q);if(!c||n.approx||!TONES[n.q])return [];
+  if(requiredTones(n.q).length>6)return [];
   const allowed=new Set(TONES[n.q].map(t=>(t+c.root)%12));if(c.bass!=null)allowed.add(c.bass);
-  const midi=[40,45,50,55,59,64], found=new Map();
+  const midi=[40,45,50,55,59,64], found=new Map(),requiredMask=requiredTones(n.q).reduce((bits,t)=>bits|(1<<((t+c.root)%12)),0);
   for(let base=1;base<=12;base++){
     const options=OPEN_STR.map(pc=>[-1,...(allowed.has(pc)?[0]:[]),...[0,1,2,3].map(d=>base+d).filter(f=>allowed.has((pc+f)%12))]);
-    const f=[];
-    function visit(i){
-      if(i<6){for(const fret of options[i]){f[i]=fret;visit(i+1)}return}
+    const f=[],suffix=new Array(7).fill(0);
+    for(let i=5;i>=0;i--)suffix[i]=suffix[i+1]|options[i].reduce((bits,fret)=>fret<0?bits:bits|(1<<((OPEN_STR[i]+fret)%12)),0);
+    function visit(i,mask=0){
+      if(((mask|suffix[i])&requiredMask)!==requiredMask)return;
+      if(i<6){for(const fret of options[i]){f[i]=fret;visit(i+1,mask|(fret<0?0:1<<((OPEN_STR[i]+fret)%12)))}return}
       const sounding=f.filter(x=>x>=0);if(sounding.length<(n.q==='5'?2:3))return;
       const pos=f.filter(x=>x>0);if(pos.length&&Math.max(...pos)-Math.min(...pos)>3)return;
       // Avoid muted strings inside a strummed voicing.
       const first=f.findIndex(x=>x>=0),last=f.findLastIndex(x=>x>=0);if(f.slice(first,last+1).includes(-1))return;
       const v={frets:[...f],barre:autoBarre(f),label:'Проверенная аппликатура'};
       const bar=barreOf(v),cost=pos.length-(bar?f.filter((x,i)=>x===bar.fret&&i>=bar.a&&i<=bar.b).length-1:0);
-      if(cost>4||!checkShape(name,f).ok)return;
+      if(cost>4||(mask&requiredMask)!==requiredMask)return;
       const bass=Math.min(...f.map((x,i)=>x<0?Infinity:midi[i]+x))%12;
+      if(c.bass!=null&&bass!==c.bass)return;
       const complete=new Set(f.map((x,i)=>x<0?-1:(OPEN_STR[i]+x-c.root+12)%12));
       v.score=(pos.length?Math.min(...pos):0)*2+cost*1.5+(6-sounding.length)*2+(bass===c.root?0:4)+(TONES[n.q].every(t=>complete.has(t))?0:3);
       found.set(f.join(),v);
@@ -1205,7 +1238,7 @@ function diagram(v,mini){
   for(let j=base===1?1:0;j<=NF;j++)s+=`<line class="fr" x1="${X(0)}" x2="${X(5)}" y1="${Y0+j*FH}" y2="${Y0+j*FH}"/>`;
   for(let i=0;i<6;i++)s+=`<line class="st" x1="${X(i)}" x2="${X(i)}" y1="${Y0}" y2="${Y0+FH*NF}"/>`;
   if(base>1)s+=`<text class="pos" x="${X(0)-14}" y="${cy(base)+5}" text-anchor="end">${base}</text>`;
-  if(bar)s+=`<rect class="dot" x="${X(bar.a)-10}" y="${cy(bar.fret)-9}" width="${X(bar.b)-X(bar.a)+20}" height="18" rx="9"/>`;
+  if(bar)s+=`<rect class="dot" x="${X(bar.a)-11}" y="${cy(bar.fret)-11}" width="${X(bar.b)-X(bar.a)+22}" height="22" rx="11"/>`;
   f.forEach((x,i)=>{
     if(x<0)s+=`<text class="mute" x="${X(i)}" y="${Y0-12}" text-anchor="middle">×</text>`;
     else if(x===0)s+=`<circle class="open" cx="${X(i)}" cy="${Y0-17}" r="5.5"/>`;
@@ -2229,6 +2262,27 @@ function showPitch(p){
   document.querySelectorAll('#t-strings span').forEach(s=>s.classList.toggle('on',near&&+s.dataset.i===best));
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(S.view==='tuner')tuAuto();return}if(document.hidden){tunerStop();if(PC.on){PC.on=false;micStop();const box=document.getElementById('tuview');if(box&&TU.view==='chords')box.innerHTML=pcHtml()}}});
+const INTERVAL_LABELS=['1','b2','2','b3','3','4','b5','5','#5','6','b7','7'];
+const CHORD_TYPES=[...new Set([...Object.keys(TONES),
+  ...['7','9','11','13','maj7','maj9','maj11','maj13','m7','m9','m11','m13'].flatMap(base=>['b5','#5','b9','#9','#11','b13','b9#11','b9b13','#9#11','#9b13','no3','no5'].map(mod=>base+mod)),
+  'mMaj9','mMaj11','mMaj13','aug7','augmaj7','dim9','6add11','m6add9','m6add11','sus2add9','sus4add9','7sus4b9','9sus4b13'
+])];
+function chordBrowserHtml(){return `<section class="chord-browser" aria-label="Все типы аккордов">
+  <h3 class="sec-h">Все типы аккордов</h3>
+  <div class="chord-pickers"><label>Основная нота<select id="chord-root">${NS.map(n=>`<option>${n}</option>`).join('')}</select></label>
+  <label>Тип<select id="chord-type">${CHORD_TYPES.map(q=>`<option value="${esc(q)}">${esc(q==='maj'?'Мажор':q)}</option>`).join('')}</select></label></div>
+  <details><summary>Составить по интервалам</summary><p class="hint">Выберите ноты относительно основной. Все выбранные ноты будут обязательными.</p><div class="chord-intervals">${INTERVAL_LABELS.map((s,i)=>`<label><input type="checkbox" data-chord-interval="${i}" ${[0,4,7].includes(i)?'checked':''} ${i===0?'disabled':''}>${s}</label>`).join('')}</div><button class="btn" data-act="chord-compose">Показать схемы</button></details>
+  <div id="chord-results" aria-live="polite"></div></section>`}
+function fillChordBrowser(compose=false){
+  const target=document.getElementById('chord-results');if(!target)return;
+  const root=document.getElementById('chord-root').value,type=document.getElementById('chord-type').value;
+  const q=compose?'('+[...document.querySelectorAll('[data-chord-interval]:checked')].map(el=>INTERVAL_LABELS[Number(el.dataset.chordInterval)]).join(',')+')':type==='maj'?'':type;
+  const name=root+q,result=getVoicings(name);
+  target.innerHTML=`<h3 class="chart-root">${esc(name)}</h3>`+(result.list.length?`<div class="chart-row">${result.list.map(v=>`<button class="cell" data-act="play-frets" data-f="${v.frets.join(',')}" aria-label="Сыграть ${esc(name)}">${diagram(v)}<span class="hint">${esc(chordInfo(v,name).frets)}</span></button>`).join('')}</div><button class="btn" data-act="cchord" data-c="${esc(name)}">Открыть крупно</button>`:'<p class="hint">В пределах четырёх ладов подходящая аппликатура не найдена. Для шести струн можно выбрать не более шести различных нот. Попробуйте убрать необязательный интервал.</p>');
+  target.dataset.compose=compose?'1':'0';
+}
+document.addEventListener('change',e=>{if(e.target.matches('#chord-root,#chord-type'))fillChordBrowser(e.target.id==='chord-root'&&document.getElementById('chord-results')?.dataset.compose==='1')});
+document.addEventListener('click',e=>{if(e.target.closest('[data-act="chord-compose"]'))fillChordBrowser(true)});
 function renderChart(){
   stopScroll(); S.view='chart'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
@@ -2239,10 +2293,11 @@ function renderChart(){
   <div class="wrap wide">
     ${tabsHtml('chart')}
     <div id="mine"></div>
+    ${chordBrowserHtml()}
     <div id="chart-sum" class="chart-sum"></div>
     <div class="chart-scroll"><div class="chart-grid" id="chart-grid"></div></div>
   </div>`;
-  fillChart();
+  fillChart();fillChordBrowser();
 }
 function fillChart(){
   const grid=document.getElementById('chart-grid'); if(!grid)return;
@@ -4689,6 +4744,6 @@ initStore().then(st=>{
 </script>
 
 <script src="hitmos-marking.js?v=132"></script>
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=133',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=134',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
