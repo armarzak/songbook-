@@ -951,9 +951,9 @@ const NFL=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
 const BASE={C:0,D:2,E:4,F:5,G:7,A:9,B:11,H:11};
 function noteIndex(n){let i=BASE[n[0]];if(n[1]==='#')i++;else if(n[1]==='b')i--;return (i+12)%12}
 const CHORD_RE=/^([A-H])([#b]?)([^\/\s]*)(?:\/([A-H][#b]?))?$/;
-const QUAL_OK=/^(?:maj|min|m|M|dim|aug|sus|add|no|[0-9]|b|#|\+|°|ø|Δ|\(|\)|-|o)*$/;
+const QUAL_OK=/^(?:maj|Maj|min|m|M|dim|aug|sus|add|no|[0-9]|b|#|\+|°|ø|Δ|\(|\)|-|o)*$/;
 function parseChord(t){
-  const m=CHORD_RE.exec(t); if(!m||!QUAL_OK.test(m[3]))return null;
+  const m=CHORD_RE.exec(t.replace(/6\/9(?=$|\/)/,'6add9'));  if(!m||!QUAL_OK.test(m[3]))return null;
   return {txt:t,root:noteIndex(m[1]+m[2]),q:m[3],bass:m[4]?noteIndex(m[4]):null};
 }
 function chordTok(t){
@@ -971,7 +971,9 @@ function chordName(c,shift,flats){
 const QMAP={'':'maj','M':'maj','maj':'maj','m':'m','min':'m','-':'m','7':'7','m7':'m7','min7':'m7','-7':'m7',
   'maj7':'maj7','M7':'maj7','Δ':'maj7','Δ7':'maj7','sus2':'sus2','2':'sus2','sus4':'sus4','sus':'sus4','4':'sus4',
   'dim':'dim','°':'dim','o':'dim','dim7':'dim7','°7':'dim7','o7':'dim7','aug':'aug','+':'aug','6':'6','m6':'m6',
-  '9':'9','add9':'add9','add4':'add4','add11':'add4','5':'5','7sus4':'7sus4','7sus':'7sus4','m7b5':'m7b5','ø':'m7b5','m7-5':'m7b5','ø7':'m7b5'};
+  '9':'9','add9':'add9','add4':'add4','add11':'add4','5':'5','7sus4':'7sus4','7sus':'7sus4','m7b5':'m7b5','ø':'m7b5','m7-5':'m7b5','ø7':'m7b5', 'm9':'m9','min9':'m9','-9':'m9','maj9':'maj9','M9':'maj9','Δ9':'maj9',
+  'madd9':'madd9','madd11':'madd11','madd4':'madd11','6/9':'6add9','6add9':'6add9','69':'6add9','mMaj7':'mMaj7','mmaj7':'mMaj7','mM7':'mMaj7','m(maj7)':'mMaj7',
+  '11':'11','m11':'m11','maj11':'maj11','13':'13','m13':'m13','maj13':'maj13','7b5':'7b5','7#5':'7#5','7+':'7#5','7b9':'7b9','7#9':'7#9','9sus4':'9sus4','7sus2':'7sus2','b5':'b5','-5':'b5','5-':'b5','m7sus4':'7sus4','msus2':'sus2','m7add11':'m7add11','13#11':'13#11','maj7sus2':'maj7sus2','6sus':'6sus4','6sus4':'6sus4'};
 function normQ(q){
   q=q.replace(/[()]/g,'');
   if(q in QMAP)return {q:QMAP[q],approx:false};
@@ -1036,11 +1038,11 @@ const CHART_RAW=[
  [['F#','2 4 4 3 2 2'],['F#m','2 4 4 2 2 2'],['Gb6','x 4 4 3 4 x'],['F#7','x x 4 3 2 0'],['F#9','x x 4 3 5 4',3],['F#m6','x x 1 2 2 2'],['F#m7','x x 2 2 2 2'],['Gbmaj7','x x 4 3 2 1'],['F#dim','x x 1 2 1 2'],['Gb+','x x 4 3 3 2'],['Gbsus','x x 4 4 2 2']],
  [['G','3 2 0 0 0 3'],['Gm','3 5 5 3 3 3',3],['G6','3 2 0 0 0 0'],['G7','3 2 0 0 0 1'],['G9','3 0 0 2 0 1'],['Gm6','x x 2 3 3 3'],['Gm7','3 5 3 3 3 3',3],['Gmaj7','x x 5 4 3 2',2],['Gdim','x x 2 3 2 3'],['G+','x x 1 0 0 3'],['Gsus','x x 0 0 1 3']]
 ];
-const CHART_TONES={'':[0,4,7],m:[0,3,7],'6':[0,4,7,9],'7':[0,4,7,10],'9':[0,4,7,10,2],m6:[0,3,7,9],m7:[0,3,7,10],maj7:[0,4,7,11],dim:[0,3,6,9],'+':[0,4,8],sus:[0,5,7]};
+const CHART_TONES={'':[0,4,7],m:[0,3,7],'6':[0,4,7,9],'7':[0,4,7,10],'9':[0,4,7,10,2],m6:[0,3,7,9],m7:[0,3,7,10],maj7:[0,4,7,11],dim:[0,3,6],'+':[0,4,8],sus:[0,5,7]};
 function autoBarre(f){
   const p=f.filter(x=>x>0); if(!p.length)return false; const min=Math.min(...p);
   const idx=f.map((x,i)=>x===min?i:-1).filter(i=>i>=0);
-  return idx.length>=2&&idx[idx.length-1]-idx[0]>=3&&f.slice(idx[0],idx[idx.length-1]+1).every(x=>x>=min);
+  return idx.length>=2&&f.slice(idx[0],idx[idx.length-1]+1).every(x=>x>=min);
 }
 function checkChart(name,frets){
   const m=/^([A-G][#b]?)(.*)$/.exec(name),root=noteIndex(m[1]),want=CHART_TONES[m[2]];
@@ -1065,28 +1067,67 @@ const EXTRA=EXTRA_RAW.map(([name,s])=>{const frets=s.split(' ').map(x=>x==='x'?-
 const EXTRA_BY_NAME=Object.fromEntries(EXTRA.map(v=>[v.name,v]));
 const CHART_BY_KEY={},CHART_BY_NAME={};
 const CQ={'':'maj',m:'m','6':'6','7':'7','9':'9',m6:'m6',m7:'m7',maj7:'maj7',dim:'dim','+':'aug',sus:'sus4'};
-for(const row of CHART)for(const v of row){
-  CHART_BY_NAME[v.name]=v;
-  if(!v.check.ok)continue;
-  const m=/^([A-G][#b]?)(.*)$/.exec(v.name),r=noteIndex(m[1]);
-  CHART_BY_KEY[r+':'+CQ[m[2]]]=v;
-  if(m[2]==='dim')CHART_BY_KEY[r+':dim7']=v;
-}
 /* ---------- the user's own shapes ---------- */
 const TONES={maj:[0,4,7],m:[0,3,7],'7':[0,4,7,10],m7:[0,3,7,10],maj7:[0,4,7,11],sus2:[0,2,7],sus4:[0,5,7],dim:[0,3,6],dim7:[0,3,6,9],
-  aug:[0,4,8],'6':[0,4,7,9],m6:[0,3,7,9],'9':[0,4,7,10,2],add9:[0,4,7,2],add4:[0,4,5,7],'5':[0,7],'7sus4':[0,5,7,10],m7b5:[0,3,6,10]};
+  aug:[0,4,8],'6':[0,4,7,9],m6:[0,3,7,9],'9':[0,4,7,10,2],add9:[0,4,7,2],add4:[0,4,5,7],'5':[0,7],'7sus4':[0,5,7,10],m7b5:[0,3,6,10],
+  m9:[0,3,7,10,2],maj9:[0,4,7,11,2],madd9:[0,3,7,2],madd11:[0,3,7,5], '6add9':[0,4,7,9,2],mMaj7:[0,3,7,11],
+  '11':[0,4,7,10,2,5],m11:[0,3,7,10,2,5],maj11:[0,4,7,11,2,5],
+  '13':[0,4,7,10,2,5,9],m13:[0,3,7,10,2,5,9],maj13:[0,4,7,11,2,5,9],
+  '7b5':[0,4,6,10],'7#5':[0,4,8,10],'7b9':[0,4,7,10,1],'7#9':[0,4,7,10,3], '9sus4':[0,5,7,10,2],'7sus2':[0,2,7,10],b5:[0,4,6],m7add11:[0,3,7,10,5],'13#11':[0,4,7,10,2,6,9],maj7sus2:[0,2,7,11],'6sus4':[0,5,7,9]};
+// Required chord tones are checked independently from the shape source.
+function requiredTones(q){
+  const tones=TONES[q];
+  return tones.filter(n=>!(tones.length>=4&&n===7)&&!(/^.*13/.test(q)&&(n===2||n===5)));
+}
 function checkShape(name,frets){
   const c=parseChord(name); if(!c)return null;
   const {q,approx}=normQ(c.q); if(approx||!TONES[q])return {unknown:true};
-  const want=TONES[q],allowed=new Set(want);
-  if(q==='dim')allowed.add(9);
+  if(!Array.isArray(frets)||frets.length!==6||frets.some(f=>!Number.isInteger(f)||f< -1||f>24))return {ok:false,extra:[],missing:[],invalid:true};
+  const allowed=new Set(TONES[q]);
   if(c.bass!=null)allowed.add((c.bass-c.root+12)%12);
   const N=/^[A-H]b|\/[A-H]b/.test(name)?NFL:NS;
   const have=new Set(frets.map((f,i)=>f<0?null:(OPEN_STR[i]+f-c.root+120)%12).filter(x=>x!=null));
-  const opt=new Set([0,7]); if(q==='9')opt.add(4);
   const extra=[...have].filter(x=>!allowed.has(x)).map(x=>N[(c.root+x)%12]);
-  const missing=want.filter(x=>!opt.has(x)&&!have.has(x)).map(x=>N[(c.root+x)%12]);
-  return {extra,missing,ok:!extra.length&&!missing.length&&have.size>0};
+  const missing=requiredTones(q).filter(x=>!have.has(x)).map(x=>N[(c.root+x)%12]);
+  const midi=[40,45,50,55,59,64], sounding=frets.map((f,i)=>f<0?Infinity:midi[i]+f);
+  const bassOk=c.bass==null||Math.min(...sounding)%12===c.bass;
+  return {extra,missing,bassOk,ok:!extra.length&&!missing.length&&have.size>0&&bassOk};
+}
+// Independent four-fret search: no network or external chord database required.
+const generatedVoicings=new Map();
+function generateVoicings(name){
+  if(generatedVoicings.has(name))return generatedVoicings.get(name);
+  const c=parseChord(name),n=c&&normQ(c.q);if(!c||n.approx||!TONES[n.q])return [];
+  const allowed=new Set(TONES[n.q].map(t=>(t+c.root)%12));if(c.bass!=null)allowed.add(c.bass);
+  const midi=[40,45,50,55,59,64], found=new Map();
+  for(let base=1;base<=12;base++){
+    const options=OPEN_STR.map(pc=>[-1,...(allowed.has(pc)?[0]:[]),...[0,1,2,3].map(d=>base+d).filter(f=>allowed.has((pc+f)%12))]);
+    const f=[];
+    function visit(i){
+      if(i<6){for(const fret of options[i]){f[i]=fret;visit(i+1)}return}
+      const sounding=f.filter(x=>x>=0);if(sounding.length<(n.q==='5'?2:3))return;
+      const pos=f.filter(x=>x>0);if(pos.length&&Math.max(...pos)-Math.min(...pos)>3)return;
+      // Avoid muted strings inside a strummed voicing.
+      const first=f.findIndex(x=>x>=0),last=f.findLastIndex(x=>x>=0);if(f.slice(first,last+1).includes(-1))return;
+      const v={frets:[...f],barre:autoBarre(f),label:'Проверенная аппликатура'};
+      const bar=barreOf(v),cost=pos.length-(bar?f.filter((x,i)=>x===bar.fret&&i>=bar.a&&i<=bar.b).length-1:0);
+      if(cost>4||!checkShape(name,f).ok)return;
+      const bass=Math.min(...f.map((x,i)=>x<0?Infinity:midi[i]+x))%12;
+      const complete=new Set(f.map((x,i)=>x<0?-1:(OPEN_STR[i]+x-c.root+12)%12));
+      v.score=(pos.length?Math.min(...pos):0)*2+cost*1.5+(6-sounding.length)*2+(bass===c.root?0:4)+(TONES[n.q].every(t=>complete.has(t))?0:3);
+      found.set(f.join(),v);
+    }
+    visit(0);
+  }
+  const result=[...found.values()].sort((a,b)=>a.score-b.score).slice(0,8);generatedVoicings.set(name,result);return result;
+}
+// Correct built-in reference cells; saved personal shapes are never rewritten.
+const CHART_CORRECTIONS=[];
+for(const row of CHART)for(const v of row){
+  const ck=checkShape(v.name,v.frets);
+  if(!ck.ok){const fixed=generateVoicings(v.name)[0];if(fixed){CHART_CORRECTIONS.push({name:v.name,before:[...v.frets],after:[...fixed.frets]});Object.assign(v,{frets:fixed.frets,base:0,barre:fixed.barre,label:'Проверенная схема'});}}
+  v.check=checkShape(v.name,v.frets);CHART_BY_NAME[v.name]=v;
+  const c=parseChord(v.name);if(v.check.ok)CHART_BY_KEY[c.root+':'+normQ(c.q).q]=v;
 }
 let CUSTOM_BY_KEY={};
 /* a quality the app does not know (say add4) keeps its own spelling: otherwise Dadd4 and D got one key and your Dadd4 replaced D */
@@ -1105,25 +1146,28 @@ const pretty=n=>n.replace(/^([A-G])b/,'$1♭').replace(/^([A-G])#/,'$1♯');
 const vCache=new Map();
 function getVoicings(name){
   if(vCache.has(name))return vCache.get(name);
-  const c=parseChord(name); let res={list:[],approx:false};
+  const c=parseChord(name),res={list:[],approx:false};
   if(c){
-    const {q,approx}=normQ(c.q); const list=[];
-    const mine=CUSTOM_BY_KEY[customKey(c)];
-    if(mine){res.list=[mine,...mine.alts];vCache.set(name,res);return res} // the user's own variants, the first one leads
-    if(EXTRA_BY_NAME[name])list.push(EXTRA_BY_NAME[name]);
-    if(c.bass!=null&&c.bass!==c.root){const f=SLASH[c.root+':'+q+'/'+c.bass]; if(f)list.push({frets:f,barre:false,label:'С басом '+name.split('/')[1]})}
-    const ch=CHART_BY_KEY[c.root+':'+q]; if(ch)list.push(ch);
-    const o=OPEN[c.root+':'+q]; if(o)list.push({frets:o,barre:false,label:'Открытая позиция'});
-    const rest=['E','A','D'].map(k=>shapeVoicing(c.root,q,k)).filter(Boolean).sort((a,b)=>Math.max(...a.frets)-Math.max(...b.frets));
-    const seen=new Set(); for(const v of ch?[...list]:[...list,...rest]){const k=v.frets.join();if(!seen.has(k)){seen.add(k);res.list.push(v)}}
-    res.approx=approx;
-    if(!res.list.length&&q==='add4'){ // no add4 shape in this key: the plain major chord, marked as approximate
-      const o=OPEN[c.root+':maj'];if(o)res.list.push({frets:o,barre:false,label:'Открытая позиция'});
-      ['E','A','D'].map(k=>shapeVoicing(c.root,'maj',k)).filter(Boolean).forEach(v=>res.list.push(v));
-      res.approx=true;
-    }
+    const {q,approx}=normQ(c.q),mine=CUSTOM_BY_KEY[customKey(c)];
+    if(mine){res.list=[mine,...mine.alts];vCache.set(name,res);return res}
+    const candidates=[];
+    if(EXTRA_BY_NAME[name])candidates.push(EXTRA_BY_NAME[name]);
+    const slash=SLASH[c.root+':'+q+'/'+c.bass];if(slash)candidates.push({frets:slash,label:'С указанным басом'});
+    const ch=CHART_BY_KEY[c.root+':'+q];if(ch)candidates.push(ch);
+    const o=OPEN[c.root+':'+q];if(o)candidates.push({frets:o,label:'Открытая позиция'});
+    candidates.push(...['E','A','D','C'].map(k=>shapeVoicing(c.root,q,k)).filter(Boolean));
+    const seen=new Set();
+    const add=v=>{if(!v)return;const k=v.frets.join();if(seen.has(k))return;
+      if(!approx&&!checkShape(name,v.frets)?.ok)return;
+      const bar=barreOf({...v,barre:autoBarre(v.frets)});
+      if(v.frets.filter(f=>f>0).length-(bar?v.frets.filter((f,i)=>f===bar.fret&&i>=bar.a&&i<=bar.b).length-1:0)>4)return;
+      seen.add(k);res.list.push({...v,barre:autoBarre(v.frets)});
+    };
+    candidates.forEach(add);
+    if(!approx&&res.list.length<3)generateVoicings(name).forEach(add);
+    res.list=res.list.slice(0,8);res.approx=approx;
   }
-  vCache.set(name,res); return res;
+  vCache.set(name,res);return res;
 }
 function barreOf(v){
   const f=v.frets,p=f.filter(x=>x>0),min=p.length?Math.min(...p):0;
@@ -1139,7 +1183,7 @@ function fingersOf(v,bar){
   if(bar){for(let i=bar.a;i<=bar.b;i++)if(f[i]===bar.fret)fin[i]=1;next=2}
   const rest=f.map((x,i)=>({x,i})).filter(o=>o.x>0&&!fin[o.i]).sort((p,q)=>p.x-q.x||p.i-q.i);
   for(const o of rest){
-    if(next>4){const same=rest.find(r=>r.x===o.x&&fin[r.i]);fin[o.i]=same?fin[same.i]:4}
+    if(next>4)fin[o.i]=0
     else fin[o.i]=next++;
   }
   return fin;
@@ -1152,10 +1196,11 @@ function chordInfo(v,name){
 }
 function diagram(v,mini){
   const f=v.frets,p=f.filter(x=>x>0),max=p.length?Math.max(...p):0,min=p.length?Math.min(...p):0;
-  const base=v.base||(max<=4?1:min),NF=Math.max(4,max-base+1);
+  const requested=Number(v.base)||0;
+  const base=requested>0&&requested<=min?requested:(max<=4?1:min||1),NF=Math.max(4,max-base+1);
   const X=i=>34+i*28,Y0=38,FH=32,H=Y0+FH*NF+8,cy=fr=>Y0+(fr-base+.5)*FH;
-  const bar=mini?null:barreOf(v),fin=fingersOf(v,bar);
-  let s=`<svg class="dia${mini?' mini':''}" viewBox="0 0 194 ${H}" aria-hidden="true">`;
+  const bar=barreOf({...v,barre:v.barre??autoBarre(f)}),fin=fingersOf(v,bar);
+  let s=`<svg class="dia${mini?' mini':''}" viewBox="0 0 194 ${H}" role="img" aria-label="Лады от шестой струны: ${f.map(x=>x<0?'не звучит':x===0?'открытая':x).join(', ')}">`;
   if(base===1)s+=`<rect class="nut" x="${X(0)-1}" y="${Y0-5}" width="${X(5)-X(0)+2}" height="5" rx="1"/>`;
   for(let j=base===1?1:0;j<=NF;j++)s+=`<line class="fr" x1="${X(0)}" x2="${X(5)}" y1="${Y0+j*FH}" y2="${Y0+j*FH}"/>`;
   for(let i=0;i<6;i++)s+=`<line class="st" x1="${X(i)}" x2="${X(i)}" y1="${Y0}" y2="${Y0+FH*NF}"/>`;
@@ -2210,7 +2255,7 @@ function fillChart(){
     <h3 class="sec-h">Таблица</h3>`:'';
   const all=CHART.flat();
   document.getElementById('chart-sum').innerHTML=`
-    <p>Все ${all.length} схем из вашей таблицы в том же порядке. Они сгруппированы по основной ноте, по 4 в ряд. Нажмите на схему, чтобы увидеть её крупно с номерами пальцев.</p>`;
+    <p>Все ${all.length} схем в прежнем порядке, с проверенным составом нот. Они сгруппированы по основной ноте, по 4 в ряд. Нажмите на схему, чтобы увидеть её крупно с номерами пальцев.</p>`;
   const cell=v=>`<button class="cell" data-act="cchord" data-c="${esc(v.name)}" aria-label="${esc(pretty(v.name))}">
       <span class="n">${esc(pretty(v.name))}</span>${diagram(v,true)}</button>`;
   grid.innerHTML=CHART.map(row=>{const root=(row[0].name.match(/^[A-G][#b]?/)||[row[0].name])[0];
@@ -2218,18 +2263,7 @@ function fillChart(){
     +`<h3 class="chart-root">С басом и другие</h3><div class="chart-row">${EXTRA.map(cell).join('')}</div>`;
 }
 /* every playable position of a chord: the user's own / table one first, then the open shape and the movable E, A, D, C shapes up the neck */
-function allVoicings(name){
-  const c=parseChord(name); if(!c)return [];
-  const {q}=normQ(c.q),out=[],seen=new Set(),add=v=>{if(!v)return;const k=v.frets.join();if(!seen.has(k)){seen.add(k);out.push(v)}};
-  const mine=CUSTOM_BY_KEY[customKey(c)]; if(mine){add(mine);mine.alts.forEach(add)}
-  if(EXTRA_BY_NAME[name])add(EXTRA_BY_NAME[name]);
-  if(CHART_BY_NAME[name])add(CHART_BY_NAME[name]);
-  getVoicings(name).list.forEach(add);
-  const o=OPEN[c.root+':'+q]; if(o)add({frets:o,barre:false,label:'Открытая позиция'});
-  const low=v=>{const p=v.frets.filter(x=>x>0);return p.length?Math.min(...p):0};
-  ['E','A','D','C'].map(k=>shapeVoicing(c.root,q,k)).filter(Boolean).sort((x,y)=>low(x)-low(y)).forEach(add);
-  return out.slice(0,Math.max(6,mine?mine.alts.length+1:0));
-}
+function allVoicings(name){return getVoicings(name).list;}
 /* note names under the six strings, lined up with the diagram */
 function stringNotes(v,flats){
   const N=flats?NFL:NS;
@@ -4655,6 +4689,6 @@ initStore().then(st=>{
 </script>
 
 <script src="hitmos-marking.js?v=132"></script>
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=132',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=133',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
