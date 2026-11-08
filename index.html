@@ -551,6 +551,7 @@ body:has(.tabbar) .wrap{padding-bottom:calc(84px + env(safe-area-inset-bottom,0p
 .metrobtn.beat{animation:mbeat .12s ease-out}
 @keyframes mbeat{from{transform:scale(1.12)}to{transform:none}}
 .tabbar button{min-width:0;font-size:clamp(9px,2.65vw,11.5px)}
+.rhythm-mode{display:flex;margin:18px 0 10px}.rhythm-mode button{flex:1;min-height:44px}.drum-controls{margin:18px 0;padding:14px;border-radius:14px;background:var(--sunk)}.drum-controls>label{display:block;margin-bottom:8px}.drum-controls select{width:100%;font-size:16px;padding:12px;border-radius:10px;border:1px solid var(--line);color:var(--fg);background:var(--surface)}.drum-volume-caption{display:flex!important;justify-content:space-between;margin-top:16px}
 .metro-page{max-width:540px;margin:12px auto;padding:20px;border:1px solid var(--line);border-radius:20px;background:var(--surface)}
 .metro-page h1{margin:0 0 8px}.metro-page .m-big{margin:32px 0 22px}.metro-page .m-val{min-width:160px}.metro-page .m-val b{font-size:clamp(64px,20vw,96px)}
 .metro-page input[type=range]{display:block;width:100%;height:40px}.metro-range{display:flex;justify-content:space-between;color:var(--muted);font-size:12px}.metro-range-label{display:block;margin-top:22px;color:var(--muted)}
@@ -972,6 +973,7 @@ input.mono{font-family:var(--f-mono)}
 <script src="album-shelf.js?v=136"></script>
 <script src="touch-guitar.js?v=117"></script>
 <script src="tempo-core.js?v=117"></script>
+<script src="drum-machine.js?v=142"></script>
 <script src="backing-tempo.js?v=117"></script>
 <script src="gtp-fretboard.js?v=117"></script>
 <script>
@@ -2469,7 +2471,7 @@ async function copySong(fromShare){
 
 /* ---------- metronome: clicks scheduled ahead on the audio clock, so the beat stays steady ---------- */
 const M={on:false,bpm:100,beats:4,beat:0,next:0,timer:0,taps:[],saveT:0};
-function metroLoad(s){M.bpm=Math.min(240,Math.max(30,+(s&&s.bpm)||100));M.beats=[2,3,4,6].includes(+(s&&s.beats))?+s.beats:4}
+function metroLoad(s){M.sound='click';M.bpm=Math.min(240,Math.max(30,+(s&&s.bpm)||100));M.beats=[2,3,4,6].includes(+(s&&s.beats))?+s.beats:4}
 function metroClick(t,accent){
   const o=AC.createOscillator(),g=AC.createGain();
   o.type='square'; o.frequency.value=accent?1760:1175;
@@ -2480,17 +2482,23 @@ function metroTick(){
   if(!M.on)return;
   while(M.next<AC.currentTime+0.12){
     const b=M.beat,t=M.next;
-    metroClick(t,b===0);
-    setTimeout(()=>metroFlash(b),Math.max(0,(t-AC.currentTime)*1000));
-    M.beat=(M.beat+1)%M.beats; M.next+=60/M.bpm;
+    if(S.view==='metronome'&&M.sound==='drums'){
+      const p=FireDrums.pattern(M.groove),step=M.step||0;
+      FireDrums.play(AC,acOut,M.groove,step,t,M.volume);
+      if(step%p.division===0)setTimeout(()=>metroFlash(Math.floor(step/p.division)),Math.max(0,(t-AC.currentTime)*1000));
+      M.step=(step+1)%(p.beats*p.division);M.next+=FireDrums.stepSeconds(M.bpm,M.groove);
+    }else{
+      metroClick(t,b===0);setTimeout(()=>metroFlash(b),Math.max(0,(t-AC.currentTime)*1000));
+      M.beat=(M.beat+1)%M.beats;M.next+=60/M.bpm;
+    }
   }
 }
 function metroStart(){
   const run=M.run=(M.run||0)+1,ctx=audioCtx(); unlockAudio(6*3600);
-  whenRunning(ctx,()=>{if(M.run!==run)return;M.on=true;M.beat=0;M.next=ctx.currentTime+0.08;clearInterval(M.timer);M.timer=setInterval(metroTick,25);metroTick();metroUI()});
+  whenRunning(ctx,()=>{if(M.run!==run)return;M.on=true;M.beat=0;M.step=0;M.next=ctx.currentTime+0.08;clearInterval(M.timer);M.timer=setInterval(metroTick,25);metroTick();metroUI()});
 }
 function metroStop(){
-  M.run=(M.run||0)+1;
+  M.run=(M.run||0)+1;FireDrums.stop();
   if(!M.on)return;
   M.on=false; clearInterval(M.timer);
   try{if(mediaEl){clearTimeout(mediaT);mediaEl.pause()}}catch{}
@@ -2511,7 +2519,7 @@ function metroSet(bpm){
   metroSave();
 }
 function metroSave(){
-  if(S.view==='metronome'){lsSet('sb.metro',JSON.stringify({bpm:M.bpm,beats:M.beats}));return}
+  if(S.view==='metronome'){lsSet('sb.metro',JSON.stringify({bpm:M.bpm,beats:M.beats,sound:M.sound||'click',groove:M.groove||'rock',volume:M.volume??.7,clickBeats:M.clickBeats||M.beats}));return}
   const s=findSong(S.cur); if(!s||s.demo)return;
   clearTimeout(M.saveT);
   const bpm=M.bpm,beats=M.beats;
@@ -2548,24 +2556,46 @@ function openMetro(){
 }
 function metroPageBeats(){
   const dots=document.querySelector('#metro-page .mdots');if(dots)dots.innerHTML=Array.from({length:M.beats},(_,i)=>`<i class="${i===0?'acc':''}"></i>`).join('');
-  document.querySelectorAll('#metro-page [data-act="m-beats"]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.v===M.beats)));
+  document.querySelectorAll('#metro-page [data-act="m-beats"]').forEach(b=>{b.setAttribute('aria-pressed',String(+b.dataset.v===M.beats));b.disabled=M.sound==='drums'});
+}
+function metroRhythmUI(){
+  document.querySelectorAll('[data-act="m-sound"]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===M.sound)));
+  const box=document.getElementById('drum-controls');if(box)box.hidden=M.sound!=='drums';
+  const select=document.getElementById('drum-groove');if(select)select.value=M.groove;
+  const hint=document.getElementById('drum-hint');if(hint)hint.textContent=FireDrums.pattern(M.groove).hint;
+  const size=document.getElementById('drum-size-hint');if(size)size.hidden=M.sound!=='drums';
+  const slider=document.getElementById('drum-volume');if(slider)slider.value=Math.round((M.volume??.7)*100);
+  const label=document.getElementById('drum-volume-label');if(label)label.textContent=Math.round((M.volume??.7)*100)+'%';
+  metroPageBeats();
+}
+function metroRhythm(sound,groove){
+  const wasPlaying=M.on;metroStop();
+  if(M.sound!=='drums')M.clickBeats=M.beats;
+  M.sound=sound==='drums'?'drums':'click';M.groove=FireDrums.patterns[groove]?groove:M.groove||'rock';
+  M.beats=M.sound==='drums'?FireDrums.pattern(M.groove).beats:M.clickBeats||4;
+  M.beat=0;M.step=0;metroSave();metroRhythmUI();if(wasPlaying)metroStart();
 }
 function renderMetronome(){
   stopScroll();closeSheet();S.view='metronome';S.cur=null;tools.hidden=true;document.body.classList.remove('has-tools');
   let pref={};try{pref=JSON.parse(lsGet('sb.metro')||'{}')||{}}catch{}
   M.bpm=Number.isFinite(+pref.bpm)?Math.max(30,Math.min(240,Math.round(+pref.bpm))):120;
   M.beats=[2,3,4,6].includes(+pref.beats)?+pref.beats:4;M.taps=[];
+  M.sound=pref.sound==='drums'?'drums':'click';M.groove=FireDrums.patterns[pref.groove]?pref.groove:'rock';M.volume=Number.isFinite(pref.volume)?Math.max(0,Math.min(1,pref.volume)):.7;M.clickBeats=[2,3,4,6].includes(+pref.clickBeats)?+pref.clickBeats:M.beats;
+  if(M.sound==='drums')M.beats=FireDrums.pattern(M.groove).beats;
   app.innerHTML=`<header class="bar"><div class="bar-in library-head"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button>${settingsButton()}</div></header>
-    <main class="wrap"><section id="metro-page" class="metro metro-page" aria-label="Метроном"><h1>Метроном</h1><p class="hint">Держи ритм — репетируй без открытия песни.</p>
+    <main class="wrap"><section id="metro-page" class="metro metro-page" aria-label="Метроном"><h1>Метроном и биты</h1><p class="hint">Играй под щелчки или барабанный ритм.</p>
+    <div class="seg rhythm-mode" role="group" aria-label="Звук сопровождения"><button data-act="m-sound" data-v="click">Метроном</button><button data-act="m-sound" data-v="drums">Барабаны</button></div>
     <div class="m-big"><button class="btn icon" data-act="m-step" data-d="-1" aria-label="Медленнее на один удар">−</button><div class="m-val"><b id="m-num">${M.bpm}</b><span>ударов в минуту</span></div><button class="btn icon" data-act="m-step" data-d="1" aria-label="Быстрее на один удар">+</button></div>
     <div class="mdots" aria-label="Доли такта"></div>
+    <div id="drum-controls" class="drum-controls" hidden><label for="drum-groove">Ритм</label><select id="drum-groove">${Object.entries(FireDrums.patterns).map(([id,p])=>`<option value="${id}">${p.name}</option>`).join('')}</select><p class="hint" id="drum-hint"></p><label class="drum-volume-caption" for="drum-volume">Громкость барабанов <span id="drum-volume-label"></span></label><input type="range" id="drum-volume" min="0" max="100" step="1" value="70"></div>
     <label class="metro-range-label" for="m-bpm">Темп</label><input type="range" id="m-bpm" min="30" max="240" value="${M.bpm}" aria-label="Темп метронома"><div class="metro-range"><span>30</span><span>240</span></div>
     <div class="metro-direct"><label>Ввести темп<input id="metro-direct" type="number" inputmode="numeric" min="30" max="240" value="${M.bpm}"></label></div>
     <div class="m-row"><span class="cap">Размер</span><div class="seg" role="group" aria-label="Размер такта">${[2,3,4,6].map(n=>`<button data-act="m-beats" data-v="${n}">${n===6?'6/8':n+'/4'}</button>`).join('')}</div></div>
+    <p class="hint" id="drum-size-hint" hidden>Размер задаётся выбранным битом. Темп регулируется выше.</p>
     <div class="metro-presets" role="group" aria-label="Готовые темпы">${[[60,'Баллада'],[80,'Медленно'],[120,'Умеренно'],[140,'Быстро'],[180,'Очень быстро']].map(([bpm,label])=>`<button class="btn" data-act="m-preset" data-v="${bpm}" aria-pressed="${M.bpm===bpm}"><span>${label}</span><b>${bpm}</b></button>`).join('')}</div>
     <div class="metro-actions"><button class="btn" data-act="m-tap">Tap — задать ритм</button><button class="btn primary" id="m-toggle" data-act="m-toggle" aria-pressed="false">Старт</button></div>
-    <button class="btn metro-reset" data-act="m-reset">Сбросить</button><p class="hint">Первая доля выделена звуком. Для Tap нажми несколько раз в нужном ритме. Настройки этого экрана сохраняются отдельно от песен.</p></section></main>${tabsHtml('metronome')}`;
-  metroPageBeats();
+    <button class="btn metro-reset" data-act="m-reset">Сбросить</button><p class="hint">Метроном выделяет первую долю. В барабанном режиме звучит выбранный бит. Для Tap нажми несколько раз в нужном ритме. Настройки сохраняются отдельно от песен.</p></section></main>${tabsHtml('metronome')}`;
+  metroRhythmUI();
 }
 function metroTap(){
   const now=performance.now();
@@ -4547,9 +4577,10 @@ document.addEventListener('click',e=>{
   else if(a==='m-toggle'){M.on?metroStop():metroStart()}
   else if(a==='m-step')metroSet(M.bpm+ +b.dataset.d);
   else if(a==='m-tap')metroTap();
-  else if(a==='m-beats'){M.beats=+b.dataset.v;M.beat=0;metroSave();if(S.view==='metronome')metroPageBeats();else openMetro()}
+  else if(a==='m-beats'){if(S.view==='metronome'&&M.sound==='drums')return;M.beats=+b.dataset.v;M.clickBeats=M.beats;M.beat=0;metroSave();if(S.view==='metronome')metroPageBeats();else openMetro()}
   else if(a==='m-preset')metroSet(+b.dataset.v);
-  else if(a==='m-reset'){metroStop();M.beats=4;M.taps=[];metroSet(120);metroPageBeats()}
+  else if(a==='m-reset'){metroStop();M.beats=4;M.clickBeats=4;M.sound='click';M.groove='rock';M.volume=.7;M.taps=[];metroSet(120);metroRhythmUI()}
+  else if(a==='m-sound')metroRhythm(b.dataset.v,M.groove);
   else if(a==='stage')enterStage();
   else if(a==='stage-exit')exitStage();
   else if(a==='viewmode'){S.textOnly=b.dataset.v==='1';lsSet('sb.textonly',S.textOnly?'1':'0');document.querySelectorAll('.vt button').forEach(x=>x.setAttribute('aria-pressed',String((x.dataset.v==='1')===S.textOnly)));document.querySelectorAll('.hdr-tone').forEach(x=>x.hidden=S.textOnly);fillSong();renderTools()}
@@ -4607,6 +4638,7 @@ document.addEventListener('click',e=>{
   }
   else if(a==='scroll'){S.scroll.tapPaused=false;if(S.scroll.on||CI.on){countInStop();stopAuto();renderTools()}else countIn(()=>{startScroll();renderTools()})}});
 document.addEventListener('change',e=>{
+  if(e.target.id==='drum-groove')metroRhythm('drums',e.target.value);
   if(e.target.id==='metro-direct'){const v=Number(e.target.value);if(e.target.value.trim()&&Number.isFinite(v))metroSet(v);e.target.value=M.bpm}
   if(e.target.id==='speed'&&S.view==='song'){const x=findSong(S.cur);if(x&&!x.demo&&+x.speed!==S.scroll.speed)store.patch(x.id,{speed:S.scroll.speed,updatedAt:Date.now()}).catch(()=>{})}
   if(e.target.id==='tu-tuning'){TU.tuning=e.target.value;lsSet('sb.tuning',TU.tuning);const t=document.getElementById('tstr');if(t)t.innerHTML=tstrHtml()}
@@ -4625,6 +4657,7 @@ document.addEventListener('input',e=>{
   if(id==='search'){S.q=e.target.value;fillList()}
   else if(id==='speed'){S.scroll.speed=+e.target.value;const x=S.view==='song'&&findSong(S.cur);if(!x||x.demo)lsSet('sb.speed',S.scroll.speed)} // a real song keeps its own speed
   else if(id==='m-bpm')metroSet(+e.target.value);
+  else if(id==='drum-volume'){M.volume=+e.target.value/100;document.getElementById('drum-volume-label').textContent=e.target.value+'%';if(AC)FireDrums.volume(AC,M.volume);metroSave()}
   else if(id==='gp-speed'){const v=+e.target.value;if(AT.api)AT.api.playbackSpeed=v/100;const l=document.getElementById('gp-speed-l');if(l)l.textContent=v+'%'}
   else if(id==='t-seek'&&TR.el){TR.seeking=Date.now();TR.el.currentTime=+e.target.value/10;TR.cur=-2}
   else if(id==='imp-src'){clearTimeout(impT);impT=setTimeout(fillImport,250)}
@@ -4819,6 +4852,6 @@ initStore().then(st=>{
 </script>
 
 <script src="hitmos-marking.js?v=132"></script>
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=141',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=142',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
