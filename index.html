@@ -547,6 +547,14 @@ body:has(.tabbar) .wrap{padding-bottom:calc(84px + env(safe-area-inset-bottom,0p
 .grp .metrobtn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
 .metrobtn.beat{animation:mbeat .12s ease-out}
 @keyframes mbeat{from{transform:scale(1.12)}to{transform:none}}
+.tabbar button{min-width:0;font-size:clamp(9px,2.65vw,11.5px)}
+.metro-page{max-width:540px;margin:12px auto;padding:20px;border:1px solid var(--line);border-radius:20px;background:var(--surface)}
+.metro-page h1{margin:0 0 8px}.metro-page .m-big{margin:32px 0 22px}.metro-page .m-val{min-width:160px}.metro-page .m-val b{font-size:clamp(64px,20vw,96px)}
+.metro-page input[type=range]{display:block;width:100%;height:40px}.metro-range{display:flex;justify-content:space-between;color:var(--muted);font-size:12px}.metro-range-label{display:block;margin-top:22px;color:var(--muted)}
+.metro-direct{margin:16px 0}.metro-direct label{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--muted)}.metro-direct input{width:100px;font-size:20px;text-align:center}
+.metro-presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:22px 0}.metro-presets .btn{height:auto;min-height:66px;padding:10px 4px;display:flex;flex-direction:column;gap:4px;font-size:11px}.metro-presets .btn b{font:700 22px var(--f-mono)}.metro-presets [aria-pressed=true]{border-color:var(--accent);color:var(--accent)}
+.metro-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:20px 0 12px}.metro-actions .btn{min-height:54px}.metro-reset{margin:0 auto 16px;display:flex}.metro-page .mdots{min-height:24px}
+@media(max-width:359px){.metro-page{padding:14px}.metro-page .m-val{min-width:130px}.metro-page .m-row{flex-wrap:wrap}}
 .metro .m-big{display:flex;align-items:center;justify-content:center;gap:6px;margin:6px 0 10px}
 .metro .m-val{display:flex;flex-direction:column;align-items:center;min-width:110px}
 .metro .m-val b{font:700 52px/1 var(--f-display);color:var(--accent);font-variant-numeric:tabular-nums}
@@ -1598,10 +1606,11 @@ const TAB_ICONS={
   chart:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M5 8.5h14M5 14h14M9.7 3v18M14.3 3v18"/><circle cx="9.7" cy="11.2" r="1.7" fill="currentColor" stroke="none"/><circle cx="14.3" cy="16.8" r="1.7" fill="currentColor" stroke="none"/>',
   circle:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v5M12 16v5M3 12h5M16 12h5"/>',
   scales:'<path d="M5 20v-3M10 20v-7M15 20V9M20 20V5" stroke-width="2.6"/>',
+  metronome:'<path d="M8 3h8l5 18H3L8 3Z"/><path d="m12 17 5-10M8 16h8"/><circle cx="12" cy="17" r="1.5"/>',
   tuner:'<path d="M3.5 17a8.5 8.5 0 1 1 17 0"/><path d="M12 17l4.2-6.2"/><circle cx="12" cy="17" r="1.6" fill="currentColor" stroke="none"/><path d="M6.4 11.4l1.2.9M12 8.5V10M17.6 11.4l-1.2.9" stroke-width="1.5"/>'
 };
 function tabsHtml(cur){
-  const t=[['list','Песни'],['chart','Схемы'],['circle','Круг'],['scales','Гаммы'],['tuner','Тюнер']];
+  const t=[['list','Песни'],['chart','Схемы'],['circle','Круг'],['scales','Гаммы'],['tuner','Тюнер'],['metronome','Метроном']];
   return `<nav class="tabbar" role="tablist" aria-label="Разделы">${t.map(([id,name])=>`<button role="tab" aria-selected="${cur===id}" data-act="tab-${id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TAB_ICONS[id]}</svg><span>${name}</span></button>`).join('')}</nav>`;
 }
 
@@ -2473,10 +2482,11 @@ function metroTick(){
   }
 }
 function metroStart(){
-  const ctx=audioCtx(); unlockAudio(6*3600);
-  whenRunning(ctx,()=>{M.on=true;M.beat=0;M.next=ctx.currentTime+0.08;clearInterval(M.timer);M.timer=setInterval(metroTick,25);metroTick();metroUI()});
+  const run=M.run=(M.run||0)+1,ctx=audioCtx(); unlockAudio(6*3600);
+  whenRunning(ctx,()=>{if(M.run!==run)return;M.on=true;M.beat=0;M.next=ctx.currentTime+0.08;clearInterval(M.timer);M.timer=setInterval(metroTick,25);metroTick();metroUI()});
 }
 function metroStop(){
+  M.run=(M.run||0)+1;
   if(!M.on)return;
   M.on=false; clearInterval(M.timer);
   try{if(mediaEl){clearTimeout(mediaT);mediaEl.pause()}}catch{}
@@ -2487,20 +2497,25 @@ function metroFlash(b){
   if(M.on)document.querySelectorAll('.metrobtn').forEach(btn=>{btn.classList.remove('beat');void btn.offsetWidth;btn.classList.add('beat')});
 }
 function metroSet(bpm){
+  if(!Number.isFinite(bpm))return;
   M.bpm=Math.min(240,Math.max(30,Math.round(bpm)));
   const n=document.getElementById('m-num'); if(n)n.textContent=M.bpm;
   const r=document.getElementById('m-bpm'); if(r&&+r.value!==M.bpm)r.value=M.bpm;
   document.querySelectorAll('.metrobtn .lbl').forEach(l=>l.textContent=M.bpm);
+  const input=document.getElementById('metro-direct');if(input&&document.activeElement!==input)input.value=M.bpm;
+  document.querySelectorAll('[data-act="m-preset"]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.v===M.bpm)));
   metroSave();
 }
 function metroSave(){
+  if(S.view==='metronome'){lsSet('sb.metro',JSON.stringify({bpm:M.bpm,beats:M.beats}));return}
   const s=findSong(S.cur); if(!s||s.demo)return;
   clearTimeout(M.saveT);
-  M.saveT=setTimeout(()=>{if(store&&((+s.bpm||100)!==M.bpm||(+s.beats||4)!==M.beats))store.patch(s.id,{bpm:M.bpm,beats:M.beats,updatedAt:Date.now()}).catch(()=>{})},900);
+  const bpm=M.bpm,beats=M.beats;
+  M.saveT=setTimeout(()=>{if(store&&((+s.bpm||100)!==bpm||(+s.beats||4)!==beats))store.patch(s.id,{bpm,beats,updatedAt:Date.now()}).catch(()=>{})},900);
 }
 function metroUI(){
   document.querySelectorAll('.metrobtn').forEach(btn=>btn.classList.toggle('on',M.on));
-  const t=document.getElementById('m-toggle'); if(t)t.textContent=M.on?'Стоп':'Старт';
+  const t=document.getElementById('m-toggle');if(t){t.textContent=M.on?'Стоп':'Старт';t.setAttribute('aria-pressed',String(M.on))}
   if(!M.on)document.querySelectorAll('.mdots i').forEach(d=>d.classList.remove('on'));
 }
 function openMetro(){
@@ -2526,6 +2541,27 @@ function openMetro(){
     <p class="hint">«Тап»: нажмите несколько раз в ритм песни, и темп подстроится. Темп и размер запоминаются для этой песни.</p>
   </div>`;
   sheet.hidden=false;
+}
+function metroPageBeats(){
+  const dots=document.querySelector('#metro-page .mdots');if(dots)dots.innerHTML=Array.from({length:M.beats},(_,i)=>`<i class="${i===0?'acc':''}"></i>`).join('');
+  document.querySelectorAll('#metro-page [data-act="m-beats"]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.v===M.beats)));
+}
+function renderMetronome(){
+  stopScroll();closeSheet();S.view='metronome';S.cur=null;tools.hidden=true;document.body.classList.remove('has-tools');
+  let pref={};try{pref=JSON.parse(lsGet('sb.metro')||'{}')||{}}catch{}
+  M.bpm=Number.isFinite(+pref.bpm)?Math.max(30,Math.min(240,Math.round(+pref.bpm))):120;
+  M.beats=[2,3,4,6].includes(+pref.beats)?+pref.beats:4;M.taps=[];
+  app.innerHTML=`<header class="bar"><div class="bar-in"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button></div></header>
+    <main class="wrap"><section id="metro-page" class="metro metro-page" aria-label="Метроном"><h1>Метроном</h1><p class="hint">Держи ритм — репетируй без открытия песни.</p>
+    <div class="m-big"><button class="btn icon" data-act="m-step" data-d="-1" aria-label="Медленнее на один удар">−</button><div class="m-val"><b id="m-num">${M.bpm}</b><span>ударов в минуту</span></div><button class="btn icon" data-act="m-step" data-d="1" aria-label="Быстрее на один удар">+</button></div>
+    <div class="mdots" aria-label="Доли такта"></div>
+    <label class="metro-range-label" for="m-bpm">Темп</label><input type="range" id="m-bpm" min="30" max="240" value="${M.bpm}" aria-label="Темп метронома"><div class="metro-range"><span>30</span><span>240</span></div>
+    <div class="metro-direct"><label>Ввести темп<input id="metro-direct" type="number" inputmode="numeric" min="30" max="240" value="${M.bpm}"></label></div>
+    <div class="m-row"><span class="cap">Размер</span><div class="seg" role="group" aria-label="Размер такта">${[2,3,4,6].map(n=>`<button data-act="m-beats" data-v="${n}">${n===6?'6/8':n+'/4'}</button>`).join('')}</div></div>
+    <div class="metro-presets" role="group" aria-label="Готовые темпы">${[[60,'Баллада'],[80,'Медленно'],[120,'Умеренно'],[140,'Быстро'],[180,'Очень быстро']].map(([bpm,label])=>`<button class="btn" data-act="m-preset" data-v="${bpm}" aria-pressed="${M.bpm===bpm}"><span>${label}</span><b>${bpm}</b></button>`).join('')}</div>
+    <div class="metro-actions"><button class="btn" data-act="m-tap">Tap — задать ритм</button><button class="btn primary" id="m-toggle" data-act="m-toggle" aria-pressed="false">Старт</button></div>
+    <button class="btn metro-reset" data-act="m-reset">Сбросить</button><p class="hint">Первая доля выделена звуком. Для Tap нажми несколько раз в нужном ритме. Настройки этого экрана сохраняются отдельно от песен.</p></section></main>${tabsHtml('metronome')}`;
+  metroPageBeats();
 }
 function metroTap(){
   const now=performance.now();
@@ -4433,6 +4469,7 @@ document.addEventListener('click',e=>{
   else if(a==='ci'){lsSet('sb.countin',b.dataset.v);openMetro()}
   else if(a==='tab-chart')renderChart();
   else if(a==='tab-tuner')renderTuner();
+  else if(a==='tab-metronome')renderMetronome();
   else if(a==='tab-circle')renderCircle();
   else if(a==='tab-scales')renderScales();
   else if(a==='sc-root'){scState.root=+b.dataset.i;scSave()}
@@ -4494,7 +4531,9 @@ document.addEventListener('click',e=>{
   else if(a==='m-toggle'){M.on?metroStop():metroStart()}
   else if(a==='m-step')metroSet(M.bpm+ +b.dataset.d);
   else if(a==='m-tap')metroTap();
-  else if(a==='m-beats'){M.beats=+b.dataset.v;M.beat=0;metroSave();openMetro()}
+  else if(a==='m-beats'){M.beats=+b.dataset.v;M.beat=0;metroSave();if(S.view==='metronome')metroPageBeats();else openMetro()}
+  else if(a==='m-preset')metroSet(+b.dataset.v);
+  else if(a==='m-reset'){metroStop();M.beats=4;M.taps=[];metroSet(120);metroPageBeats()}
   else if(a==='stage')enterStage();
   else if(a==='stage-exit')exitStage();
   else if(a==='viewmode'){S.textOnly=b.dataset.v==='1';lsSet('sb.textonly',S.textOnly?'1':'0');document.querySelectorAll('.vt button').forEach(x=>x.setAttribute('aria-pressed',String((x.dataset.v==='1')===S.textOnly)));document.querySelectorAll('.hdr-tone').forEach(x=>x.hidden=S.textOnly);fillSong();renderTools()}
@@ -4550,6 +4589,7 @@ document.addEventListener('click',e=>{
   }
   else if(a==='scroll'){S.scroll.tapPaused=false;if(S.scroll.on||CI.on){countInStop();stopAuto();renderTools()}else countIn(()=>{startScroll();renderTools()})}});
 document.addEventListener('change',e=>{
+  if(e.target.id==='metro-direct'){const v=Number(e.target.value);if(e.target.value.trim()&&Number.isFinite(v))metroSet(v);e.target.value=M.bpm}
   if(e.target.id==='speed'&&S.view==='song'){const x=findSong(S.cur);if(x&&!x.demo&&+x.speed!==S.scroll.speed)store.patch(x.id,{speed:S.scroll.speed,updatedAt:Date.now()}).catch(()=>{})}
   if(e.target.id==='tu-tuning'){TU.tuning=e.target.value;lsSet('sb.tuning',TU.tuning);const t=document.getElementById('tstr');if(t)t.innerHTML=tstrHtml()}
   if(e.target.id==='sc-type'){scState.type=e.target.value;scState.pos=0;scSave()}
@@ -4760,6 +4800,6 @@ initStore().then(st=>{
 </script>
 
 <script src="hitmos-marking.js?v=132"></script>
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=138',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=139',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
