@@ -11,9 +11,9 @@
 <meta name="theme-color" content="#F1F2EE" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111312" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="playback-tools.css?v=145">
-<link rel="stylesheet" href="album-shelf.css?v=145">
-<link rel="stylesheet" href="touch-guitar.css?v=145">
+<link rel="stylesheet" href="playback-tools.css?v=146">
+<link rel="stylesheet" href="album-shelf.css?v=146">
+<link rel="stylesheet" href="touch-guitar.css?v=146">
 <link rel="apple-touch-icon" href="fire-180.png">
 <link rel="icon" type="image/png" href="fire-180.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
@@ -971,12 +971,12 @@ input.mono{font-family:var(--f-mono)}
 <div id="sheet" class="sheet" hidden></div>
 <div id="toast" class="toast" hidden role="status"></div>
 
-<script src="album-shelf.js?v=145"></script>
-<script src="touch-guitar.js?v=145"></script>
-<script src="tempo-core.js?v=145"></script>
-<script src="drum-machine.js?v=145"></script>
-<script src="backing-tempo.js?v=145"></script>
-<script src="gtp-fretboard.js?v=145"></script>
+<script src="album-shelf.js?v=146"></script>
+<script src="touch-guitar.js?v=146"></script>
+<script src="tempo-core.js?v=146"></script>
+<script src="drum-machine.js?v=146"></script>
+<script src="backing-tempo.js?v=146"></script>
+<script src="gtp-fretboard.js?v=146"></script>
 <script>
 /* ---------- music theory ---------- */
 const SPEED_MIN=3,SPEED_MAX=70; // autoscroll, pixels per second (the old slowest step was 12)
@@ -2539,9 +2539,9 @@ function metroUI(){
   if(!M.on)document.querySelectorAll('.mdots i').forEach(d=>d.classList.remove('on'));
 }
 function metroSoundControls(){return `<div class="seg rhythm-mode" role="group" aria-label="Звук сопровождения"><button data-act="m-sound" data-v="click">Метроном</button><button data-act="m-sound" data-v="drums">Барабаны</button></div>`}
-function metroDrummerControls(){const d=FireDrums.settings(M.drummer);return `<label for="drummer-kit">Установка</label><select id="drummer-kit">${[['acoustic','Живая акустическая'],['studio','Сухая студийная'],['room','Акустическая — комната']].map(([v,n])=>`<option value="${v}" ${d.kit===v?'selected':''}>${n}</option>`).join('')}</select>${[['reverb','Реверберация'],['delay','Дилей']].map(([k,n])=>`<label class="drum-volume-caption" for="drummer-${k}">${n}<output id="drummer-${k}-value">${d[k]}%</output></label><input type="range" id="drummer-${k}" min="0" max="100" value="${d[k]}">`).join('')}<label style="margin:16px 0"><input type="checkbox" id="drummer-enabled" ${d.enabled?'checked':''}> Живой барабанщик</label><div id="drummer-options" ${d.enabled?'':'hidden'}><label for="drummer-section">Часть песни</label><select id="drummer-section">${[['intro','Вступление'],['verse','Куплет'],['chorus','Припев']].map(([v,n])=>`<option value="${v}" ${d.section===v?'selected':''}>${n}</option>`).join('')}</select>${[['intensity','Интенсивность'],['complexity','Сложность'],['fills','Переходы'],['humanize','Живость'],['swing','Свинг']].map(([k,n])=>`<label class="drum-volume-caption" for="drummer-${k}">${n}<output id="drummer-${k}-value">${d[k]}%</output></label><input type="range" id="drummer-${k}" min="0" max="100" value="${d[k]}">`).join('')}<button class="btn" data-act="drummer-fill">Переход в следующем такте</button><p class="hint">Вариации по тактам, переходы раз в четыре такта. Часть песни выбирается вручную. Свинг меняет прямые ритмы; блюз уже триольный.</p></div>`}
+function metroDrummerControls(){const d=FireDrums.settings(M.drummer);return `<label for="drummer-kit">Установка</label><select id="drummer-kit">${[['acoustic','Живая акустическая'],['studio','Сухая студийная'],['room','Акустическая — комната'],['electronic','Электронная']].map(([v,n])=>`<option value="${v}" ${d.kit===v?'selected':''}>${n}</option>`).join('')}</select>${[['reverb','Реверберация'],['delay','Дилей']].map(([k,n])=>`<label class="drum-volume-caption" for="drummer-${k}">${n}<output id="drummer-${k}-value">${d[k]}%</output></label><input type="range" id="drummer-${k}" min="0" max="100" value="${d[k]}">`).join('')}<label style="margin:16px 0"><input type="checkbox" id="drummer-enabled" ${d.enabled?'checked':''}> Живой барабанщик</label><div id="drummer-options" ${d.enabled?'':'hidden'}><label for="drummer-section">Часть песни</label><select id="drummer-section">${[['intro','Вступление'],['verse','Куплет'],['chorus','Припев']].map(([v,n])=>`<option value="${v}" ${d.section===v?'selected':''}>${n}</option>`).join('')}</select>${[['intensity','Интенсивность'],['complexity','Сложность'],['fills','Переходы'],['humanize','Живость'],['swing','Свинг']].map(([k,n])=>`<label class="drum-volume-caption" for="drummer-${k}">${n}<output id="drummer-${k}-value">${d[k]}%</output></label><input type="range" id="drummer-${k}" min="0" max="100" value="${d[k]}">`).join('')}<button class="btn" data-act="drummer-fill">Переход в следующем такте</button><p class="hint">Вариации по тактам, переходы раз в четыре такта. Часть песни выбирается вручную. Свинг меняет прямые ритмы; блюз уже триольный.</p></div>`}
 function metroDrummerChange(el){const key=el.id.replace('drummer-','');M.drummer=FireDrums.settings({...M.drummer,[key]:key==='enabled'?el.checked:['section','kit'].includes(key)?el.value:+el.value});const box=document.getElementById('drummer-options');if(box)box.hidden=!M.drummer.enabled;const label=document.getElementById(el.id+'-value');if(label)label.textContent=M.drummer[key]+'%';metroSave()}
-function metroDrumControls(){return `<div id="drum-controls" class="drum-controls" hidden><label for="drum-groove">Ритм</label><select id="drum-groove">${Object.entries(FireDrums.patterns).map(([id,p])=>`<option value="${id}">${p.name}</option>`).join('')}</select><p class="hint" id="drum-hint"></p><p class="hint">Записи акустической установки Salamander Drumkit · Alexander Holm. Разные удары, мягкие и сильные ноты.</p>${metroDrummerControls()}<label class="drum-volume-caption" for="drum-volume">Громкость барабанов <span id="drum-volume-label"></span></label><input type="range" id="drum-volume" min="0" max="100" step="1" value="70"></div><p class="hint" id="drum-size-hint" hidden>Размер задаётся выбранным битом. Темп можно менять во время игры.</p>`}
+function metroDrumControls(){return `<div id="drum-controls" class="drum-controls" hidden><label for="drum-groove">Ритм</label><select id="drum-groove">${Object.entries(FireDrums.patterns).map(([id,p])=>`<option value="${id}">${p.name}</option>`).join('')}</select><p class="hint" id="drum-hint"></p><p class="hint">Акустические варианты: записи Salamander Drumkit · Alexander Holm. Электронная установка: синтезированные ударные.</p>${metroDrummerControls()}<label class="drum-volume-caption" for="drum-volume">Громкость барабанов <span id="drum-volume-label"></span></label><input type="range" id="drum-volume" min="0" max="100" step="1" value="70"></div><p class="hint" id="drum-size-hint" hidden>Размер задаётся выбранным битом. Темп можно менять во время игры.</p>`}
 function openMetro(){
   sheet.innerHTML=`<div class="panel metro" role="dialog" aria-label="Метроном">
     <div class="panel-top"><h2 class="ptitle">Метроном и биты</h2><button class="btn" data-act="close">Закрыть</button></div>
@@ -4867,7 +4867,7 @@ initStore().then(st=>{
 });
 </script>
 
-<script src="hitmos-marking.js?v=145"></script>
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=145',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script src="hitmos-marking.js?v=146"></script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=146',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
