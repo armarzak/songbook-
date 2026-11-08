@@ -150,6 +150,9 @@ body.has-tools .wrap{padding-block-end:calc(var(--toolsh,120px) + 28px)}
 
 .bar{position:sticky;top:0;z-index:10;background:var(--bar);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
 .bar-in{max-width:760px;margin:0 auto;padding:10px 16px;display:flex;gap:8px;align-items:center;min-height:60px}
+.library-head .brand{min-width:0}.library-head .brand>span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.settings-button{flex-shrink:0}.settings-button svg{width:23px;height:23px}.settings-title{font-size:20px;margin:0}.settings-page{max-width:760px}.settings-page .fold:first-child{margin-top:14px}
+@media(max-width:420px){.library-head{gap:6px;padding-inline:10px}.library-head .brand{font-size:15px;gap:5px}.library-head>.btn:not(.icon){padding-inline:9px;font-size:12px}.library-head .brand-mark{width:24px;height:24px}.library-head .settings-button{width:38px}}
+@media(max-width:359px){.library-head .brand>span:last-child{display:none}}
 .bar-title{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .brand{flex:1;display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-weight:700;font-size:19px;letter-spacing:-.01em}
 .brand{border:0;background:none;color:var(--fg);text-align:left;padding:0;min-height:40px;cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -3430,10 +3433,11 @@ function brandHome(){
 function renderList(){
   stopScroll(); S.view='list'; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
-  <header class="bar"><div class="bar-in">
+  <header class="bar"><div class="bar-in library-head">
     <button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button>
     <button class="btn" data-act="import">Импорт</button>
     <button class="btn primary" data-act="new">${ICON.plus}Песня</button>
+    <button class="btn icon settings-button" data-act="settings" aria-label="Настройки" title="Настройки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 3-.6 2.3-2 .9-2.2-.7-2.5 4.3 1.6 1.7v2.1l-1.6 1.7 2.5 4.3 2.2-.7 2 .9.6 2.2h5l.6-2.2 2-.9 2.2.7 2.5-4.3-1.6-1.7v-2.1l1.6-1.7-2.5-4.3-2.2.7-2-.9-.6-2.3z"/><circle cx="12" cy="12" r="3.2"/></svg></button>
   </div></header>
   <div class="wrap">
     ${tabsHtml('list')}
@@ -3444,6 +3448,15 @@ function renderList(){
     <ul class="songs" id="songs"></ul>
     <nav class="az" id="az" hidden aria-label="Алфавит"></nav>
     <p class="note" id="note"></p>
+
+  </div>`;
+  fillList();pinSort();
+}
+
+let settingsReturnY=0;
+function renderSettings(){
+  settingsReturnY=SCR.scrollTop;stopScroll();closeSheet();S.view='settings';S.cur=null;tools.hidden=true;document.body.classList.remove('has-tools');
+  app.innerHTML=`<header class="bar"><div class="bar-in"><button class="btn" data-act="settings-back">Назад</button><h1 class="bar-title settings-title">Настройки</h1></div></header><main class="wrap settings-page">
     <details class="fold" data-fold="skins"${lsGet('sb.fold.skins')==='1'?' open':''}>
       <summary>Оформление</summary>
       <div class="skins" id="skins"></div>
@@ -3468,10 +3481,12 @@ function renderList(){
       <p class="sec-p" style="font-size:12px">Звук гитары: FluidR3 GM, Frank Wen (CC BY 3.0).</p>
       <div class="actions" style="justify-content:flex-start"><button class="btn" data-act="app-update">Обновить песенник</button><span class="sec-p" id="app-ver"></span></div>
     </section>`:''}
-  </div>`;
-  fillList(); fillSkins(); fillSync(); fillRestore(); fillVer(); pinSort();
+  </main>${tabsHtml('')}`;
+  fillSkins();fillSync();fillRestore();fillVer();
   document.querySelectorAll('details.fold').forEach(d=>d.addEventListener('toggle',()=>lsSet('sb.fold.'+d.dataset.fold,d.open?'1':'0')));
+  SCR.scrollTo({top:0,behavior:'instant'});
 }
+function settingsBack(){const y=settingsReturnY;renderList();requestAnimationFrame(()=>SCR.scrollTo({top:y,behavior:'instant'}))}
 
 /* ---------- app update without reinstalling ---------- */
 async function fillVer(){
@@ -4544,6 +4559,8 @@ document.addEventListener('click',e=>{
   else if(a==='tag-add')addTag();
   else if(a==='export')exportBackup();
   else if(a==='app-update')appUpdate();
+  else if(a==='settings')renderSettings();
+  else if(a==='settings-back')settingsBack();
   else if(a==='gh-connect')ghConnect();
   else if(a==='gh-sync')ghSync(true);
   else if(a==='gh-off')ghOff(b);
@@ -4790,6 +4807,7 @@ initStore().then(st=>{
     S.loaded=true;
     if(S.view==='list')fillList();
     else if(S.view==='chart')fillChart();
+    else if(S.view==='settings')fillRestore();
     else if(S.view==='song'&&shapesChanged&&findSong(S.cur))fillSong();
     else if(S.view==='song'){const now=findSong(S.cur);
       if(!now){S.cur=null;renderList()}
@@ -4800,6 +4818,6 @@ initStore().then(st=>{
 </script>
 
 <script src="hitmos-marking.js?v=132"></script>
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=139',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=140',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
