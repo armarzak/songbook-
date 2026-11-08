@@ -551,6 +551,7 @@ body:has(.tabbar) .wrap{padding-bottom:calc(84px + env(safe-area-inset-bottom,0p
 .metrobtn.beat{animation:mbeat .12s ease-out}
 @keyframes mbeat{from{transform:scale(1.12)}to{transform:none}}
 .tabbar button{min-width:0;font-size:clamp(9px,2.65vw,11.5px)}
+.panel.metro .m-big{gap:4px}.panel.metro .m-val{min-width:96px}.panel.metro .m-big .btn.icon{min-width:34px;padding:0 5px}
 .rhythm-mode{display:flex;margin:18px 0 10px}.rhythm-mode button{flex:1;min-height:44px}.drum-controls{margin:18px 0;padding:14px;border-radius:14px;background:var(--sunk)}.drum-controls>label{display:block;margin-bottom:8px}.drum-controls select{width:100%;font-size:16px;padding:12px;border-radius:10px;border:1px solid var(--line);color:var(--fg);background:var(--surface)}.drum-volume-caption{display:flex!important;justify-content:space-between;margin-top:16px}
 .metro-page{max-width:540px;margin:12px auto;padding:20px;border:1px solid var(--line);border-radius:20px;background:var(--surface)}
 .metro-page h1{margin:0 0 8px}.metro-page .m-big{margin:32px 0 22px}.metro-page .m-val{min-width:160px}.metro-page .m-val b{font-size:clamp(64px,20vw,96px)}
@@ -2471,7 +2472,12 @@ async function copySong(fromShare){
 
 /* ---------- metronome: clicks scheduled ahead on the audio clock, so the beat stays steady ---------- */
 const M={on:false,bpm:100,beats:4,beat:0,next:0,timer:0,taps:[],saveT:0};
-function metroLoad(s){M.sound='click';M.bpm=Math.min(240,Math.max(30,+(s&&s.bpm)||100));M.beats=[2,3,4,6].includes(+(s&&s.beats))?+s.beats:4}
+function metroLoad(s){
+  s={...s,...M.pending?.get(s?.id)};const pref=s.metroRhythm||{};
+  M.bpm=Math.min(240,Math.max(30,+s.bpm||100));M.beats=[2,3,4,6].includes(+s.beats)?+s.beats:4;
+  M.sound=pref.sound==='drums'?'drums':'click';M.groove=FireDrums.patterns[pref.groove]?pref.groove:'rock';M.volume=Number.isFinite(pref.volume)?Math.max(0,Math.min(1,pref.volume)):.7;M.clickBeats=[2,3,4,6].includes(+pref.clickBeats)?+pref.clickBeats:M.beats;
+  if(M.sound==='drums')M.beats=FireDrums.pattern(M.groove).beats;M.taps=[];
+}
 function metroClick(t,accent){
   const o=AC.createOscillator(),g=AC.createGain();
   o.type='square'; o.frequency.value=accent?1760:1175;
@@ -2482,7 +2488,7 @@ function metroTick(){
   if(!M.on)return;
   while(M.next<AC.currentTime+0.12){
     const b=M.beat,t=M.next;
-    if(S.view==='metronome'&&M.sound==='drums'){
+    if((S.view==='metronome'||S.view==='song')&&M.sound==='drums'){
       const p=FireDrums.pattern(M.groove),step=M.step||0;
       FireDrums.play(AC,acOut,M.groove,step,t,M.volume);
       if(step%p.division===0)setTimeout(()=>metroFlash(Math.floor(step/p.division)),Math.max(0,(t-AC.currentTime)*1000));
@@ -2521,18 +2527,23 @@ function metroSet(bpm){
 function metroSave(){
   if(S.view==='metronome'){lsSet('sb.metro',JSON.stringify({bpm:M.bpm,beats:M.beats,sound:M.sound||'click',groove:M.groove||'rock',volume:M.volume??.7,clickBeats:M.clickBeats||M.beats}));return}
   const s=findSong(S.cur); if(!s||s.demo)return;
-  clearTimeout(M.saveT);
-  const bpm=M.bpm,beats=M.beats;
-  M.saveT=setTimeout(()=>{if(store&&((+s.bpm||100)!==bpm||(+s.beats||4)!==beats))store.patch(s.id,{bpm,beats,updatedAt:Date.now()}).catch(()=>{})},900);
+  M.saves??=new Map();M.pending??=new Map();clearTimeout(M.saves.get(s.id));
+  const patch={bpm:M.bpm,beats:M.beats,metroRhythm:{sound:M.sound||'click',groove:M.groove||'rock',volume:M.volume??.7,clickBeats:M.clickBeats||M.beats}};
+  M.pending.set(s.id,patch);
+  const timer=setTimeout(()=>{M.saves.delete(s.id);if(store)store.patch(s.id,{...patch,updatedAt:Date.now()}).then(()=>{if(M.pending.get(s.id)===patch)M.pending.delete(s.id)}).catch(()=>{})},900);
+  M.saves.set(s.id,timer);M.saveT=timer;
 }
 function metroUI(){
   document.querySelectorAll('.metrobtn').forEach(btn=>btn.classList.toggle('on',M.on));
   const t=document.getElementById('m-toggle');if(t){t.textContent=M.on?'Стоп':'Старт';t.setAttribute('aria-pressed',String(M.on))}
   if(!M.on)document.querySelectorAll('.mdots i').forEach(d=>d.classList.remove('on'));
 }
+function metroSoundControls(){return `<div class="seg rhythm-mode" role="group" aria-label="Звук сопровождения"><button data-act="m-sound" data-v="click">Метроном</button><button data-act="m-sound" data-v="drums">Барабаны</button></div>`}
+function metroDrumControls(){return `<div id="drum-controls" class="drum-controls" hidden><label for="drum-groove">Ритм</label><select id="drum-groove">${Object.entries(FireDrums.patterns).map(([id,p])=>`<option value="${id}">${p.name}</option>`).join('')}</select><p class="hint" id="drum-hint"></p><label class="drum-volume-caption" for="drum-volume">Громкость барабанов <span id="drum-volume-label"></span></label><input type="range" id="drum-volume" min="0" max="100" step="1" value="70"></div><p class="hint" id="drum-size-hint" hidden>Размер задаётся выбранным битом. Темп можно менять во время игры.</p>`}
 function openMetro(){
   sheet.innerHTML=`<div class="panel metro" role="dialog" aria-label="Метроном">
-    <div class="panel-top"><h2 class="ptitle">Метроном</h2><button class="btn" data-act="close">Закрыть</button></div>
+    <div class="panel-top"><h2 class="ptitle">Метроном и биты</h2><button class="btn" data-act="close">Закрыть</button></div>
+    ${metroSoundControls()}
     <div class="m-big">
       <button class="btn icon" data-act="m-step" data-d="-5" aria-label="Медленнее на 5">−5</button>
       <button class="btn icon" data-act="m-step" data-d="-1" aria-label="Медленнее на 1">−</button>
@@ -2542,6 +2553,7 @@ function openMetro(){
     </div>
     <input type="range" id="m-bpm" min="30" max="240" step="1" value="${M.bpm}" aria-label="Темп">
     <div class="mdots">${Array.from({length:M.beats},(_,i)=>`<i class="${i===0?'acc':''}"></i>`).join('')}</div>
+    ${metroDrumControls()}
     <div class="m-row"><span class="cap">Размер</span><div class="seg" role="group" aria-label="Долей в такте">${[2,3,4,6].map(n=>`<button data-act="m-beats" data-v="${n}" aria-pressed="${M.beats===n}">${n===6?'6/8':n+'/4'}</button>`).join('')}</div></div>
     <div class="actions" style="justify-content:space-between">
       <button class="btn" data-act="m-tap">Тап</button>
@@ -2550,13 +2562,13 @@ function openMetro(){
     <div class="m-row"><span class="cap">Отсчёт перед стартом</span><div class="seg" role="group" aria-label="Отсчёт перед стартом"><button data-act="ci" data-v="1" aria-pressed="${countInOn()}">Вкл</button><button data-act="ci" data-v="0" aria-pressed="${!countInOn()}">Выкл</button></div></div>
     ${FCBackingTempo.html(findSong(S.cur))}
     <p class="hint">Отсчёт: перед минусом и автопрокруткой метроном отсчитывает один такт в темпе песни. Быстро включить или выключить — кнопка «1·2·3·4» внизу песни.</p>
-    <p class="hint">«Тап»: нажмите несколько раз в ритм песни, и темп подстроится. Темп и размер запоминаются для этой песни.</p>
+    <p class="hint">«Тап»: нажмите несколько раз в ритм песни, и темп подстроится. Темп, размер, выбранный бит и громкость запоминаются для этой песни. Закройте окно — барабаны продолжат играть, пока вы читаете текст.</p>
   </div>`;
-  sheet.hidden=false;
+  sheet.hidden=false;metroRhythmUI();metroUI();
 }
 function metroPageBeats(){
-  const dots=document.querySelector('#metro-page .mdots');if(dots)dots.innerHTML=Array.from({length:M.beats},(_,i)=>`<i class="${i===0?'acc':''}"></i>`).join('');
-  document.querySelectorAll('#metro-page [data-act="m-beats"]').forEach(b=>{b.setAttribute('aria-pressed',String(+b.dataset.v===M.beats));b.disabled=M.sound==='drums'});
+  document.querySelectorAll('.metro .mdots').forEach(dots=>dots.innerHTML=Array.from({length:M.beats},(_,i)=>`<i class="${i===0?'acc':''}"></i>`).join(''));
+  document.querySelectorAll('.metro [data-act="m-beats"]').forEach(b=>{b.setAttribute('aria-pressed',String(+b.dataset.v===M.beats));b.disabled=M.sound==='drums'});
 }
 function metroRhythmUI(){
   document.querySelectorAll('[data-act="m-sound"]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===M.sound)));
@@ -2584,14 +2596,13 @@ function renderMetronome(){
   if(M.sound==='drums')M.beats=FireDrums.pattern(M.groove).beats;
   app.innerHTML=`<header class="bar"><div class="bar-in library-head"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button>${settingsButton()}</div></header>
     <main class="wrap"><section id="metro-page" class="metro metro-page" aria-label="Метроном"><h1>Метроном и биты</h1><p class="hint">Играй под щелчки или барабанный ритм.</p>
-    <div class="seg rhythm-mode" role="group" aria-label="Звук сопровождения"><button data-act="m-sound" data-v="click">Метроном</button><button data-act="m-sound" data-v="drums">Барабаны</button></div>
+    ${metroSoundControls()}
     <div class="m-big"><button class="btn icon" data-act="m-step" data-d="-1" aria-label="Медленнее на один удар">−</button><div class="m-val"><b id="m-num">${M.bpm}</b><span>ударов в минуту</span></div><button class="btn icon" data-act="m-step" data-d="1" aria-label="Быстрее на один удар">+</button></div>
     <div class="mdots" aria-label="Доли такта"></div>
-    <div id="drum-controls" class="drum-controls" hidden><label for="drum-groove">Ритм</label><select id="drum-groove">${Object.entries(FireDrums.patterns).map(([id,p])=>`<option value="${id}">${p.name}</option>`).join('')}</select><p class="hint" id="drum-hint"></p><label class="drum-volume-caption" for="drum-volume">Громкость барабанов <span id="drum-volume-label"></span></label><input type="range" id="drum-volume" min="0" max="100" step="1" value="70"></div>
+    ${metroDrumControls()}
     <label class="metro-range-label" for="m-bpm">Темп</label><input type="range" id="m-bpm" min="30" max="240" value="${M.bpm}" aria-label="Темп метронома"><div class="metro-range"><span>30</span><span>240</span></div>
     <div class="metro-direct"><label>Ввести темп<input id="metro-direct" type="number" inputmode="numeric" min="30" max="240" value="${M.bpm}"></label></div>
     <div class="m-row"><span class="cap">Размер</span><div class="seg" role="group" aria-label="Размер такта">${[2,3,4,6].map(n=>`<button data-act="m-beats" data-v="${n}">${n===6?'6/8':n+'/4'}</button>`).join('')}</div></div>
-    <p class="hint" id="drum-size-hint" hidden>Размер задаётся выбранным битом. Темп регулируется выше.</p>
     <div class="metro-presets" role="group" aria-label="Готовые темпы">${[[60,'Баллада'],[80,'Медленно'],[120,'Умеренно'],[140,'Быстро'],[180,'Очень быстро']].map(([bpm,label])=>`<button class="btn" data-act="m-preset" data-v="${bpm}" aria-pressed="${M.bpm===bpm}"><span>${label}</span><b>${bpm}</b></button>`).join('')}</div>
     <div class="metro-actions"><button class="btn" data-act="m-tap">Tap — задать ритм</button><button class="btn primary" id="m-toggle" data-act="m-toggle" aria-pressed="false">Старт</button></div>
     <button class="btn metro-reset" data-act="m-reset">Сбросить</button><p class="hint">Метроном выделяет первую долю. В барабанном режиме звучит выбранный бит. Для Tap нажми несколько раз в нужном ритме. Настройки сохраняются отдельно от песен.</p></section></main>${tabsHtml('metronome')}`;
@@ -4577,7 +4588,7 @@ document.addEventListener('click',e=>{
   else if(a==='m-toggle'){M.on?metroStop():metroStart()}
   else if(a==='m-step')metroSet(M.bpm+ +b.dataset.d);
   else if(a==='m-tap')metroTap();
-  else if(a==='m-beats'){if(S.view==='metronome'&&M.sound==='drums')return;M.beats=+b.dataset.v;M.clickBeats=M.beats;M.beat=0;metroSave();if(S.view==='metronome')metroPageBeats();else openMetro()}
+  else if(a==='m-beats'){if(M.sound==='drums')return;M.beats=+b.dataset.v;M.clickBeats=M.beats;M.beat=0;metroSave();if(S.view==='metronome')metroPageBeats();else openMetro()}
   else if(a==='m-preset')metroSet(+b.dataset.v);
   else if(a==='m-reset'){metroStop();M.beats=4;M.clickBeats=4;M.sound='click';M.groove='rock';M.volume=.7;M.taps=[];metroSet(120);metroRhythmUI()}
   else if(a==='m-sound')metroRhythm(b.dataset.v,M.groove);
@@ -4852,6 +4863,6 @@ initStore().then(st=>{
 </script>
 
 <script src="hitmos-marking.js?v=132"></script>
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=142',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=143',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
