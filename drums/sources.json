@@ -1,0 +1,92 @@
+[
+  {
+    "file": "kick-soft1.m4a",
+    "source": "Samples/kick_OH_P_1.flac",
+    "sha256": "0d1f6de1d851195e1d0f058c8df9a1ef35aeb4f05d1b7130c2b38bac3b6b9fc7"
+  },
+  {
+    "file": "kick-soft2.m4a",
+    "source": "Samples/kick_OH_P_2.flac",
+    "sha256": "92af8e081038074ecb6812f521322c3beac096b5b888f2a6120221b804a8085f"
+  },
+  {
+    "file": "kick-hard1.m4a",
+    "source": "Samples/kick_OH_F_1.flac",
+    "sha256": "30e96e67b1ce2714a7212c3056f8e44c86f012a3a79d18c27dd1c09a9e3d19fd"
+  },
+  {
+    "file": "kick-hard2.m4a",
+    "source": "Samples/kick_OH_F_2.flac",
+    "sha256": "6b8f1f87fd53254fc3976948ad0e1b5d6fdb87eaeb6cf9f3cf6fc1bd90c94ff7"
+  },
+  {
+    "file": "snare-soft1.m4a",
+    "source": "Samples/snare_OH_MP_1.flac",
+    "sha256": "cd38b32035b059b6149411c4ccb6c6abc2042ff7cc34a12ece23dc259f90296f"
+  },
+  {
+    "file": "snare-soft2.m4a",
+    "source": "Samples/snare_OH_MP_2.flac",
+    "sha256": "13e9cf5c8e2e28636521bf0498a3f582e5828f6f0a0e83e134c9bbb5288af27f"
+  },
+  {
+    "file": "snare-hard1.m4a",
+    "source": "Samples/snare_OH_F_1.flac",
+    "sha256": "d6611c9a1b3a72cfee2b2fe30112e4d075d5f43dce0d28094bbe576783431a97"
+  },
+  {
+    "file": "snare-hard2.m4a",
+    "source": "Samples/snare_OH_F_2.flac",
+    "sha256": "7356513ca7a7352773501d3e4a80cc312fd6250979b0b3dac105b9c559fa73af"
+  },
+  {
+    "file": "ghost1.m4a",
+    "source": "Samples/snare_OH_Ghost_1.flac",
+    "sha256": "1a865dbe188d75da085194ba4a1278d57ec716476de5c312e1c8a249dbf05b4e"
+  },
+  {
+    "file": "ghost2.m4a",
+    "source": "Samples/snare_OH_Ghost_2.flac",
+    "sha256": "775a37e4f5fcf2d27322fe07f972796b7e2554b0e47a8d574af821ccb1d63560"
+  },
+  {
+    "file": "hat1.m4a",
+    "source": "Samples/hihatClosed_OH_F_1.flac",
+    "sha256": "1fce7fa94f58fbc05467d90adfb0491db19679e89d941577af51cf6ee3dad09a"
+  },
+  {
+    "file": "hat2.m4a",
+    "source": "Samples/hihatClosed_OH_F_2.flac",
+    "sha256": "d62ff88f735b9cd9fe269c128522568c9a44caa0addd7ec900608a98462b51ed"
+  },
+  {
+    "file": "open1.m4a",
+    "source": "Samples/hihatOpen_OH_FF_1.flac",
+    "sha256": "972bab0775472844ad35c6b345b437eaafb7478a4094f1da8e5c72b448e8002d"
+  },
+  {
+    "file": "open2.m4a",
+    "source": "Samples/hihatOpen_OH_FF_2.flac",
+    "sha256": "71458e91a58c5671c4623ee1cad91018ba9dce3e49aeb04eaaab9d8640196059"
+  },
+  {
+    "file": "tom1.m4a",
+    "source": "Samples/hiTom_OH_F_1.flac",
+    "sha256": "972d65d323278463924763c948280081baf0d39bb48f462ad2683e2ca6f328b4"
+  },
+  {
+    "file": "tom2.m4a",
+    "source": "Samples/hiTom_OH_F_2.flac",
+    "sha256": "b41e6ea614a6ad1f91dc158d078b051692db9aef1d99b481ea4a9ae6527c7e48"
+  },
+  {
+    "file": "rim1.m4a",
+    "source": "Samples/snareStick_OH_F_1.flac",
+    "sha256": "6f0195acb440c0d3482c920c667b22c6635cb78e5ec55b139e5a6f8286a542fb"
+  },
+  {
+    "file": "rim2.m4a",
+    "source": "Samples/snareStick_OH_F_2.flac",
+    "sha256": "a1349bf4f05099855a2efc1f4bd5058ff087e969fba41fbb7055dbe529affb31"
+  }
+]
