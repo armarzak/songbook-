@@ -1612,6 +1612,7 @@ const TAB_ICONS={
   metronome:'<path d="M8 3h8l5 18H3L8 3Z"/><path d="m12 17 5-10M8 16h8"/><circle cx="12" cy="17" r="1.5"/>',
   tuner:'<path d="M3.5 17a8.5 8.5 0 1 1 17 0"/><path d="M12 17l4.2-6.2"/><circle cx="12" cy="17" r="1.6" fill="currentColor" stroke="none"/><path d="M6.4 11.4l1.2.9M12 8.5V10M17.6 11.4l-1.2.9" stroke-width="1.5"/>'
 };
+function settingsButton(){return `<button class="btn icon settings-button" data-act="settings" aria-label="Настройки" title="Настройки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 3-.6 2.3-2 .9-2.2-.7-2.5 4.3 1.6 1.7v2.1l-1.6 1.7 2.5 4.3 2.2-.7 2 .9.6 2.2h5l.6-2.2 2-.9 2.2.7 2.5-4.3-1.6-1.7v-2.1l1.6-1.7-2.5-4.3-2.2.7-2-.9-.6-2.3z"/><circle cx="12" cy="12" r="3.2"/></svg></button>`}
 function tabsHtml(cur){
   const t=[['list','Песни'],['chart','Схемы'],['circle','Круг'],['scales','Гаммы'],['tuner','Тюнер'],['metronome','Метроном']];
   return `<nav class="tabbar" role="tablist" aria-label="Разделы">${t.map(([id,name])=>`<button role="tab" aria-selected="${cur===id}" data-act="tab-${id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TAB_ICONS[id]}</svg><span>${name}</span></button>`).join('')}</nav>`;
@@ -1685,7 +1686,7 @@ function cofSvg(){
 function renderCircle(){
   stopScroll(); S.view='circle'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
-  <header class="bar"><div class="bar-in"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button></div></header>
+  <header class="bar"><div class="bar-in library-head"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button>${settingsButton()}</div></header>
   <div class="wrap">
     ${tabsHtml('circle')}
     <div class="cof-wrap"><div id="cof-svg"></div><div id="cof-info" class="cof-info"></div></div>
@@ -1794,7 +1795,7 @@ function fretboardSvg(){
 function renderScales(){
   stopScroll(); S.view='scales'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
-  <header class="bar"><div class="bar-in"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button></div></header>
+  <header class="bar"><div class="bar-in library-head"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button>${settingsButton()}</div></header>
   <div class="wrap wide">
     ${tabsHtml('scales')}
     <div class="sc-ctrl">
@@ -2119,7 +2120,7 @@ function renderTuner(){
       <div class="t-help" id="t-help"></div>
     </div>`;
   app.innerHTML=`
-  <header class="bar"><div class="bar-in"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button></div></header>
+  <header class="bar"><div class="bar-in library-head"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button>${settingsButton()}</div></header>
   <div class="wrap">
     ${tabsHtml('tuner')}
     ${tuViewSeg()}
@@ -2314,10 +2315,10 @@ document.addEventListener('click',e=>{if(e.target.closest('[data-act="chord-comp
 function renderChart(){
   stopScroll(); S.view='chart'; S.cur=null; tools.hidden=true; document.body.classList.remove('has-tools');
   app.innerHTML=`
-  <header class="bar"><div class="bar-in">
+  <header class="bar"><div class="bar-in library-head">
     <button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button>
     <button class="btn primary" data-act="new-shape">${ICON.plus}Своя схема</button>
-  </div></header>
+  ${settingsButton()}</div></header>
   <div class="wrap wide">
     ${tabsHtml('chart')}
     <div id="mine"></div>
@@ -2554,7 +2555,7 @@ function renderMetronome(){
   let pref={};try{pref=JSON.parse(lsGet('sb.metro')||'{}')||{}}catch{}
   M.bpm=Number.isFinite(+pref.bpm)?Math.max(30,Math.min(240,Math.round(+pref.bpm))):120;
   M.beats=[2,3,4,6].includes(+pref.beats)?+pref.beats:4;M.taps=[];
-  app.innerHTML=`<header class="bar"><div class="bar-in"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button></div></header>
+  app.innerHTML=`<header class="bar"><div class="bar-in library-head"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button>${settingsButton()}</div></header>
     <main class="wrap"><section id="metro-page" class="metro metro-page" aria-label="Метроном"><h1>Метроном</h1><p class="hint">Держи ритм — репетируй без открытия песни.</p>
     <div class="m-big"><button class="btn icon" data-act="m-step" data-d="-1" aria-label="Медленнее на один удар">−</button><div class="m-val"><b id="m-num">${M.bpm}</b><span>ударов в минуту</span></div><button class="btn icon" data-act="m-step" data-d="1" aria-label="Быстрее на один удар">+</button></div>
     <div class="mdots" aria-label="Доли такта"></div>
@@ -3437,7 +3438,7 @@ function renderList(){
     <button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button>
     <button class="btn" data-act="import">Импорт</button>
     <button class="btn primary" data-act="new">${ICON.plus}Песня</button>
-    <button class="btn icon settings-button" data-act="settings" aria-label="Настройки" title="Настройки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 3-.6 2.3-2 .9-2.2-.7-2.5 4.3 1.6 1.7v2.1l-1.6 1.7 2.5 4.3 2.2-.7 2 .9.6 2.2h5l.6-2.2 2-.9 2.2.7 2.5-4.3-1.6-1.7v-2.1l1.6-1.7-2.5-4.3-2.2.7-2-.9-.6-2.3z"/><circle cx="12" cy="12" r="3.2"/></svg></button>
+    ${settingsButton()}
   </div></header>
   <div class="wrap">
     ${tabsHtml('list')}
@@ -3453,9 +3454,9 @@ function renderList(){
   fillList();pinSort();
 }
 
-let settingsReturnY=0;
+let settingsReturnY=0,settingsReturnView='list';
 function renderSettings(){
-  settingsReturnY=SCR.scrollTop;stopScroll();closeSheet();S.view='settings';S.cur=null;tools.hidden=true;document.body.classList.remove('has-tools');
+  settingsReturnY=SCR.scrollTop;settingsReturnView=S.view;stopScroll();closeSheet();S.view='settings';S.cur=null;tools.hidden=true;document.body.classList.remove('has-tools');
   app.innerHTML=`<header class="bar"><div class="bar-in"><button class="btn" data-act="settings-back">Назад</button><h1 class="bar-title settings-title">Настройки</h1></div></header><main class="wrap settings-page">
     <details class="fold" data-fold="skins"${lsGet('sb.fold.skins')==='1'?' open':''}>
       <summary>Оформление</summary>
@@ -3486,7 +3487,7 @@ function renderSettings(){
   document.querySelectorAll('details.fold').forEach(d=>d.addEventListener('toggle',()=>lsSet('sb.fold.'+d.dataset.fold,d.open?'1':'0')));
   SCR.scrollTo({top:0,behavior:'instant'});
 }
-function settingsBack(){const y=settingsReturnY;renderList();requestAnimationFrame(()=>SCR.scrollTo({top:y,behavior:'instant'}))}
+function settingsBack(){const y=settingsReturnY;const render={list:renderList,chart:renderChart,circle:renderCircle,scales:renderScales,tuner:renderTuner,metronome:renderMetronome}[settingsReturnView]||renderList;render();requestAnimationFrame(()=>SCR.scrollTo({top:y,behavior:'instant'}))}
 
 /* ---------- app update without reinstalling ---------- */
 async function fillVer(){
@@ -4818,6 +4819,6 @@ initStore().then(st=>{
 </script>
 
 <script src="hitmos-marking.js?v=132"></script>
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=140',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=141',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
