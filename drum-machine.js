@@ -20,14 +20,14 @@
   // Original generator: preserve a groove's anchors and vary the surrounding performance.
   function performanceHits(id,step,bar,options={},forcedFill=false){
     const o=settings(options),p=pattern(id),length=p.beats*p.division;
-    if(!o.enabled)return hits(id,step).map(h=>({...h,offset:0}));
+    if(!o.enabled&&(!forcedFill||step<length-Math.min(length,p.division*2)))return hits(id,step).map(h=>({...h,offset:0}));
     const section=o.section==='intro'?.65:o.section==='chorus'?1.2:1;
     const complexity=Math.min(1,o.complexity/100*section),level=(.4+o.intensity/100*.7)*section;
     let out=hits(id,step).filter(h=>!(h.kind==='hat'&&step%p.division!==0&&complexity<.25));
     if(step%p.division!==0&&random(bar,step,1)<complexity*.28&&!out.some(h=>h.kind==='snare'||h.kind==='rim'||h.kind==='clap'||h.kind==='ghost'))out.push({kind:'ghost',velocity:.18});
     if(id!=='reggae'&&step%p.division===p.division-1&&random(bar,step,2)<complexity*.22&&!out.some(h=>h.kind==='kick'))out.push({kind:'kick',velocity:.5});
     const fill=forcedFill||(bar%4===3&&random(bar,0,3)<o.fills/100);
-    if(fill&&step>=length-p.division){out=out.filter(h=>h.kind!=='hat'&&h.kind!=='open'&&h.kind!=='ghost');if(step%2===0||complexity>.6)out.push({kind:step<length-Math.ceil(p.division/2)?'snare':'tom',velocity:.55+random(bar,step,6)*.2})}
+    if(fill&&step>=length-Math.min(length,p.division*2)){out=out.filter(h=>h.kind!=='hat'&&h.kind!=='open'&&h.kind!=='ghost');if(forcedFill||step%2===0||complexity>.6)out.push({kind:step<length-Math.ceil(p.division/2)?'snare':'tom',velocity:.55+random(bar,step,6)*.2})}
     if(bar>0&&bar%4===0&&step===0&&o.section==='chorus')out.push({kind:'open',velocity:.55});
     return out.map((h,i)=>({...h,velocity:Math.max(.08,Math.min(1,h.velocity*level*(1+(random(bar,step,10+i)-.5)*o.humanize/180))),offset:Math.max(0,(random(bar,step,20+i)-.5)*o.humanize/100*.018)}));
   }
