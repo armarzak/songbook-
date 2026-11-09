@@ -11,9 +11,9 @@
 <meta name="theme-color" content="#F1F2EE" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111312" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="playback-tools.css?v=150">
-<link rel="stylesheet" href="album-shelf.css?v=150">
-<link rel="stylesheet" href="touch-guitar.css?v=150">
+<link rel="stylesheet" href="playback-tools.css?v=151">
+<link rel="stylesheet" href="album-shelf.css?v=151">
+<link rel="stylesheet" href="touch-guitar.css?v=151">
 <link rel="apple-touch-icon" href="fire-180.png">
 <link rel="icon" type="image/png" href="fire-180.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
@@ -723,6 +723,7 @@ body.stage .wrap{max-width:none;padding-block:calc(14px + env(safe-area-inset-to
 body.stage .sheet-body{padding-top:0}
 body.stage .tools{background:transparent;border-top:0;backdrop-filter:none;-webkit-backdrop-filter:none;opacity:.55;transition:opacity .2s}
 body.stage .tools:hover,body.stage .tools:focus-within{opacity:1}
+.stage-pads{max-width:760px;margin:0 auto 8px;padding:8px;border:1px solid #ffffff25;border-radius:16px;background:rgba(18,20,24,.64);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}.stage-pads-head{display:flex;justify-content:space-between;gap:4px;margin-bottom:6px}.stage-pads-head button{background:transparent;color:#eee;border:0;padding:5px;font:500 12px var(--f-body);min-height:30px}.stage-pad-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.stage-pad-grid[hidden]{display:none}.stage-pad-grid .drum-pad{min-height:56px;border-radius:9px;border:1px solid var(--pad-color);background:color-mix(in srgb,var(--pad-color) 10%,transparent);color:#eee;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;touch-action:manipulation}.drum-pad strong{font:600 12px var(--f-body)}.drum-pad small{font:10px var(--f-body);opacity:.8}.stage-pad-grid .drum-pad[aria-pressed="true"]{background:var(--pad-color);color:#151515;box-shadow:0 0 12px color-mix(in srgb,var(--pad-color) 30%,transparent)}.stage-pad-grid .drum-pad.pad-pending{border-style:dashed;opacity:.65}.stage-pads-status{color:#ddd;font:11px var(--f-body);margin-top:5px}body.stage .tools:has(.stage-pads){opacity:1;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
 .stage-tools{justify-content:center}
 .stage-tools .grp{box-shadow:0 2px 10px var(--shadow)}
 .backup{margin-top:28px;padding-top:6px;border-top:1px solid var(--line)}
@@ -972,12 +973,12 @@ input.mono{font-family:var(--f-mono)}
 <div id="sheet" class="sheet" hidden></div>
 <div id="toast" class="toast" hidden role="status"></div>
 
-<script src="album-shelf.js?v=150"></script>
-<script src="touch-guitar.js?v=150"></script>
-<script src="tempo-core.js?v=150"></script>
-<script src="drum-machine.js?v=150"></script>
-<script src="backing-tempo.js?v=150"></script>
-<script src="gtp-fretboard.js?v=150"></script>
+<script src="album-shelf.js?v=151"></script>
+<script src="touch-guitar.js?v=151"></script>
+<script src="tempo-core.js?v=151"></script>
+<script src="drum-machine.js?v=151"></script>
+<script src="backing-tempo.js?v=151"></script>
+<script src="gtp-fretboard.js?v=151"></script>
 <script>
 /* ---------- music theory ---------- */
 const SPEED_MIN=3,SPEED_MAX=70; // autoscroll, pixels per second (the old slowest step was 12)
@@ -2476,7 +2477,7 @@ const M={on:false,bpm:100,beats:4,beat:0,next:0,timer:0,taps:[],saveT:0};
 function metroLoad(s){
   s={...s,...M.pending?.get(s?.id)};const pref=s.metroRhythm||{};
   M.bpm=Math.min(240,Math.max(30,+s.bpm||100));M.beats=[2,3,4,6].includes(+s.beats)?+s.beats:4;
-  M.drummer=FireDrums.settings(pref.drummer);M.sound=pref.sound==='drums'?'drums':'click';M.groove=FireDrums.patterns[pref.groove]?pref.groove:'rock';M.volume=Number.isFinite(pref.volume)?Math.max(0,Math.min(1,pref.volume)):.7;M.clickBeats=[2,3,4,6].includes(+pref.clickBeats)?+pref.clickBeats:M.beats;
+  M.padMode=pref.padMode===true;M.padParts=FireDrums.cleanParts(pref.padParts);M.padQueued=null;M.drummer=FireDrums.settings(pref.drummer);M.sound=pref.sound==='drums'?'drums':'click';M.groove=FireDrums.patterns[pref.groove]?pref.groove:'rock';M.volume=Number.isFinite(pref.volume)?Math.max(0,Math.min(1,pref.volume)):.7;M.clickBeats=[2,3,4,6].includes(+pref.clickBeats)?+pref.clickBeats:M.beats;
   if(M.sound==='drums')M.beats=FireDrums.pattern(M.groove).beats;M.taps=[];
 }
 function metroClick(t,accent){
@@ -2491,8 +2492,9 @@ function metroTick(){
     const b=M.beat,t=M.next;
     if((S.view==='metronome'||S.view==='song')&&M.sound==='drums'){
       const p=FireDrums.pattern(M.groove),step=M.step||0;
+      if(step===0&&M.padQueued!==null&&M.padQueued!==undefined){M.padParts=M.padQueued;M.padQueued=null;M.padMode=true;metroSave();drumPadsUI()}
       if(step===0&&M.nextSection){M.drummer=FireDrums.selectSection({...M.drummer,enabled:true},M.nextSection);M.nextSection=null;metroSave();drumPartControlsUI();drumLiveUI()}
-      FireDrums.play(AC,acOut,M.groove,step,t,M.volume,{...M.drummer,bpm:M.bpm},M.bar||0,M.fillBar===M.bar);
+      FireDrums.play(AC,acOut,M.groove,step,t,M.volume,{...M.drummer,bpm:M.bpm,...(M.padMode?{padParts:M.padParts||[]}: {})},M.bar||0,M.fillBar===M.bar);
       if(step%p.division===0)setTimeout(()=>metroFlash(Math.floor(step/p.division)),Math.max(0,(t-AC.currentTime)*1000));
       M.step=(step+1)%(p.beats*p.division);M.next+=FireDrums.liveStepSeconds(M.bpm,M.groove,step,M.drummer);if(M.step===0){M.bar=(M.bar||0)+1;if(M.fillBar>=0&&M.bar>M.fillBar){M.fillBar=-1;drumLiveUI()}}
     }else{
@@ -2506,7 +2508,7 @@ function metroStart(){
   whenRunning(ctx,()=>{const ready=M.sound==='drums'?FireDrums.load(ctx):Promise.resolve();ready.then(()=>{if(M.run!==run)return;M.on=true;M.beat=0;M.step=0;M.bar=0;M.fillBar=-1;M.next=ctx.currentTime+0.08;clearInterval(M.timer);M.timer=setInterval(metroTick,25);metroTick();metroUI()},()=>{if(M.run===run)toast('Не удалось загрузить звуки барабанов. Подключитесь к интернету и обновите песенник')})});
 }
 function metroStop(){
-  M.run=(M.run||0)+1;M.nextSection=null;M.fillBar=-1;FireDrums.stop();
+  M.run=(M.run||0)+1;M.padQueued=null;M.nextSection=null;M.fillBar=-1;FireDrums.stop();
   if(!M.on)return;
   M.on=false; clearInterval(M.timer);
   try{if(mediaEl){clearTimeout(mediaT);mediaEl.pause()}}catch{}
@@ -2527,10 +2529,10 @@ function metroSet(bpm){
   metroSave();
 }
 function metroSave(){
-  if(S.view==='metronome'){lsSet('sb.metro',JSON.stringify({bpm:M.bpm,beats:M.beats,sound:M.sound||'click',groove:M.groove||'rock',volume:M.volume??.7,drummer:FireDrums.settings(M.drummer),clickBeats:M.clickBeats||M.beats}));return}
+  if(S.view==='metronome'){lsSet('sb.metro',JSON.stringify({bpm:M.bpm,beats:M.beats,sound:M.sound||'click',groove:M.groove||'rock',volume:M.volume??.7,padMode:!!M.padMode,padParts:FireDrums.cleanParts(M.padParts),drummer:FireDrums.settings(M.drummer),clickBeats:M.clickBeats||M.beats}));return}
   const s=findSong(S.cur); if(!s||s.demo)return;
   M.saves??=new Map();M.pending??=new Map();clearTimeout(M.saves.get(s.id));
-  const patch={bpm:M.bpm,beats:M.beats,metroRhythm:{sound:M.sound||'click',groove:M.groove||'rock',volume:M.volume??.7,drummer:FireDrums.settings(M.drummer),clickBeats:M.clickBeats||M.beats}};
+  const patch={bpm:M.bpm,beats:M.beats,metroRhythm:{sound:M.sound||'click',groove:M.groove||'rock',volume:M.volume??.7,padMode:!!M.padMode,padParts:FireDrums.cleanParts(M.padParts),drummer:FireDrums.settings(M.drummer),clickBeats:M.clickBeats||M.beats}};
   M.pending.set(s.id,patch);
   const timer=setTimeout(()=>{M.saves.delete(s.id);if(store)store.patch(s.id,{...patch,updatedAt:Date.now()}).then(()=>{if(M.pending.get(s.id)===patch)M.pending.delete(s.id)}).catch(()=>{})},900);
   M.saves.set(s.id,timer);M.saveT=timer;
@@ -2603,7 +2605,7 @@ function renderMetronome(){
   let pref={};try{pref=JSON.parse(lsGet('sb.metro')||'{}')||{}}catch{}
   M.bpm=Number.isFinite(+pref.bpm)?Math.max(30,Math.min(240,Math.round(+pref.bpm))):120;
   M.beats=[2,3,4,6].includes(+pref.beats)?+pref.beats:4;M.taps=[];
-  M.drummer=FireDrums.settings(pref.drummer);M.sound=pref.sound==='drums'?'drums':'click';M.groove=FireDrums.patterns[pref.groove]?pref.groove:'rock';M.volume=Number.isFinite(pref.volume)?Math.max(0,Math.min(1,pref.volume)):.7;M.clickBeats=[2,3,4,6].includes(+pref.clickBeats)?+pref.clickBeats:M.beats;
+  M.padMode=pref.padMode===true;M.padParts=FireDrums.cleanParts(pref.padParts);M.padQueued=null;M.drummer=FireDrums.settings(pref.drummer);M.sound=pref.sound==='drums'?'drums':'click';M.groove=FireDrums.patterns[pref.groove]?pref.groove:'rock';M.volume=Number.isFinite(pref.volume)?Math.max(0,Math.min(1,pref.volume)):.7;M.clickBeats=[2,3,4,6].includes(+pref.clickBeats)?+pref.clickBeats:M.beats;
   if(M.sound==='drums')M.beats=FireDrums.pattern(M.groove).beats;
   app.innerHTML=`<header class="bar"><div class="bar-in library-head"><button class="brand" type="button" data-act="brand-home" aria-label="Fire Chords — все песни"><span class="brand-mark">${LOGO}</span><span>Fire Chords</span></button>${settingsButton()}</div></header>
     <main class="wrap"><section id="metro-page" class="metro metro-page" aria-label="Метроном"><h1>Метроном и биты</h1><p class="hint">Играй под щелчки или барабанный ритм.</p>
@@ -3915,6 +3917,11 @@ function openTone(){
   </div>`;
   sheet.hidden=false;
 }
+const DRUM_PAD_LABELS={kick:'Бочка',snare:'Малый',hat:'Хэт',open:'Открытый хэт',tom:'Том',rim:'Обод',clap:'Акцент',ghost:'Тихий малый'};
+function drumPadsTools(){return `<section class="stage-pads" aria-label="Партии барабанов"><div class="stage-pads-head"><button data-act="pads-visible" aria-expanded="${!M.padsHidden}">Пэды ${M.bpm} BPM</button><button data-act="pads-groove">Готовый ритм</button><button data-act="drum-stop" aria-label="Остановить все партии">Стоп всё</button></div><div class="stage-pad-grid" ${M.padsHidden?'hidden':''}>${FireDrums.padParts.map((k,i)=>`<button class="drum-pad" style="--pad-color:${['#f4a259','#ef6a82','#eac85f','#acd26c','#6ccbc3','#7fa8ef','#b48ce0','#dc93c5'][i]}" data-act="drum-pad" data-part="${k}" aria-label="Партия: ${DRUM_PAD_LABELS[k]}" aria-pressed="${M.padMode&&(M.padParts||[]).includes(k)}"><strong>${DRUM_PAD_LABELS[k]}</strong><small>Выкл</small></button>`).join('')}</div><div class="stage-pads-status" role="status"></div></section>`}
+function drumPadsUI(){const actual=M.padMode?M.padParts||[]:[],desired=M.padQueued??actual;document.querySelectorAll('.drum-pad').forEach(b=>{const k=b.dataset.part,selected=desired.includes(k),pending=selected!==actual.includes(k);b.setAttribute('aria-pressed',String(selected));b.classList.toggle('pad-pending',pending);b.querySelector('small').textContent=pending?(selected?'Со след. такта':'Остановится'):selected?(M.on?'Играет':'Готово'):'Выкл'});const status=M.padQueued!==null&&M.padQueued!==undefined?'Изменения со следующего такта':M.padMode?'Собирай ритм из отдельных партий':'Нажми пэд, чтобы собрать свой ритм';document.querySelectorAll('.stage-pads-status').forEach(e=>e.textContent=status)}
+function drumPadToggle(part){if(!FireDrums.padParts.includes(part))return;const desired=new Set(M.padQueued??(M.padMode?M.padParts||[]:[]));desired.has(part)?desired.delete(part):desired.add(part);const parts=FireDrums.cleanParts([...desired]);
+ if(M.on&&M.sound==='drums'){M.padQueued=parts;drumPadsUI()}else{M.padMode=true;M.padParts=parts;M.padQueued=null;M.sound='drums';M.beats=FireDrums.pattern(M.groove).beats;metroSave();if(parts.length)metroStart();drumPadsUI()}}
 function drumLiveTools(){if(S.view!=='song'||!M.on||M.sound!=='drums')return '';const d=FireDrums.settings(M.drummer);return `<div class="drum-live" role="group" aria-label="Барабаны на сцене"><button data-act="drum-section" data-v="verse" aria-pressed="${d.section==='verse'}">Куплет</button><button data-act="drum-section" data-v="chorus" aria-pressed="${d.section==='chorus'}">Припев</button><button data-act="drummer-fill" aria-label="Барабанная сбивка">Сбивка</button><button data-act="drum-stop" aria-label="Остановить барабаны">Стоп</button><span class="drum-live-status" role="status"></span></div>`}
 function drumLiveUI(){const section=M.nextSection||FireDrums.settings(M.drummer).section;document.querySelectorAll('[data-act="drum-section"]').forEach(b=>{b.setAttribute('aria-pressed',String(b.dataset.v===section));b.classList.toggle('pending',!!M.nextSection&&b.dataset.v===section)});const fillPending=M.on&&M.fillBar>=0&&M.fillBar>=(M.bar||0);const fillText=fillPending?'Сбивка — в ближайшем конце такта':'';document.querySelectorAll('.drum-live-status').forEach(el=>el.textContent=[M.nextSection?(section==='chorus'?'Припев':'Куплет')+' — со следующего такта':'',fillText].filter(Boolean).join(' · '));document.querySelectorAll('.drum-fill-status').forEach(el=>el.textContent=fillText);document.querySelectorAll('[data-act="drummer-fill"]').forEach(b=>b.setAttribute('aria-pressed',String(fillPending)));const sel=document.getElementById('drummer-section');if(sel&&!M.nextSection)sel.value=section;const enabled=document.getElementById('drummer-enabled');if(enabled)enabled.checked=!!M.drummer?.enabled}
 function drumLiveSection(section){if(!['verse','chorus'].includes(section))return;M.nextSection=section;drumLiveUI()}
@@ -3931,7 +3938,7 @@ function renderTools(){
   if(minus&&sp.on)stopAuto();
   if(minus&&CI.on&&!TR.ciHold)countInStop(); // an autoscroll count-in, not the minus's own
   if(S.stage){
-    tools.innerHTML=`${drumLiveTools()}<div class="tools-in stage-tools">
+    tools.innerHTML=`${drumPadsTools()}${drumLiveTools()}<div class="tools-in stage-tools">
       ${trackTools()}
       ${minus?'':`<div class="grp scroll" aria-label="Автопрокрутка">
         ${ciBtn()}<button data-act="scroll" class="${sp.on?'on':''}" aria-label="${sp.on?'Остановить':'Запустить'} автопрокрутку">${sp.on?ICON.pause:ICON.play}</button>
@@ -3941,7 +3948,7 @@ function renderTools(){
         <button data-act="fs" data-d="1" aria-label="Крупнее" style="font-size:18px">A</button></div>
       <div class="grp"><button data-act="stage-exit" aria-label="Выйти из режима сцены">Выйти</button></div>
     </div>`;
-    tools.hidden=false; return;
+    tools.hidden=false;drumPadsUI(); return;
   }
   tools.innerHTML=`${drumLiveTools()}<div class="tools-in">
     <div class="grp" aria-label="Тональность"${S.textOnly?' hidden':''}><span class="cap">Тон</span>
@@ -4534,7 +4541,7 @@ document.addEventListener('click',e=>{
   if(S.stage){
     const act=b&&b.dataset.act;
     if(!b||act==='chord'){if(!e.target.closest('#tools'))stageTap(e);return}
-    if(!['scroll','fs','stage-exit','t-play','v-play','v-reset','ci-toggle','drum-section','drummer-fill','drum-stop'].includes(act))exitStage();
+    if(!['scroll','fs','stage-exit','t-play','v-play','v-reset','ci-toggle','drum-section','drummer-fill','drum-stop','drum-pad','pads-visible','pads-groove'].includes(act))exitStage();
   }
   if(!b){if(e.target===sheet)closeSheet();return}
   const a=b.dataset.act;
@@ -4613,6 +4620,9 @@ document.addEventListener('click',e=>{
   else if(a==='m-toggle'){M.on?metroStop():metroStart()}
   else if(a==='m-step')metroSet(M.bpm+ +b.dataset.d);
   else if(a==='m-tap')metroTap();
+  else if(a==='drum-pad')drumPadToggle(b.dataset.part);
+  else if(a==='pads-visible'){M.padsHidden=!M.padsHidden;renderTools()}
+  else if(a==='pads-groove'){M.padMode=false;M.padQueued=null;metroSave();drumPadsUI();if(!M.on){M.sound='drums';metroStart()}}
   else if(a==='drum-section')drumLiveSection(b.dataset.v);
   else if(a==='drum-stop')metroStop();
   else if(a==='drummer-fill'){if(!M.on||M.sound!=='drums'){toast('Сначала запустите барабаны');return}const p=FireDrums.pattern(M.groove),start=p.beats*p.division-Math.min(p.beats*p.division,p.division*2);M.fillBar=(M.bar||0)+((M.step||0)>=start?1:0);drumLiveUI()}
@@ -4892,7 +4902,7 @@ initStore().then(st=>{
 });
 </script>
 
-<script src="hitmos-marking.js?v=150"></script>
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=150',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script src="hitmos-marking.js?v=151"></script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=151',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
