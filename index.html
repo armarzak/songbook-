@@ -11,9 +11,9 @@
 <meta name="theme-color" content="#F1F2EE" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111312" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="playback-tools.css?v=149">
-<link rel="stylesheet" href="album-shelf.css?v=149">
-<link rel="stylesheet" href="touch-guitar.css?v=149">
+<link rel="stylesheet" href="playback-tools.css?v=150">
+<link rel="stylesheet" href="album-shelf.css?v=150">
+<link rel="stylesheet" href="touch-guitar.css?v=150">
 <link rel="apple-touch-icon" href="fire-180.png">
 <link rel="icon" type="image/png" href="fire-180.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
@@ -972,12 +972,12 @@ input.mono{font-family:var(--f-mono)}
 <div id="sheet" class="sheet" hidden></div>
 <div id="toast" class="toast" hidden role="status"></div>
 
-<script src="album-shelf.js?v=149"></script>
-<script src="touch-guitar.js?v=149"></script>
-<script src="tempo-core.js?v=149"></script>
-<script src="drum-machine.js?v=149"></script>
-<script src="backing-tempo.js?v=149"></script>
-<script src="gtp-fretboard.js?v=149"></script>
+<script src="album-shelf.js?v=150"></script>
+<script src="touch-guitar.js?v=150"></script>
+<script src="tempo-core.js?v=150"></script>
+<script src="drum-machine.js?v=150"></script>
+<script src="backing-tempo.js?v=150"></script>
+<script src="gtp-fretboard.js?v=150"></script>
 <script>
 /* ---------- music theory ---------- */
 const SPEED_MIN=3,SPEED_MAX=70; // autoscroll, pixels per second (the old slowest step was 12)
@@ -4487,14 +4487,25 @@ function fillAz(list,anchors){
 })();
 
 /* ---------- autoscroll ---------- */
-let raf=0,lastT=null,acc=0,wake=null;
+let raf=0,lastT=null,acc=0,wake=null,autoEndLine=null;
+function autoScrollLimit(){
+  const pageEnd=Math.max(0,SCR.scrollHeight-SCR.clientHeight);
+  if(S.stage||S.view!=='song')return pageEnd;
+  if(!autoEndLine?.isConnected){const lines=[...document.querySelectorAll('#body .ln')];autoEndLine=lines.reverse().find(el=>el.textContent.trim())||document.getElementById('body')}
+  if(!autoEndLine)return pageEnd;
+  const viewportBottom=SCR.getBoundingClientRect().bottom,toolbarTop=tools.hidden?viewportBottom:tools.getBoundingClientRect().top;
+  const visibleBottom=Math.min(viewportBottom,toolbarTop);
+  return Math.max(0,Math.min(pageEnd,SCR.scrollTop+autoEndLine.getBoundingClientRect().bottom-visibleBottom+12));
+}
 function tick(t){
   if(!S.scroll.on)return;
-  if(lastT!=null){acc+=S.scroll.speed*(t-lastT)/1000;if(acc>=1){const n=Math.floor(acc);acc-=n;SCR.scrollBy(0,n)}
-    if(SCR.clientHeight+SCR.scrollTop>=SCR.scrollHeight-2){stopAuto();renderTools();return}}
+  const limit=autoScrollLimit();
+  if(SCR.scrollTop>=limit-1){stopAuto();renderTools();return}
+  if(lastT!=null){acc+=S.scroll.speed*(t-lastT)/1000;if(acc>=1){const n=Math.floor(acc);acc-=n;SCR.scrollBy(0,Math.min(n,Math.max(0,limit-SCR.scrollTop)))}
+    if(SCR.scrollTop>=limit-1){stopAuto();renderTools();return}}
   lastT=t;raf=requestAnimationFrame(tick);
 }
-async function startScroll(){S.scroll.on=true;lastT=null;acc=0;raf=requestAnimationFrame(tick);
+async function startScroll(){autoEndLine=null;S.scroll.on=true;lastT=null;acc=0;raf=requestAnimationFrame(tick);
   try{wake=await navigator.wakeLock.request('screen')}catch{wake=null}}
 function stopScroll(){closeHitmos();FireAlbumShelf.stop();micStop();songWakeOff();countInStop();gpClose();if(document.body.classList.contains('vfull-on'))videoExit();tunerStop();metroStop();trackStop();stopAuto()}
 function stopAuto(){S.scroll.on=false;cancelAnimationFrame(raf);if(wake){wake.release().catch(()=>{});wake=null}}
@@ -4523,7 +4534,7 @@ document.addEventListener('click',e=>{
   if(S.stage){
     const act=b&&b.dataset.act;
     if(!b||act==='chord'){if(!e.target.closest('#tools'))stageTap(e);return}
-    if(!['scroll','fs','stage-exit','t-play','v-play','v-reset','ci-toggle'].includes(act))exitStage();
+    if(!['scroll','fs','stage-exit','t-play','v-play','v-reset','ci-toggle','drum-section','drummer-fill','drum-stop'].includes(act))exitStage();
   }
   if(!b){if(e.target===sheet)closeSheet();return}
   const a=b.dataset.act;
@@ -4881,7 +4892,7 @@ initStore().then(st=>{
 });
 </script>
 
-<script src="hitmos-marking.js?v=149"></script>
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=149',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script src="hitmos-marking.js?v=150"></script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=150',{updateViaCache:'none'}).catch(()=>{}))</script>
 </body>
 </html>
