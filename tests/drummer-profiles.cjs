@@ -1,0 +1,12 @@
+const a=require('node:assert/strict'),d=require('../drum-machine.js');
+let v=d.settings({enabled:true,intensity:38,complexity:24,kit:'studio',reverb:37,delay:12});
+a.equal(v.intensity,38);a.equal(v.complexity,24);
+let c=d.selectSection(v,'chorus');a.equal(c.intensity,80);a.equal(c.complexity,80);a.equal(c.reverb,37);a.equal(c.kit,'studio');
+c=d.settings({...c,intensity:92,complexity:87,fills:64});
+v=d.selectSection(c,'verse');a.equal(v.intensity,38);a.equal(v.complexity,24);
+v=d.settings({...v,intensity:21,complexity:12});
+c=d.selectSection(JSON.parse(JSON.stringify(v)),'chorus');a.equal(c.intensity,92);a.equal(c.complexity,87);a.equal(c.fills,64);
+v=d.selectSection(c,'verse');a.equal(v.intensity,21);a.equal(v.complexity,12);
+const n=16,verse=Array.from({length:n},(_,s)=>d.performanceHits('rock',s,0,v)),chorus=Array.from({length:n},(_,s)=>d.performanceHits('rock',s,0,c));
+a.notDeepEqual(verse,chorus);a(chorus.flat().length>verse.flat().length);a(d.performanceHits('rock',0,0,c)[0].velocity>d.performanceHits('rock',0,0,v)[0].velocity);
+console.log('PASS independent verse/chorus profiles, legacy migration, JSON persistence, shared kit/effects, audibly different event density and velocity');

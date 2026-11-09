@@ -15,7 +15,17 @@
   function hits(id,step){const p=pattern(id);return instruments.filter(k=>p[k]?.includes(step)).map(kind=>({kind,velocity:kind==='ghost'?.24:kind==='hat'?(step%p.division===0?.6:.4):.85}))}
   function stepSeconds(bpm,id){return 60/Math.max(30,Math.min(240,bpm))/pattern(id).division}
   const defaults={enabled:false,section:'verse',intensity:55,complexity:45,fills:35,humanize:25,swing:0,kit:'acoustic',reverb:15,delay:0};
-  function settings(v={}){v=v&&typeof v==='object'?v:{};const o={...defaults,...v};o.enabled=v.enabled===true;o.kit=['acoustic','studio','room','electronic'].includes(o.kit)?o.kit:'acoustic';o.section=['intro','verse','chorus'].includes(o.section)?o.section:'verse';for(const k of ['intensity','complexity','fills','humanize','swing','reverb','delay'])o[k]=Number.isFinite(+o[k])?Math.max(0,Math.min(100,+o[k])):defaults[k];return o}
+  const partKeys=['intensity','complexity','fills','humanize','swing'];
+  const partDefaults={intro:{intensity:30,complexity:15,fills:15,humanize:25,swing:0},verse:{intensity:45,complexity:30,fills:25,humanize:25,swing:0},chorus:{intensity:80,complexity:80,fills:55,humanize:25,swing:0}};
+  function settings(v={}){
+    v=v&&typeof v==='object'?v:{};const o={...defaults,...v};o.enabled=v.enabled===true;o.kit=['acoustic','studio','room','electronic'].includes(o.kit)?o.kit:'acoustic';o.section=['intro','verse','chorus'].includes(o.section)?o.section:'verse';
+    const bounded=(x,fallback)=>Number.isFinite(+x)?Math.max(0,Math.min(100,+x)):fallback;
+    o.profiles={};for(const part of Object.keys(partDefaults)){o.profiles[part]={};for(const k of partKeys)o.profiles[part][k]=bounded(v.profiles?.[part]?.[k],partDefaults[part][k])}
+    // Migrate old flat settings into the active section; other sections get distinct defaults.
+    for(const k of partKeys){o[k]=bounded(v[k],o.profiles[o.section][k]);o.profiles[o.section][k]=o[k]}
+    for(const k of ['reverb','delay'])o[k]=bounded(v[k],defaults[k]);return o;
+  }
+  function selectSection(v,section){const o=settings(v);if(!partDefaults[section])return o;return settings({...o,...o.profiles[section],section})}
   function random(bar,step,salt){let n=Math.imul(bar+1,73856093)^Math.imul(step+1,19349663)^Math.imul(salt+1,83492791);n=Math.imul(n^(n>>>16),2246822507);return (n>>>0)/4294967296}
   // Original generator: preserve a groove's anchors and vary the surrounding performance.
   function performanceHits(id,step,bar,options={},forcedFill=false){
@@ -25,6 +35,7 @@
     const complexity=Math.min(1,o.complexity/100*section),level=(.4+o.intensity/100*.7)*section;
     let out=hits(id,step).filter(h=>!(h.kind==='hat'&&step%p.division!==0&&complexity<.25));
     if(step%p.division!==0&&random(bar,step,1)<complexity*.28&&!out.some(h=>h.kind==='snare'||h.kind==='rim'||h.kind==='clap'||h.kind==='ghost'))out.push({kind:'ghost',velocity:.18});
+    if(p.division===4&&complexity>.65&&step%2===1&&!out.some(h=>h.kind==='hat'||h.kind==='open'))out.push({kind:'hat',velocity:.27});
     if(id!=='reggae'&&step%p.division===p.division-1&&random(bar,step,2)<complexity*.22&&!out.some(h=>h.kind==='kick'))out.push({kind:'kick',velocity:.5});
     const fill=forcedFill||(bar%4===3&&random(bar,0,3)<o.fills/100);
     if(fill&&step>=length-Math.min(length,p.division*2)){out=out.filter(h=>h.kind!=='hat'&&h.kind!=='open'&&h.kind!=='ghost');if(forcedFill||step%2===0||complexity>.6)out.push({kind:step<length-Math.ceil(p.division/2)?'snare':'tom',velocity:.55+random(bar,step,6)*.2})}
@@ -83,5 +94,5 @@
   function play(ctx,destination,id,step,time,volume=.7,options={},bar=0,forcedFill=false){const s=state(ctx,destination),o=settings(options);s.kit=o.kit;s.wet.gain.setTargetAtTime(Math.min(1,o.reverb/100+(o.kit==='room'?.2:0))*.65,ctx.currentTime,.03);s.echo.gain.setTargetAtTime(o.delay/100*.55,ctx.currentTime,.03);s.delay.delayTime.setTargetAtTime(Math.min(1.8,60/(options.bpm||120)*.75),ctx.currentTime,.03);s.bus.gain.setValueAtTime(Math.max(0,Math.min(1,volume))*.65,ctx.currentTime);for(const hit of performanceHits(id,step,bar,options,forcedFill))voice(ctx,s,hit.kind,Math.max(ctx.currentTime,time+hit.offset),hit.velocity)}
   function volume(ctx,value){const s=states.get(ctx);if(s)s.bus.gain.setTargetAtTime(Math.max(0,Math.min(1,value))*.65,ctx.currentTime,.02)}
   function stop(){for(const node of active){try{node.stop()}catch{}}active.clear();for(const s of liveStates){for(const node of s.nodes)try{node.disconnect()}catch{}states.delete(s.ctx)}liveStates.clear()}
-  const api={load,settings,performanceHits,liveStepSeconds,patterns,pattern,hits,stepSeconds,play,volume,stop};root.FireDrums=api;if(typeof module!=='undefined')module.exports=api;
+  const api={load,settings,selectSection,performanceHits,liveStepSeconds,patterns,pattern,hits,stepSeconds,play,volume,stop};root.FireDrums=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);
