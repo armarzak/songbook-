@@ -45,7 +45,8 @@
   function liveStepSeconds(bpm,id,step,options={}){const o=settings(options),p=pattern(id),base=stepSeconds(bpm,id);return base*(1+(o.enabled&&p.division%2===0?(step%2===0?1:-1)*o.swing/100*.5:0))}
   const padParts=['kick','snare','hat','open','tom','rim','clap','ghost'];
   function cleanParts(parts){return padParts.filter(k=>Array.isArray(parts)&&parts.includes(k))}
-  function padHits(id,step,bar,options={}){const p=pattern(id),d=p.division,n=p.beats*d,o=settings(options),beat=Math.floor(step/d),onBeat=step%d===0,half=step%d===Math.floor(d/2);const back=p.beats===6?beat===3:beat%2===1;
+  function padHits(id,step,bar,options={},forcedFill=false){const p=pattern(id),d=p.division,n=p.beats*d,o=settings(options),beat=Math.floor(step/d),onBeat=step%d===0,half=step%d===Math.floor(d/2);const back=p.beats===6?beat===3:beat%2===1;
+    if(forcedFill&&step>=n-Math.min(n,d*2))return performanceHits(id,step,bar,options,true);
     const play={kick:(p.kick||[0]).includes(step),snare:onBeat&&back,hat:onBeat||half,open:half,tom:step>=n-d&&step%Math.max(1,Math.floor(d/2))===0,rim:onBeat&&!back,clap:onBeat&&back,ghost:step%d===d-1&&beat%2===0};
     return cleanParts(options.padParts).filter(k=>play[k]).map((kind,i)=>({kind,velocity:Math.min(1,(kind==='ghost'?.2:kind==='hat'?.45:.8)*(o.enabled?.4+o.intensity/100*.7:1)),offset:o.enabled?random(bar,step,40+i)*o.humanize/100*.009:0}));
   }
@@ -97,7 +98,7 @@
     if(kind==='hat'&&s.openHat){try{s.openHat.gain.cancelScheduledValues(t);s.openHat.gain.setTargetAtTime(0,t,.015)}catch{}}if(kind==='open')s.openHat=gain;
     active.add(source);source.onended=()=>{active.delete(source);source.disconnect();filter.disconnect();gain.disconnect()};source.start(t);source.stop(t+duration+.01);
   }
-  function play(ctx,destination,id,step,time,volume=.7,options={},bar=0,forcedFill=false){const s=state(ctx,destination),o=settings(options);s.kit=o.kit;s.wet.gain.setTargetAtTime(Math.min(1,o.reverb/100+(o.kit==='room'?.2:0))*.65,ctx.currentTime,.03);s.echo.gain.setTargetAtTime(o.delay/100*.55,ctx.currentTime,.03);s.delay.delayTime.setTargetAtTime(Math.min(1.8,60/(options.bpm||120)*.75),ctx.currentTime,.03);s.bus.gain.setValueAtTime(Math.max(0,Math.min(1,volume))*.65,ctx.currentTime);for(const hit of (Array.isArray(options.padParts)?padHits(id,step,bar,options):performanceHits(id,step,bar,options,forcedFill)))voice(ctx,s,hit.kind,Math.max(ctx.currentTime,time+hit.offset),hit.velocity)}
+  function play(ctx,destination,id,step,time,volume=.7,options={},bar=0,forcedFill=false){const s=state(ctx,destination),o=settings(options);s.kit=o.kit;s.wet.gain.setTargetAtTime(Math.min(1,o.reverb/100+(o.kit==='room'?.2:0))*.65,ctx.currentTime,.03);s.echo.gain.setTargetAtTime(o.delay/100*.55,ctx.currentTime,.03);s.delay.delayTime.setTargetAtTime(Math.min(1.8,60/(options.bpm||120)*.75),ctx.currentTime,.03);s.bus.gain.setValueAtTime(Math.max(0,Math.min(1,volume))*.65,ctx.currentTime);for(const hit of (Array.isArray(options.padParts)?padHits(id,step,bar,options,forcedFill):performanceHits(id,step,bar,options,forcedFill)))voice(ctx,s,hit.kind,Math.max(ctx.currentTime,time+hit.offset),hit.velocity)}
   function volume(ctx,value){const s=states.get(ctx);if(s)s.bus.gain.setTargetAtTime(Math.max(0,Math.min(1,value))*.65,ctx.currentTime,.02)}
   function stop(){for(const node of active){try{node.stop()}catch{}}active.clear();for(const s of liveStates){for(const node of s.nodes)try{node.disconnect()}catch{}states.delete(s.ctx)}liveStates.clear()}
   const api={padParts,cleanParts,padHits,load,settings,selectSection,performanceHits,liveStepSeconds,patterns,pattern,hits,stepSeconds,play,volume,stop};root.FireDrums=api;if(typeof module!=='undefined')module.exports=api;

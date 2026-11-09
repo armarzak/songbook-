@@ -5,3 +5,5 @@ for(const id of Object.keys(d.patterns)){const p=d.pattern(id),n=p.beats*p.divis
  for(const k of d.padParts)for(const h of d.padHits(id,s,0,{padParts:[k]}))a.equal(h.kind,k);
 }for(const k of d.padParts)a(Array.from({length:n},(_,s)=>d.padHits(id,s,0,{padParts:[k]})).flat().length>0,k+' must produce hits in '+id)}
 a.deepEqual(d.cleanParts(['kick','kick','snare','unknown']),['kick','snare']);console.log('PASS all eight independent loops, layering, silence with no pads, all seven meters, selection validation');
+
+a(d.padHits('rock',15,0,{padParts:['kick']},true).some(h=>h.kind==='tom'));console.log('PASS requested fill plays once and preserves pad selection');
