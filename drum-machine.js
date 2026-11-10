@@ -53,7 +53,7 @@
   const banks=new WeakMap(),loads=new WeakMap();
   const sampleNames=['kick-soft','kick-hard','snare-soft','snare-hard','ghost','hat','open','tom','rim','shaker','perc'];
   function load(ctx){if(banks.has(ctx))return Promise.resolve();if(loads.has(ctx))return loads.get(ctx);const bank={};
-    const task=Promise.all(sampleNames.flatMap(name=>[1,2].map(async n=>{const r=await fetch('drums/'+name+n+(['shaker','perc'].includes(name)?'.wav':'.m4a'));if(!r.ok)throw Error('Drum sample '+r.status);const b=await r.arrayBuffer();const decoded=await new Promise((ok,no)=>{const task=ctx.decodeAudioData(b,ok,no);if(task&&task.catch)task.catch(no)});(bank[name]??=[])[n-1]=decoded}))).then(()=>{banks.set(ctx,bank);loads.delete(ctx)},e=>{loads.delete(ctx);throw e});loads.set(ctx,task);return task;
+    const task=Promise.all(sampleNames.flatMap(name=>[1,2].map(async n=>{const r=await fetch('drums/'+name+n+(['shaker','perc'].includes(name)?'.wav':'.m4a'));if(!r.ok)throw Error('Drum sample '+r.status);const b=await r.arrayBuffer();const decoded=await new Promise((ok,no)=>{const task=ctx.decodeAudioData(b,ok,no);if(task&&task.catch)task.catch(no)});if(name==='shaker'||name==='perc'){let peak=0;for(let ch=0;ch<decoded.numberOfChannels;ch++)for(const v of decoded.getChannelData(ch))peak=Math.max(peak,Math.abs(v));if(peak>0){const scale=.8/peak;for(let ch=0;ch<decoded.numberOfChannels;ch++){const samples=decoded.getChannelData(ch);for(let i=0;i<samples.length;i++)samples[i]*=scale}}}(bank[name]??=[])[n-1]=decoded}))).then(()=>{banks.set(ctx,bank);loads.delete(ctx)},e=>{loads.delete(ctx);throw e});loads.set(ctx,task);return task;
   }
   const states=new WeakMap(),active=new Set(),liveStates=new Set();
   function state(ctx,destination){
