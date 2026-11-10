@@ -979,7 +979,7 @@ input.mono{font-family:var(--f-mono)}
 <script src="album-shelf.js?v=152"></script>
 <script src="touch-guitar.js?v=152"></script>
 <script src="tempo-core.js?v=152"></script>
-<script src="drum-machine.js?v=154"></script>
+<script src="drum-machine.js?v=155"></script>
 <script src="backing-tempo.js?v=152"></script>
 <script src="gtp-fretboard.js?v=152"></script>
 <script>
@@ -3921,8 +3921,8 @@ function openTone(){
   </div>`;
   sheet.hidden=false;
 }
-const DRUM_PAD_LABELS={kick:'Бочка',snare:'Малый',hat:'Хэт',open:'Открытый хэт',tom:'Том',rim:'Обод',clap:'Перкуссия',ghost:'Тихий малый'};
-function drumPadsTools(){return `<section class="stage-pads" aria-label="Партии барабанов"><div class="stage-pads-head"><button data-act="pads-visible" aria-expanded="${!M.padsHidden}">Пэды ${M.bpm} BPM</button><button data-act="pads-groove">Готовый ритм</button><button data-act="drum-stop" aria-label="Остановить все партии">Стоп всё</button></div><div class="stage-pad-grid" ${M.padsHidden?'hidden':''}>${FireDrums.padParts.map((k,i)=>`<button class="drum-pad" style="--pad-color:${['#f4a259','#ef6a82','#eac85f','#acd26c','#6ccbc3','#7fa8ef','#b48ce0','#dc93c5'][i]}" data-act="drum-pad" data-part="${k}" aria-label="Партия: ${DRUM_PAD_LABELS[k]}" aria-pressed="${M.padMode&&(M.padParts||[]).includes(k)}"><span class="pad-ring"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="pad-track" cx="18" cy="18" r="14"/><circle class="pad-progress" cx="18" cy="18" r="14" pathLength="100"/></svg><span class="pad-count">1</span></span><span class="pad-caption"><strong>${({kick:"Kick",snare:"Snare",hat:"Hat",open:"Open",tom:"Tom",rim:"Rim",clap:"Perc",ghost:"Ghost"})[k]}</strong><small>Выкл</small></span></button>`).join('')}</div><div class="stage-pads-status" role="status"></div></section>`}
+const DRUM_PAD_LABELS={kick:'Бочка',snare:'Малый',hat:'Хэт',open:'Открытый хэт',tom:'Том',rim:'Обод',clap:'Перкуссия',ghost:'Шейкер'};
+function drumPadsTools(){return `<section class="stage-pads" aria-label="Партии барабанов"><div class="stage-pads-head"><button data-act="pads-visible" aria-expanded="${!M.padsHidden}">Пэды ${M.bpm} BPM</button><button data-act="pads-groove">Готовый ритм</button><button data-act="drum-stop" aria-label="Остановить все партии">Стоп всё</button></div><div class="stage-pad-grid" ${M.padsHidden?'hidden':''}>${FireDrums.padParts.map((k,i)=>`<button class="drum-pad" style="--pad-color:${['#f4a259','#ef6a82','#eac85f','#acd26c','#6ccbc3','#7fa8ef','#b48ce0','#dc93c5'][i]}" data-act="drum-pad" data-part="${k}" aria-label="Партия: ${DRUM_PAD_LABELS[k]}" aria-pressed="${M.padMode&&(M.padParts||[]).includes(k)}"><span class="pad-ring"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="pad-track" cx="18" cy="18" r="14"/><circle class="pad-progress" cx="18" cy="18" r="14" pathLength="100"/></svg><span class="pad-count">1</span></span><span class="pad-caption"><strong>${({kick:"Kick",snare:"Snare",hat:"Hat",open:"Open",tom:"Tom",rim:"Rim",clap:"Perc",ghost:"Shaker"})[k]}</strong><small>Выкл</small></span></button>`).join('')}</div><div class="stage-pads-status" role="status"></div></section>`}
 function drumPadsProgress(step,total,bar){if(!M.on)return;document.querySelectorAll('.drum-pad').forEach(b=>{const r=b.querySelector('.pad-progress');if(r)r.style.strokeDashoffset=100-(step+1)*100/total;const n=b.querySelector('.pad-count');if(n)n.textContent=bar+1})}
 function drumPadsUI(){const actual=M.padMode?M.padParts||[]:[],desired=M.padQueued??actual;document.querySelectorAll('.drum-pad').forEach(b=>{const k=b.dataset.part,selected=desired.includes(k),pending=selected!==actual.includes(k);b.setAttribute('aria-pressed',String(selected));b.classList.toggle('pad-pending',pending);b.querySelector('small').textContent=pending?(selected?'Со след. такта':'Остановится'):selected?(M.on?'Играет':'Готово'):'Выкл'});const status=M.padQueued!==null&&M.padQueued!==undefined?'Изменения со следующего такта':M.padMode?'Собирай ритм из отдельных партий':'Нажми пэд, чтобы собрать свой ритм';document.querySelectorAll('.stage-pads-status').forEach(e=>e.textContent=status)}
 function drumPadToggle(part){if(!FireDrums.padParts.includes(part))return;const desired=new Set(M.padQueued??(M.padMode?M.padParts||[]:[]));desired.has(part)?desired.delete(part):desired.add(part);const parts=FireDrums.cleanParts([...desired]);
@@ -4908,6 +4908,6 @@ initStore().then(st=>{
 </script>
 
 <script src="hitmos-marking.js?v=152"></script>
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=154',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=155',{updateViaCache:'none'}).catch(()=>{}))</script>
 <style>.stage-pads{margin:0 auto 4px!important;padding:4px 6px!important}.stage-pad-grid{gap:4px!important}.stage-pad-grid .drum-pad{height:36px!important;min-height:36px!important;flex-direction:row!important;padding:3px!important;gap:4px!important}.stage-pads-head{margin-bottom:3px!important}.stage-pads-head button{min-height:26px!important;padding:3px!important}.stage-pads-status{position:absolute!important}.drum-live button{min-height:32px!important;font-size:12px!important}</style></body>
 </html>
