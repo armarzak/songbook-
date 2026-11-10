@@ -7,3 +7,5 @@ Upstream historical license: CC BY-SA 3.0. https://creativecommons.org/licenses/
 This audio selection and AAC conversions are also available under CC BY-SA 3.0.
 Conversions: FLAC to AAC 128 kbps via macOS afconvert. Sources and source SHA-256 in sources.json.
 Recordings, not synthesized hits; two performances per articulation, soft/hard kick and snare layers.
+
+Hand percussion: original small shaker and bongo recordings from Versilian Community Sample Library (VCSL), CC0-1.0. Source files, pinned revision and hashes: hand-percussion-sources.json. Two performances alternate for each instrument. Original WAV files retained.

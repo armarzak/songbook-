@@ -51,9 +51,9 @@
     return cleanParts(options.padParts).filter(k=>play[k]).map((kind,i)=>({kind,velocity:Math.min(1,(kind==='ghost'?.55:kind==='hat'?.45:.8)*(o.enabled?.4+o.intensity/100*.7:1)),offset:o.enabled?random(bar,step,40+i)*o.humanize/100*.009:0}));
   }
   const banks=new WeakMap(),loads=new WeakMap();
-  const sampleNames=['kick-soft','kick-hard','snare-soft','snare-hard','ghost','hat','open','tom','rim'];
+  const sampleNames=['kick-soft','kick-hard','snare-soft','snare-hard','ghost','hat','open','tom','rim','shaker','perc'];
   function load(ctx){if(banks.has(ctx))return Promise.resolve();if(loads.has(ctx))return loads.get(ctx);const bank={};
-    const task=Promise.all(sampleNames.flatMap(name=>[1,2].map(async n=>{const r=await fetch('drums/'+name+n+'.m4a');if(!r.ok)throw Error('Drum sample '+r.status);const b=await r.arrayBuffer();const decoded=await new Promise((ok,no)=>{const task=ctx.decodeAudioData(b,ok,no);if(task&&task.catch)task.catch(no)});(bank[name]??=[])[n-1]=decoded}))).then(()=>{banks.set(ctx,bank);loads.delete(ctx)},e=>{loads.delete(ctx);throw e});loads.set(ctx,task);return task;
+    const task=Promise.all(sampleNames.flatMap(name=>[1,2].map(async n=>{const r=await fetch('drums/'+name+n+(['shaker','perc'].includes(name)?'.wav':'.m4a'));if(!r.ok)throw Error('Drum sample '+r.status);const b=await r.arrayBuffer();const decoded=await new Promise((ok,no)=>{const task=ctx.decodeAudioData(b,ok,no);if(task&&task.catch)task.catch(no)});(bank[name]??=[])[n-1]=decoded}))).then(()=>{banks.set(ctx,bank);loads.delete(ctx)},e=>{loads.delete(ctx);throw e});loads.set(ctx,task);return task;
   }
   const states=new WeakMap(),active=new Set(),liveStates=new Set();
   function state(ctx,destination){
@@ -72,16 +72,6 @@
   function synthVoice(ctx,s,kind,t,velocity){
     const gain=ctx.createGain();gain.connect(s.bus);velocity*=s.kit==='studio'?.88:1;
     function attach(source,end){active.add(source);source.onended=()=>{active.delete(source);source.disconnect();gain.disconnect()};source.connect(gain);source.start(t);source.stop(end)}
-    if(kind==='shaker'){
-      const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter();source.buffer=s.noise;filter.type='bandpass';filter.frequency.value=5200;filter.Q.value=.65;source.connect(filter);filter.connect(gain);
-      gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(velocity*.7,t+.009);gain.gain.exponentialRampToValueAtTime(.0002,t+.038);gain.gain.exponentialRampToValueAtTime(velocity*.45,t+.052);gain.gain.exponentialRampToValueAtTime(.0001,t+.115);
-      active.add(source);source.onended=()=>{active.delete(source);source.disconnect();filter.disconnect();gain.disconnect()};source.start(t);source.stop(t+.125);return;
-    }
-    // Perc pad: a short pitched wooden block, distinct from the snare's noise.
-    if(kind==='perc'){
-      const osc=ctx.createOscillator();osc.type='sine';osc.frequency.setValueAtTime(1040,t);osc.frequency.exponentialRampToValueAtTime(780,t+.018);
-      gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(velocity*.75,t+.001);gain.gain.exponentialRampToValueAtTime(.0001,t+.075);attach(osc,t+.085);return;
-    }
     if(kind==='kick'||kind==='rim'||kind==='tom'){
       const osc=ctx.createOscillator();osc.type=kind==='kick'?'sine':'triangle';osc.frequency.setValueAtTime(kind==='kick'?(s.kit==='electronic'?180:130):kind==='tom'?220:1150,t);osc.frequency.exponentialRampToValueAtTime(kind==='kick'?45:kind==='tom'?75:460,t+(kind==='kick'||kind==='tom'?.12:.025));
       const duration=kind==='kick'||kind==='tom'?(s.kit==='electronic'?.44:s.kit==='studio'?.18:.28):.055;gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(velocity*(kind==='kick'?1.05:kind==='tom'?.65:.3),t+.002);gain.gain.exponentialRampToValueAtTime(.0001,t+duration);attach(osc,t+duration+.01);return;
@@ -97,10 +87,10 @@
     }
   }
   function voice(ctx,s,kind,t,velocity){
-    if(kind==='shaker'||kind==='perc'||s.kit==='electronic'){synthVoice(ctx,s,kind,t,velocity);return}
+    if(s.kit==='electronic'&&kind!=='shaker'&&kind!=='perc'){synthVoice(ctx,s,kind,t,velocity);return}
     const bank=banks.get(ctx);if(!bank)return;
     const name=kind==='kick'?(velocity<.55?'kick-soft':'kick-hard'):kind==='snare'||kind==='clap'?(velocity<.5?'snare-soft':'snare-hard'):kind;
-    const recordings=bank[name]||bank['snare-soft'];s.counters??={};const index=(s.counters[name]||0)%recordings.length;s.counters[name]=index+1;
+    const recordings=bank[name];if(!recordings)return;s.counters??={};const index=(s.counters[name]||0)%recordings.length;s.counters[name]=index+1;
     const source=ctx.createBufferSource(),gain=ctx.createGain(),filter=ctx.createBiquadFilter();source.buffer=recordings[index];
     filter.type='lowpass';filter.frequency.value=s.kit==='studio'?11000:18000;source.connect(filter);filter.connect(gain);gain.connect(s.bus);
     const level=velocity*(kind==='hat'?.6:kind==='open'?.65:kind==='ghost'?.5:1.05),duration=s.kit==='studio'?Math.min(source.buffer.duration,kind==='open'?.65:.4):source.buffer.duration;

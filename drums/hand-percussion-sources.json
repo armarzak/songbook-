@@ -1,0 +1,26 @@
+[
+  {
+    "file": "shaker1.wav",
+    "url": "https://raw.githubusercontent.com/sgossner/VCSL/c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e/Idiophones/Struck%20Idiophones/Shaker%2C%20Small/Mid_ShakerHighFaster_Down_rr1.wav",
+    "license": "CC0-1.0",
+    "sha256": "cf4cb388ffcff5a042149e0645123b089ae85e8342876421e817dce55ce66a5a"
+  },
+  {
+    "file": "shaker2.wav",
+    "url": "https://raw.githubusercontent.com/sgossner/VCSL/c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e/Idiophones/Struck%20Idiophones/Shaker%2C%20Small/Mid_ShakerHighFaster_Up_rr1.wav",
+    "license": "CC0-1.0",
+    "sha256": "45ae715ce4f64280c9d8fa7eacb4e7003127b93c59c08e95125b67b173cf98e0"
+  },
+  {
+    "file": "perc1.wav",
+    "url": "https://raw.githubusercontent.com/sgossner/VCSL/c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e/Membranophones/Struck%20Membranophones/Bongos/BongoH_Hit1_v2_rr1_Mid.wav",
+    "license": "CC0-1.0",
+    "sha256": "dd9b6239a151702966a995937f74ac022c9bb950c967277fbd16beaced0c9e1a"
+  },
+  {
+    "file": "perc2.wav",
+    "url": "https://raw.githubusercontent.com/sgossner/VCSL/c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e/Membranophones/Struck%20Membranophones/Bongos/BongoH_Hit1_v2_rr2_Mid.wav",
+    "license": "CC0-1.0",
+    "sha256": "03d4653d70e2180643872da4ebb94845f4da81b8d8f9ba2c7df3a611bd9d65ac"
+  }
+]
