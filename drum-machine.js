@@ -30,7 +30,7 @@
   // Original generator: preserve a groove's anchors and vary the surrounding performance.
   function performanceHits(id,step,bar,options={},forcedFill=false){
     const o=settings(options),p=pattern(id),length=p.beats*p.division;
-    if(!o.enabled&&(!forcedFill||step<length-Math.min(length,p.division*2)))return hits(id,step).map(h=>({...h,offset:0}));
+    if(!o.enabled&&o.section!=='chorus'&&(!forcedFill||step<length-Math.min(length,p.division*2)))return hits(id,step).map(h=>({...h,offset:0}));
     const section=o.section==='intro'?.65:o.section==='chorus'?1.2:1;
     const complexity=Math.min(1,o.complexity/100*section),level=(.4+o.intensity/100*.7)*section;
     let out=hits(id,step).filter(h=>!(h.kind==='hat'&&step%p.division!==0&&complexity<.25));
@@ -48,6 +48,8 @@
   function padHits(id,step,bar,options={},forcedFill=false){const p=pattern(id),d=p.division,n=p.beats*d,o=settings(options),beat=Math.floor(step/d),onBeat=step%d===0,half=step%d===Math.floor(d/2);const back=p.beats===6?beat===3:beat%2===1;
     if(forcedFill&&step>=n-Math.min(n,d*2))return performanceHits(id,step,bar,options,true);
     const play={kick:(p.kick||[0]).includes(step),snare:onBeat&&back,hat:onBeat||half,open:half,tom:step>=n-d&&step%Math.max(1,Math.floor(d/2))===0,rim:onBeat&&!back,clap:onBeat&&back,ghost:step%Math.max(1,Math.floor(d/2))===0};
+    const variants={kick:[[0,8],[0,6,8,14],[0,4,8,12],[0,3,6,10],[0,10],[0,7,8,11,14]],snare:[[4,12],[4,10,12],[8],[4,7,12,15],[4,12,14],[2,6,10,14]],hat:[[0,2,4,6,8,10,12,14],[0,4,8,12],[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],[2,6,10,14],[0,3,4,7,8,11,12,15],[0,2,3,6,8,10,11,14]],clap:[[4,12],[2,6,10,14],[0,3,6,8,11,14],[0,8],[3,7,11,15],[0,2,5,8,10,13]],ghost:[[0,2,4,6,8,10,12,14],[0,4,8,12],[2,6,10,14],[0,1,2,4,5,6,8,9,10,12,13,14],[0,3,6,8,11,14],[0,2,3,6,8,10,11,14]]};
+    for(const k of padParts){const selected=Math.max(0,Math.min(5,Number(o.padVariants?.[k])||0)),variant=(selected+(o.section==='chorus'?2:0))%6;if(variant||o.section==='chorus'){const bank=variants[k]||variants.hat;play[k]=bank[variant].some(s=>Math.round(s*n/16)%n===step)}}
     return cleanParts(options.padParts).filter(k=>play[k]).map((kind,i)=>({kind,velocity:Math.min(1,(kind==='ghost'?.55:kind==='hat'?.45:.8)*(o.enabled?.4+o.intensity/100*.7:1)),offset:o.enabled?random(bar,step,40+i)*o.humanize/100*.009:0}));
   }
   const banks=new WeakMap(),loads=new WeakMap();
@@ -92,8 +94,8 @@
     const name=kind==='kick'?(velocity<.55?'kick-soft':'kick-hard'):kind==='snare'||kind==='clap'?(velocity<.5?'snare-soft':'snare-hard'):kind;
     const recordings=bank[name];if(!recordings)return;s.counters??={};const index=(s.counters[name]||0)%recordings.length;s.counters[name]=index+1;
     const source=ctx.createBufferSource(),gain=ctx.createGain(),filter=ctx.createBiquadFilter();source.buffer=recordings[index];
-    filter.type='lowpass';filter.frequency.value=s.kit==='studio'?11000:18000;source.connect(filter);filter.connect(gain);gain.connect(s.bus);
-    const level=velocity*(kind==='hat'?.6:kind==='open'?.65:kind==='ghost'?.5:1.05),duration=s.kit==='studio'?Math.min(source.buffer.duration,kind==='open'?.65:.4):source.buffer.duration;
+    source.playbackRate.value=kind==='perc'||kind==='shaker'?1:s.kit==='studio'?(kind==='kick'?.78:1.28):s.kit==='room'?(kind==='kick'?1.12:.78):1;filter.type='lowpass';filter.frequency.value=s.kit==='studio'?6500:s.kit==='room'?4200:18000;source.connect(filter);filter.connect(gain);gain.connect(s.bus);
+    const level=velocity*(kind==='hat'?.6:kind==='open'?.65:kind==='ghost'?.5:1.05),duration=s.kit==='studio'?Math.min(source.buffer.duration,kind==='open'?.22:.16):source.buffer.duration;
     gain.gain.setValueAtTime(Math.max(.0001,level),t);gain.gain.setValueAtTime(Math.max(.0001,level),t+Math.max(.01,duration-.07));gain.gain.exponentialRampToValueAtTime(.0001,t+duration);
     if(kind==='hat'&&s.openHat){try{s.openHat.gain.cancelScheduledValues(t);s.openHat.gain.setTargetAtTime(0,t,.015)}catch{}}if(kind==='open')s.openHat=gain;
     active.add(source);source.onended=()=>{active.delete(source);source.disconnect();filter.disconnect();gain.disconnect()};source.start(t);source.stop(t+duration+.01);
