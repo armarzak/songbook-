@@ -30,10 +30,11 @@
   // Original generator: preserve a groove's anchors and vary the surrounding performance.
   function performanceHits(id,step,bar,options={},forcedFill=false){
     const o=settings(options),p=pattern(id),length=p.beats*p.division;
-    if(!o.enabled&&o.section!=='chorus'&&(!forcedFill||step<length-Math.min(length,p.division*2)))return hits(id,step).map(h=>({...h,offset:0}));
+    if(!o.enabled&&o.section==='verse'&&(!forcedFill||step<length-Math.min(length,p.division*2)))return hits(id,step).map(h=>({...h,offset:0}));
     const section=o.section==='intro'?.65:o.section==='chorus'?1.2:1;
     const complexity=Math.min(1,o.complexity/100*section),level=(.4+o.intensity/100*.7)*section;
     let out=hits(id,step).filter(h=>!(h.kind==='hat'&&step%p.division!==0&&complexity<.25));
+    if(o.section==='intro')out=out.filter(h=>h.kind==='kick'?step===0:h.kind==='hat'?step%p.division===0:step===Math.floor(length/2));
     if(step%p.division!==0&&random(bar,step,1)<complexity*.28&&!out.some(h=>h.kind==='snare'||h.kind==='rim'||h.kind==='clap'||h.kind==='ghost'))out.push({kind:'ghost',velocity:.18});
     if(p.division===4&&complexity>.65&&step%2===1&&!out.some(h=>h.kind==='hat'||h.kind==='open'))out.push({kind:'hat',velocity:.27});
     if(id!=='reggae'&&step%p.division===p.division-1&&random(bar,step,2)<complexity*.22&&!out.some(h=>h.kind==='kick'))out.push({kind:'kick',velocity:.5});
@@ -50,6 +51,7 @@
     const play={kick:(p.kick||[0]).includes(step),snare:onBeat&&back,hat:onBeat||half,open:half,tom:step>=n-d&&step%Math.max(1,Math.floor(d/2))===0,rim:onBeat&&!back,clap:onBeat&&back,ghost:step%Math.max(1,Math.floor(d/2))===0};
     const variants={kick:[[0,8],[0,6,8,14],[0,4,8,12],[0,3,6,10],[0,10],[0,7,8,11,14]],snare:[[4,12],[4,10,12],[8],[4,7,12,15],[4,12,14],[2,6,10,14]],hat:[[0,2,4,6,8,10,12,14],[0,4,8,12],[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],[2,6,10,14],[0,3,4,7,8,11,12,15],[0,2,3,6,8,10,11,14]],clap:[[4,12],[2,6,10,14],[0,3,6,8,11,14],[0,8],[3,7,11,15],[0,2,5,8,10,13]],ghost:[[0,2,4,6,8,10,12,14],[0,4,8,12],[2,6,10,14],[0,1,2,4,5,6,8,9,10,12,13,14],[0,3,6,8,11,14],[0,2,3,6,8,10,11,14]]};
     for(const k of padParts){const selected=Math.max(0,Math.min(5,Number(o.padVariants?.[k])||0)),variant=(selected+(o.section==='chorus'?2:0))%6;if(variant||o.section==='chorus'){const bank=variants[k]||variants.hat;play[k]=bank[variant].some(s=>Math.round(s*n/16)%n===step)}}
+    if(o.section==='intro')for(const k of padParts){const v=Math.max(0,Math.min(5,+o.padVariants?.[k]||0));const sparse=[[0],[0,8],[4],[8],[12],[0,12]];const positions=(k==='hat'||k==='ghost'?[[0,8],[0,4,8,12],[4,12],[0],[8],[0,12]][v]:sparse[v]).map(x=>Math.round(x*n/16)%n);play[k]=positions.includes(step)}
     return cleanParts(options.padParts).filter(k=>play[k]).map((kind,i)=>({kind,velocity:Math.min(1,(kind==='ghost'?.55:kind==='hat'?.45:.8)*(o.enabled?.4+o.intensity/100*.7:1)),offset:o.enabled?random(bar,step,40+i)*o.humanize/100*.009:0}));
   }
   const banks=new WeakMap(),loads=new WeakMap();
