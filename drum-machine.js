@@ -72,6 +72,11 @@
   function synthVoice(ctx,s,kind,t,velocity){
     const gain=ctx.createGain();gain.connect(s.bus);velocity*=s.kit==='studio'?.88:1;
     function attach(source,end){active.add(source);source.onended=()=>{active.delete(source);source.disconnect();gain.disconnect()};source.connect(gain);source.start(t);source.stop(end)}
+    // Perc pad: a short pitched wooden block, distinct from the snare's noise.
+    if(kind==='perc'){
+      const osc=ctx.createOscillator();osc.type='sine';osc.frequency.setValueAtTime(1040,t);osc.frequency.exponentialRampToValueAtTime(780,t+.018);
+      gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(velocity*.75,t+.001);gain.gain.exponentialRampToValueAtTime(.0001,t+.075);attach(osc,t+.085);return;
+    }
     if(kind==='kick'||kind==='rim'||kind==='tom'){
       const osc=ctx.createOscillator();osc.type=kind==='kick'?'sine':'triangle';osc.frequency.setValueAtTime(kind==='kick'?(s.kit==='electronic'?180:130):kind==='tom'?220:1150,t);osc.frequency.exponentialRampToValueAtTime(kind==='kick'?45:kind==='tom'?75:460,t+(kind==='kick'||kind==='tom'?.12:.025));
       const duration=kind==='kick'||kind==='tom'?(s.kit==='electronic'?.44:s.kit==='studio'?.18:.28):.055;gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(velocity*(kind==='kick'?1.05:kind==='tom'?.65:.3),t+.002);gain.gain.exponentialRampToValueAtTime(.0001,t+duration);attach(osc,t+duration+.01);return;
@@ -87,7 +92,7 @@
     }
   }
   function voice(ctx,s,kind,t,velocity){
-    if(s.kit==='electronic'){synthVoice(ctx,s,kind,t,velocity);return}
+    if(kind==='perc'||s.kit==='electronic'){synthVoice(ctx,s,kind,t,velocity);return}
     const bank=banks.get(ctx);if(!bank)return;
     const name=kind==='kick'?(velocity<.55?'kick-soft':'kick-hard'):kind==='snare'||kind==='clap'?(velocity<.5?'snare-soft':'snare-hard'):kind;
     const recordings=bank[name]||bank['snare-soft'];s.counters??={};const index=(s.counters[name]||0)%recordings.length;s.counters[name]=index+1;
@@ -98,7 +103,7 @@
     if(kind==='hat'&&s.openHat){try{s.openHat.gain.cancelScheduledValues(t);s.openHat.gain.setTargetAtTime(0,t,.015)}catch{}}if(kind==='open')s.openHat=gain;
     active.add(source);source.onended=()=>{active.delete(source);source.disconnect();filter.disconnect();gain.disconnect()};source.start(t);source.stop(t+duration+.01);
   }
-  function play(ctx,destination,id,step,time,volume=.7,options={},bar=0,forcedFill=false){const s=state(ctx,destination),o=settings(options);s.kit=o.kit;s.wet.gain.setTargetAtTime(Math.min(1,o.reverb/100+(o.kit==='room'?.2:0))*.65,ctx.currentTime,.03);s.echo.gain.setTargetAtTime(o.delay/100*.55,ctx.currentTime,.03);s.delay.delayTime.setTargetAtTime(Math.min(1.8,60/(options.bpm||120)*.75),ctx.currentTime,.03);s.bus.gain.setValueAtTime(Math.max(0,Math.min(1,volume))*.65,ctx.currentTime);for(const hit of (Array.isArray(options.padParts)?padHits(id,step,bar,options,forcedFill):performanceHits(id,step,bar,options,forcedFill)))voice(ctx,s,hit.kind,Math.max(ctx.currentTime,time+hit.offset),hit.velocity)}
+  function play(ctx,destination,id,step,time,volume=.7,options={},bar=0,forcedFill=false){const s=state(ctx,destination),o=settings(options);s.kit=o.kit;s.wet.gain.setTargetAtTime(Math.min(1,o.reverb/100+(o.kit==='room'?.2:0))*.65,ctx.currentTime,.03);s.echo.gain.setTargetAtTime(o.delay/100*.55,ctx.currentTime,.03);s.delay.delayTime.setTargetAtTime(Math.min(1.8,60/(options.bpm||120)*.75),ctx.currentTime,.03);s.bus.gain.setValueAtTime(Math.max(0,Math.min(1,volume))*.65,ctx.currentTime);for(const hit of (Array.isArray(options.padParts)?padHits(id,step,bar,options,forcedFill):performanceHits(id,step,bar,options,forcedFill)))voice(ctx,s,Array.isArray(options.padParts)&&hit.kind==='clap'?'perc':hit.kind,Math.max(ctx.currentTime,time+hit.offset),hit.velocity)}
   function volume(ctx,value){const s=states.get(ctx);if(s)s.bus.gain.setTargetAtTime(Math.max(0,Math.min(1,value))*.65,ctx.currentTime,.02)}
   function stop(){for(const node of active){try{node.stop()}catch{}}active.clear();for(const s of liveStates){for(const node of s.nodes)try{node.disconnect()}catch{}states.delete(s.ctx)}liveStates.clear()}
   const api={padParts,cleanParts,padHits,load,settings,selectSection,performanceHits,liveStepSeconds,patterns,pattern,hits,stepSeconds,play,volume,stop};root.FireDrums=api;if(typeof module!=='undefined')module.exports=api;
