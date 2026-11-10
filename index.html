@@ -3913,6 +3913,15 @@ function fillSong(){
   if(TR.marking)lineHL(TR.k,'next',false);
 }
 /* the song's bottom padding follows the bar's real height (it grows to two rows on a phone) */
+let toolsIdleTimer=0;
+function wakeTools(){
+ clearTimeout(toolsIdleTimer);tools.classList.remove('tools-idle');
+ if(S.view==='song'&&!tools.hidden)toolsIdleTimer=setTimeout(()=>{if(S.view==='song'&&!tools.hidden)tools.classList.add('tools-idle')},10000);
+}
+for(const event of ['pointerdown','keydown','touchstart','input','wheel'])document.addEventListener(event,wakeTools,{passive:true});
+tools.addEventListener('pointermove',wakeTools,{passive:true});
+addEventListener('resize',wakeTools);
+new MutationObserver(wakeTools).observe(tools,{childList:true,attributes:true,attributeFilter:['hidden']});
 function fitTools(){const mb=(TR.marking||window.FCHitmosMark?.marking)&&document.getElementById('markbar');const h=mb?mb.offsetHeight:tools.hidden?0:tools.offsetHeight;if(h)document.documentElement.style.setProperty('--toolsh',h+'px')}
 if(window.ResizeObserver)new ResizeObserver(fitTools).observe(tools); addEventListener('resize',fitTools);
 function openTone(){
@@ -4921,6 +4930,9 @@ initStore().then(st=>{
 </script>
 
 <script src="hitmos-marking.js?v=152"></script>
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=158',{updateViaCache:'none'}).catch(()=>{}))</script>
-<style>.stage-pads{margin:0 auto 4px!important;padding:4px 6px!important}.stage-pad-grid{gap:4px!important}.stage-pad-grid .drum-pad{height:36px!important;min-height:36px!important;flex-direction:row!important;padding:3px!important;gap:4px!important}.stage-pads-head{margin-bottom:3px!important}.stage-pads-head button{min-height:26px!important;padding:3px!important}.stage-pads-status{position:absolute!important}.drum-live button{min-height:32px!important;font-size:12px!important}</style></body>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=159',{updateViaCache:'none'}).catch(()=>{}))</script>
+<style>.stage-pads{margin:0 auto 4px!important;padding:4px 6px!important}.stage-pad-grid{gap:4px!important}.stage-pad-grid .drum-pad{height:36px!important;min-height:36px!important;flex-direction:row!important;padding:3px!important;gap:4px!important}.stage-pads-head{margin-bottom:3px!important}.stage-pads-head button{min-height:26px!important;padding:3px!important}.stage-pads-status{position:absolute!important}.drum-live button{min-height:32px!important;font-size:12px!important}</style><style>
+#tools{transition:opacity .45s ease!important}#tools.tools-idle{opacity:.12!important}#tools:not(.tools-idle){opacity:1!important}
+@media(orientation:landscape){body.stage #tools{left:auto!important;right:calc(8px + env(safe-area-inset-right,0px))!important;top:50%!important;bottom:auto!important;width:min(360px,40vw)!important;max-height:calc(100dvh - 16px);overflow-y:auto;transform:translateY(-50%)!important;padding:6px!important;border-radius:12px}body.stage #tools .stage-pad-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}body.stage .wrap{padding-right:calc(min(360px,40vw) + 24px + env(safe-area-inset-right,0px))!important;padding-bottom:24px!important}body.stage #tools .tools-in{padding:0;gap:4px}body.stage #tools .stage-pads{width:100%}}
+</style></body>
 </html>
