@@ -1,0 +1,29 @@
+{
+  "songs": 222,
+  "artwork": [
+    {
+      "artist": "Coldplay",
+      "title": "Warning sign",
+      "key": "album-1122775993",
+      "source": "https://music.apple.com/gb/album/warning-sign/1122775993?i=1122776159&uo=4"
+    },
+    {
+      "artist": "Coldplay",
+      "title": "Magic",
+      "key": "album-829909653",
+      "source": "https://music.apple.com/gb/album/magic/829909653?i=829909824&uo=4"
+    },
+    {
+      "artist": "Morning Parade",
+      "title": "Under The Stars",
+      "key": "album-693144995",
+      "source": "https://music.apple.com/gb/album/under-the-stars/693144995?i=693145001&uo=4"
+    },
+    {
+      "artist": "London Grammar",
+      "title": "Hey Now",
+      "key": "album-1216979715",
+      "source": "https://music.apple.com/gb/album/hey-now/1216979715?i=1216979716&uo=4"
+    }
+  ]
+}
