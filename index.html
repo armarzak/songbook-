@@ -552,8 +552,11 @@ body:has(.tabbar) .wrap{padding-bottom:calc(84px + env(safe-area-inset-bottom,0p
 .share-text{min-height:40vh;font-size:14px}
 .grp .metrobtn{display:inline-flex;align-items:center;gap:4px;padding:0 8px}
 .grp .metrobtn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
-.metrobtn.beat{animation:mbeat .12s ease-out}
-@keyframes mbeat{from{transform:scale(1.12)}to{transform:none}}
+.metrobtn.on{color:var(--accent)}
+.metrobtn.on.beat{animation:mbeat var(--metro-pulse,.24s) ease-out}
+.metrobtn.on.beat svg{animation:metro-icon-glow var(--metro-pulse,.24s) ease-out}
+@keyframes mbeat{0%{box-shadow:0 0 0 1px var(--accent),0 0 14px -3px var(--accent)}100%{box-shadow:0 0 0 0 transparent,0 0 0 0 transparent}}
+@keyframes metro-icon-glow{0%{filter:drop-shadow(0 0 5px currentColor) drop-shadow(0 0 2px currentColor)}100%{filter:drop-shadow(0 0 0 transparent)}}
 .tabbar button{min-width:0;font-size:clamp(9px,2.65vw,11.5px)}
 .panel.metro .m-big{gap:4px}.panel.metro .m-val{min-width:96px}.panel.metro .m-big .btn.icon{min-width:34px;padding:0 5px}
 .rhythm-mode{display:flex;margin:18px 0 10px}.rhythm-mode button{flex:1;min-height:44px}.drum-controls{margin:18px 0;padding:14px;border-radius:14px;background:var(--sunk)}.drum-controls>label{display:block;margin-bottom:8px}.drum-controls select{width:100%;font-size:16px;padding:12px;border-radius:10px;border:1px solid var(--line);color:var(--fg);background:var(--surface)}.drum-volume-caption{display:flex!important;justify-content:space-between;margin-top:16px}
@@ -576,7 +579,7 @@ body:has(.tabbar) .wrap{padding-bottom:calc(84px + env(safe-area-inset-bottom,0p
 .mdots i.on{background:var(--accent);border-color:var(--accent)}
 .m-row{display:flex;align-items:center;gap:10px;justify-content:center}
 .m-row .cap{font-size:13px;color:var(--muted)}
-@media (prefers-reduced-motion:reduce){.metrobtn.beat{animation:none}}
+@media (prefers-reduced-motion:reduce){.metrobtn.beat,.metrobtn.beat svg{animation:none}}
 .video{margin-top:26px;padding-top:6px;border-top:1px solid var(--line)}
 .vframe{position:relative;width:100%;max-width:720px;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000;margin-top:8px}
 .vframe.tall{aspect-ratio:9/16;max-width:360px}
@@ -2526,7 +2529,7 @@ function metroStop(){
 }
 function metroFlash(b){
   document.querySelectorAll('.mdots i').forEach((d,i)=>d.classList.toggle('on',M.on&&i===b));
-  if(M.on)document.querySelectorAll('.metrobtn').forEach(btn=>{btn.classList.remove('beat');void btn.offsetWidth;btn.classList.add('beat')});
+  if(M.on)document.querySelectorAll('.metrobtn').forEach(btn=>{btn.style.setProperty('--metro-pulse',Math.min(.28,60/M.bpm*.7)+'s');btn.classList.remove('beat');void btn.offsetWidth;btn.classList.add('beat')});
 }
 function metroSet(bpm){
   if(!Number.isFinite(bpm))return;
@@ -2549,7 +2552,7 @@ function metroSave(){
   M.saves.set(s.id,timer);M.saveT=timer;
 }
 function metroUI(){
-  document.querySelectorAll('.metrobtn').forEach(btn=>btn.classList.toggle('on',M.on));
+  document.querySelectorAll('.metrobtn').forEach(btn=>{btn.classList.toggle('on',M.on);if(!M.on)btn.classList.remove('beat')});
   const t=document.getElementById('m-toggle');if(t){t.textContent=M.on?'Стоп':'Старт';t.setAttribute('aria-pressed',String(M.on))}
   if(!M.on)document.querySelectorAll('.mdots i').forEach(d=>d.classList.remove('on'));
   if(S.view==='song')renderTools();
@@ -4940,7 +4943,7 @@ initStore().then(st=>{
 </script>
 
 <script src="hitmos-marking.js?v=166"></script>
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=166',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=167',{updateViaCache:'none'}).catch(()=>{}))</script>
 <style>.stage-pads{margin:0 auto 4px!important;padding:4px 6px!important}.stage-pad-grid{gap:4px!important}.stage-pad-grid .drum-pad{height:36px!important;min-height:36px!important;flex-direction:row!important;padding:3px!important;gap:4px!important}.stage-pads-head{margin-bottom:3px!important}.stage-pads-head button{min-height:26px!important;padding:3px!important}.stage-pads-status{position:absolute!important}.drum-live button{min-height:32px!important;font-size:12px!important}</style><style>
 #tools{transition:opacity .45s ease!important}#tools.tools-idle{opacity:.12!important}#tools:not(.tools-idle){opacity:1!important}
 @media(orientation:landscape){body.has-tools #tools{left:auto!important;right:calc(8px + env(safe-area-inset-right,0px))!important;top:50%!important;bottom:auto!important;width:min(360px,40vw)!important;max-height:calc(100dvh - 16px);overflow-y:auto;transform:translateY(-50%)!important;padding:6px!important;border-radius:12px}body.has-tools #tools .stage-pad-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}body.has-tools .wrap{padding-right:calc(min(360px,40vw) + 24px + env(safe-area-inset-right,0px))!important;padding-bottom:24px!important}body.has-tools #tools .tools-in{padding:0;gap:4px}body.has-tools #tools .stage-pads{width:100%}}
