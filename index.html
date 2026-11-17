@@ -215,8 +215,19 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
 .slink.find{color:var(--fg)}
 .slink.find span{color:var(--fg);font-weight:600}
 .slink span{max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hitmosbox{position:sticky;top:var(--hitmos-top,60px);z-index:11;margin:0;padding:8px max(12px,calc((100% - 728px)/2));background:var(--bg);border-bottom:1px solid var(--line);box-shadow:0 6px 16px -12px var(--fg);max-height:calc(100dvh - var(--hitmos-top,60px) - 130px);overflow:auto}
 #hitmosbox:not([hidden]){animation:hitmos-reveal .22s ease-out}
-@keyframes hitmos-reveal{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+#hitmosbox .hitmos-heading{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+#hitmosbox .hitmos-heading .sec-h{margin:0;flex:1;font-size:15px}
+#hitmosbox .hitmos-heading .btn{min-height:30px;padding:3px 10px;font-size:13px}
+#hitmosbox audio{display:block;width:100%;height:40px}
+#hitmosbox .hitmos-options{margin-top:6px;font-size:13px}
+#hitmosbox .hitmos-options summary{cursor:pointer;color:var(--muted);padding:4px 0}
+#hitmosbox .hitmos-options .actions{margin-top:8px}
+#hitmosbox .hitmos-frame{height:45vh;min-height:180px}
+body.stage #hitmosbox:not([hidden]){display:block;top:0;max-height:calc(100dvh - 130px)}
+#body{scroll-margin-top:140px}
+@keyframes hitmos-reveal{from{opacity:0;transform:translateY(-18px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){#hitmosbox:not([hidden]){animation:none}}
 #hitmosbox.hitmos-expanded{position:fixed;inset:calc(env(safe-area-inset-top,0px) + 8px) 8px calc(env(safe-area-inset-bottom,0px) + 8px);z-index:1000;display:flex;flex-direction:column;gap:8px;margin:0;padding:12px;background:var(--bg);border:1px solid var(--muted);border-radius:16px;box-shadow:0 8px 40px #0008;overflow:auto}
 #hitmosbox.hitmos-expanded .hitmos-frame{flex:1;min-height:180px;height:auto}
@@ -3743,18 +3754,20 @@ function closeHitmos(){
   hb.querySelector('audio')?.pause();hb.hidden=true;hb.classList.remove('hitmos-expanded');delete hb.dataset.open;
   if(hb.querySelector('iframe')){hb.innerHTML='';delete hb.dataset.web;delete hb.dataset.audio}
 }
+function fitHitmos(){const hb=document.getElementById('hitmosbox');if(hb)hb.style.setProperty('--hitmos-top',(document.querySelector('#app > .bar')?.offsetHeight||0)+'px')}
+addEventListener('resize',fitHitmos);
 function openHitmos(){
   const s=findSong(S.cur);if(!s)return;
   const hb=document.getElementById('hitmosbox'),player=hb&&hb.querySelector('audio');
-  if(hb){hb.hidden=false;hb.dataset.open='1'}
-  if(player){pauseBackingForHitmos();player.play().catch(()=>toast('Нажмите ▶ в плеере Hitmos'));hb.scrollIntoView({behavior:'smooth',block:'center'});return}
+  if(hb){fitHitmos();hb.hidden=false;hb.dataset.open='1'}
+  if(player){pauseBackingForHitmos();player.play().catch(()=>toast('Нажмите ▶ в плеере Hitmos'));return}
   if(!hb)return;
   pauseBackingForHitmos();
   const q=[s.artist,s.title].filter(Boolean).join(' ');
   const url=hitmosLink(s.hitmosUrl)||'https://rus.hitmos.fm/search?q='+encodeURIComponent(q);
   hb.hidden=false;hb.dataset.web='1';
   hb.innerHTML=`<h3 class="sec-h">Слушать · Hitmos</h3><div class="actions"><button class="btn" data-act="hitmos-close">Закрыть</button><a class="btn" href="${esc(url)}" target="_blank" rel="noopener">Открыть на сайте ↗</a></div><button class="btn" data-act="hitmos-expand" aria-pressed="false">Развернуть плеер</button><button class="btn" data-act="hitmos-frame-top" aria-expanded="false">Показать верх страницы</button><p class="hint">Выберите трек и нажмите ▶. Перемотка — тонкая полоса над нижней панелью Hitmos. Если её не видно, разверните плеер.</p><div class="hitmos-frame"><iframe title="Поиск и плеер Hitmos" src="${esc(url)}" allow="autoplay" referrerpolicy="strict-origin-when-cross-origin" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" ></iframe></div>`;
-  hb.scrollIntoView({behavior:'smooth',block:'start'});
+  fitHitmos();
 }
 function songLinks(s){
   if(!s||s.demo)return '';
@@ -3906,12 +3919,12 @@ function fillSong(){
     <p class="hint">Табулатура с бегущим курсором и звуком.</p>
   </section>`:'';
   let hb=document.getElementById('hitmosbox');
-  if(!hb){hb=document.createElement('section');hb.id='hitmosbox';hb.className='video';document.getElementById('videobox').before(hb)}
+  if(!hb){hb=document.createElement('section');hb.id='hitmosbox';hb.className='video';document.querySelector('#app > .bar').after(hb)}
   if(hb.dataset.song!==s.id){closeHitmos();hb.dataset.song=s.id;delete hb.dataset.audio}
-  const ha=hitmosAudioFor(s);hb.hidden=hb.dataset.open!=='1';
+  fitHitmos();const ha=hitmosAudioFor(s);hb.hidden=hb.dataset.open!=='1';
   if(hb.dataset.audio!==ha){
     hb.querySelector('audio')?.pause();hb.dataset.audio=ha;
-    hb.innerHTML=ha?`<div class="actions"><h3 class="sec-h">Слушать · Hitmos</h3><button class="btn" data-act="hitmos-close">Закрыть</button></div><audio controls preload="none" style="width:100%" src="${esc(ha)}"></audio>${timingPicker(s,'hitmos')}<div class="actions">${s.hitmosMarksAudio===ha&&s.hitmosMarks?.length?'<button class="btn primary" data-act="hm-resume">Доразметить строки Hitmos</button>':''}<button class="btn" data-act="hm-start">${s.hitmosMarksAudio===ha&&s.hitmosMarks?.length?'Разметить строки Hitmos заново':'Разметить строки Hitmos'}</button><button class="btn" data-act="hitmos-retry">Повторить</button><a class="btn" href="${esc(hitmosLink(s.hitmosUrl)||'https://rus.hitmos.fm/search?q='+encodeURIComponent([s.artist,s.title].filter(Boolean).join(' ')))}" target="_blank" rel="noopener">Открыть Hitmos ↗</a></div><p class="hint" hidden></p>`:'';
+    hb.innerHTML=ha?`<div class="hitmos-heading"><h3 class="sec-h">Hitmos</h3><button class="btn" data-act="hitmos-close">Закрыть</button></div><audio controls preload="none" style="width:100%" src="${esc(ha)}"></audio><details class="hitmos-options"><summary>Настройки и разметка Hitmos</summary>${timingPicker(s,'hitmos')}<div class="actions">${s.hitmosMarksAudio===ha&&s.hitmosMarks?.length?'<button class="btn primary" data-act="hm-resume">Доразметить строки Hitmos</button>':''}<button class="btn" data-act="hm-start">${s.hitmosMarksAudio===ha&&s.hitmosMarks?.length?'Разметить строки Hitmos заново':'Разметить строки Hitmos'}</button><button class="btn" data-act="hitmos-retry">Повторить</button><a class="btn" href="${esc(hitmosLink(s.hitmosUrl)||'https://rus.hitmos.fm/search?q='+encodeURIComponent([s.artist,s.title].filter(Boolean).join(' ')))}" target="_blank" rel="noopener">Открыть Hitmos ↗</a></div></details><p class="hint" hidden></p>`:'';
     const player=hb.querySelector('audio');
     if(player){window.FCHitmosMark?.bind(player,s,ha);player.addEventListener('error',()=>hitmosError(player));player.addEventListener('loadedmetadata',()=>{hb.querySelector('.hint').hidden=true});player.addEventListener('play',pauseBackingForHitmos)}
   }
@@ -4583,7 +4596,7 @@ document.addEventListener('click',e=>{
   }
   if(S.stage){
     const act=b&&b.dataset.act;
-    if(!b||act==='chord'){if(!e.target.closest('#tools'))stageTap(e);return}
+    if(!b||act==='chord'){if(!e.target.closest('#tools,#hitmosbox'))stageTap(e);return}
     if(!['scroll','fs','stage-exit','t-play','v-play','v-reset','ci-toggle','drum-section','drummer-fill','drum-stop','drum-pad','pads-visible','pads-groove','drums-open','drum-settings','m-step'].includes(act))exitStage();
   }
   if(!b){if(e.target===sheet)closeSheet();return}
@@ -4952,7 +4965,7 @@ initStore().then(st=>{
 </script>
 
 <script src="hitmos-marking.js?v=166"></script>
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=168',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=169',{updateViaCache:'none'}).catch(()=>{}))</script>
 <style>.stage-pads{margin:0 auto 4px!important;padding:4px 6px!important}.stage-pad-grid{gap:4px!important}.stage-pad-grid .drum-pad{height:36px!important;min-height:36px!important;flex-direction:row!important;padding:3px!important;gap:4px!important}.stage-pads-head{margin-bottom:3px!important}.stage-pads-head button{min-height:26px!important;padding:3px!important}.stage-pads-status{position:absolute!important}.drum-live button{min-height:32px!important;font-size:12px!important}</style><style>
 #tools{transition:opacity .45s ease!important}#tools.tools-idle{opacity:.12!important}#tools:not(.tools-idle){opacity:1!important}
 @media(orientation:landscape){body.has-tools #tools{left:auto!important;right:calc(8px + env(safe-area-inset-right,0px))!important;top:50%!important;bottom:auto!important;width:min(360px,40vw)!important;max-height:calc(100dvh - 16px);overflow-y:auto;transform:translateY(-50%)!important;padding:6px!important;border-radius:12px}body.has-tools #tools .stage-pad-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}body.has-tools .wrap{padding-right:calc(min(360px,40vw) + 24px + env(safe-area-inset-right,0px))!important;padding-bottom:24px!important}body.has-tools #tools .tools-in{padding:0;gap:4px}body.has-tools #tools .stage-pads{width:100%}}
