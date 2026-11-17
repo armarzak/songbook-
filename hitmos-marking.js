@@ -33,7 +33,7 @@ window.FCHitmosMark=(()=>{
     player.addEventListener('seeked',()=>{if(state.player===player)follow()});
     player.addEventListener('ended',()=>{if(state.marking&&state.player===player)finish(true)});
   }
-  function start(){
+  function start(from=0){
     if(TR.marking){toast('Сначала завершите разметку минуса');return}
     const song=findSong(S.cur),box=document.getElementById('hitmosbox'),player=box?.querySelector('audio');
     if(!song||!player){toast('Сначала загрузите оригинал во встроенный плеер Hitmos');return}
@@ -41,12 +41,23 @@ window.FCHitmosMark=(()=>{
     const n=document.querySelectorAll('.ln[data-li]').length;
     if(!n){toast('В песне нет строк текста');return}
     closeSheet();pauseBackingForHitmos();exitStage();wordClear();wordClear(state);
-    Object.assign(state,{marking:true,id:song.id,audio:box.dataset.audio,player,marks:[],n,current:-1});
-    document.getElementById('markbar')?.remove();lineHL(-1,'cur');lineHL(0,'next',true);
+    const saved=song.hitmosMarksAudio===box.dataset.audio?song.hitmosMarks||[]:[];
+    from=Math.max(0,Math.min(Number(from)||0,saved.length,n-1));const prefix=saved.slice(0,from);
+    Object.assign(state,{marking:true,id:song.id,audio:box.dataset.audio,player,marks:prefix,n,current:-1});
+    document.getElementById('markbar')?.remove();lineHL(-1,'cur');lineHL(from,'next',true);
     const bar=document.createElement('div');bar.id='markbar';bar.className='markbar';
     bar.innerHTML=`<div class="mark-player"><div class="grp"><button data-act="hm-toggle" aria-label="Пауза оригинала Hitmos">${ICON.pause}</button><strong>Hitmos</strong><span class="tt" id="hm-mark-time"></span></div><input id="hm-mark-seek" type="range" min="0" max="0" step="0.05" value="0" aria-label="Перемотка оригинала Hitmos" style="width:100%;height:32px;accent-color:var(--accent)"></div><p>Разметка оригинала Hitmos. Тайминги минуса сохраняются отдельно.</p><div class="mk-btns"><button class="btn" data-act="hm-undo">Назад</button><button class="btn primary mk-main" data-act="hm-tap" id="hm-mark-main">Строка 1 из ${n}</button><button class="btn" data-act="hm-done">Готово</button></div><button class="link2" data-act="hm-cancel">Отменить разметку Hitmos</button>`;
     document.body.append(bar);renderTools();update();
-    player.currentTime=0;player.play().then(follow).catch(()=>{update();toast('Нажмите ▶ в панели разметки Hitmos')});
+    player.currentTime=from?Math.max(0,(saved[from]??saved[from-1]??0)-1):0;player.play().then(follow).catch(()=>{update();toast('Нажмите ▶ в панели разметки Hitmos')});
+  }
+  function resume(){
+    const song=findSong(S.cur),box=document.getElementById('hitmosbox');
+    if(!song||!box||song.hitmosMarksAudio!==box.dataset.audio){toast('Сначала выберите оригинал с сохранённой разметкой');return}
+    const lines=[...document.querySelectorAll('.ln[data-li]')],saved=song.hitmosMarks||[];
+    if(!lines.length)return;
+    const next=Math.min(saved.length,lines.length-1);
+    sheet.innerHTML=`<div class="panel" role="dialog" aria-label="Продолжить разметку Hitmos"><div class="panel-top"><h2 class="ptitle">Доразметить Hitmos</h2><button class="btn" data-act="close">Закрыть</button></div><p class="hint">Метки до выбранной строки сохранятся. Начиная с неё строки будут размечаться заново. Отмена оставит прежнюю разметку.</p><label for="hm-resume-line">Начать со строки</label><select id="hm-resume-line" style="width:100%;margin:12px 0;padding:12px;font-size:16px">${lines.map((line,i)=>`<option value="${i}" ${i===next?'selected':''}>${i+1}. ${esc(line.textContent.trim().slice(0,90)||'Строка '+(i+1))}</option>`).join('')}</select><button class="btn primary" data-act="hm-resume-go">Продолжить</button></div>`;
+    sheet.hidden=false;
   }
   function tap(){
     if(!state.marking||!state.player)return;
@@ -85,6 +96,8 @@ window.FCHitmosMark=(()=>{
   document.addEventListener('click',e=>{
     const action=e.target.closest?.('[data-act]')?.dataset.act;
     if(action==='hm-start')start();
+    else if(action==='hm-resume')resume();
+    else if(action==='hm-resume-go')start(+document.getElementById('hm-resume-line').value);
     else if(action==='hm-tap'&&e.detail===0)tap();
     else if(action==='hm-undo')undo();
     else if(action==='hm-done')finish(true);
