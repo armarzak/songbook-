@@ -225,7 +225,9 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
 #hitmosbox .hitmos-options summary{cursor:pointer;color:var(--muted);padding:4px 0}
 #hitmosbox .hitmos-options .actions{margin-top:8px}
 #hitmosbox .hitmos-frame{height:45vh;min-height:180px}
-#hitmosbox.hitmos-collapsed audio,#hitmosbox.hitmos-collapsed .hitmos-options,#hitmosbox.hitmos-collapsed .hint{display:none}
+#hitmosbox.hitmos-collapsed>:not(.hitmos-heading){display:none!important}
+#hitmosbox .hitmos-heading .btn{min-height:44px;min-width:44px;touch-action:manipulation;flex-shrink:0}
+#hitmosbox.hitmos-collapsed{max-height:none;overflow:visible}
 body.stage #hitmosbox:not([hidden]){display:block;top:0;max-height:calc(100dvh - 130px)}
 #body{scroll-margin-top:140px}
 @keyframes hitmos-reveal{from{opacity:0;transform:translateY(-18px)}to{opacity:1;transform:translateY(0)}}
@@ -3768,7 +3770,7 @@ function openHitmos(){
   const q=[s.artist,s.title].filter(Boolean).join(' ');
   const url=hitmosLink(s.hitmosUrl)||'https://rus.hitmos.fm/search?q='+encodeURIComponent(q);
   hb.hidden=false;hb.dataset.web='1';
-  hb.innerHTML=`<h3 class="sec-h">Слушать · Hitmos</h3><div class="actions"><button class="btn" data-act="hitmos-close">Закрыть</button><a class="btn" href="${esc(url)}" target="_blank" rel="noopener">Открыть на сайте ↗</a></div><button class="btn" data-act="hitmos-expand" aria-pressed="false">Развернуть плеер</button><button class="btn" data-act="hitmos-frame-top" aria-expanded="false">Показать верх страницы</button><p class="hint">Выберите трек и нажмите ▶. Перемотка — тонкая полоса над нижней панелью Hitmos. Если её не видно, разверните плеер.</p><div class="hitmos-frame"><iframe title="Поиск и плеер Hitmos" src="${esc(url)}" allow="autoplay" referrerpolicy="strict-origin-when-cross-origin" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" ></iframe></div>`;
+  hb.innerHTML=`<div class="hitmos-heading"><h3 class="sec-h">Hitmos</h3><button class="btn" data-act="hitmos-collapse" aria-expanded="true">Свернуть</button></div><div class="actions"><button class="btn" data-act="hitmos-close">Закрыть</button><a class="btn" href="${esc(url)}" target="_blank" rel="noopener">Открыть на сайте ↗</a></div><button class="btn" data-act="hitmos-expand" aria-pressed="false">Развернуть плеер</button><button class="btn" data-act="hitmos-frame-top" aria-expanded="false">Показать верх страницы</button><p class="hint">Выберите трек и нажмите ▶. Перемотка — тонкая полоса над нижней панелью Hitmos. Если её не видно, разверните плеер.</p><div class="hitmos-frame"><iframe title="Поиск и плеер Hitmos" src="${esc(url)}" allow="autoplay" referrerpolicy="strict-origin-when-cross-origin" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" ></iframe></div>`;
   fitHitmos();
 }
 function songLinks(s){
@@ -4599,7 +4601,7 @@ document.addEventListener('click',e=>{
   if(S.stage){
     const act=b&&b.dataset.act;
     if(!b||act==='chord'){if(!e.target.closest('#tools,#hitmosbox'))stageTap(e);return}
-    if(!['scroll','fs','stage-exit','t-play','v-play','v-reset','ci-toggle','drum-section','drummer-fill','drum-stop','drum-pad','pads-visible','pads-groove','drums-open','drum-settings','m-step'].includes(act))exitStage();
+    if(!['scroll','fs','stage-exit','t-play','v-play','v-reset','ci-toggle','drum-section','drummer-fill','drum-stop','drum-pad','pads-visible','pads-groove','drums-open','drum-settings','m-step','hitmos-collapse','hitmos-close'].includes(act))exitStage();
   }
   if(!b){if(e.target===sheet)closeSheet();return}
   const a=b.dataset.act;
@@ -4610,7 +4612,7 @@ document.addEventListener('click',e=>{
   else if(a==='hitmos-expand'){const hb=document.getElementById('hitmosbox');const expanded=hb.classList.toggle('hitmos-expanded');b.setAttribute('aria-pressed',String(expanded));b.textContent=expanded?'Свернуть плеер':'Развернуть плеер'}
   else if(a==='hitmos-frame-top'){const frame=document.querySelector('#hitmosbox .hitmos-frame');if(frame){const full=frame.classList.toggle('full');b.setAttribute('aria-expanded',String(full));b.textContent=full?'Скрыть верх страницы':'Показать верх страницы'}}
   else if(a==='hitmos-retry')retryHitmos();
-  else if(a==='hitmos-collapse'){const hb=document.getElementById('hitmosbox'),collapsed=hb.classList.toggle('hitmos-collapsed');b.textContent=collapsed?'Развернуть':'Свернуть';b.setAttribute('aria-expanded',String(!collapsed))}
+  else if(a==='hitmos-collapse'){const hb=document.getElementById('hitmosbox'),collapsed=hb.classList.toggle('hitmos-collapsed');if(collapsed)hb.classList.remove('hitmos-expanded');b.textContent=collapsed?'Развернуть':'Свернуть';b.setAttribute('aria-expanded',String(!collapsed))}
   else if(a==='hitmos-close')closeHitmos();
   else if(a==='tonebridge')toneBridgeCopy(b.dataset.q);
   else if(a==='ci-toggle'){const on=!countInOn();lsSet('sb.countin',on?'1':'0');renderTools();toast(on?'Отсчёт перед стартом включён':'Отсчёт выключен')}
@@ -4968,7 +4970,7 @@ initStore().then(st=>{
 </script>
 
 <script src="hitmos-marking.js?v=166"></script>
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=170',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=171',{updateViaCache:'none'}).catch(()=>{}))</script>
 <style>.stage-pads{margin:0 auto 4px!important;padding:4px 6px!important}.stage-pad-grid{gap:4px!important}.stage-pad-grid .drum-pad{height:36px!important;min-height:36px!important;flex-direction:row!important;padding:3px!important;gap:4px!important}.stage-pads-head{margin-bottom:3px!important}.stage-pads-head button{min-height:26px!important;padding:3px!important}.stage-pads-status{position:absolute!important}.drum-live button{min-height:32px!important;font-size:12px!important}</style><style>
 #tools{transition:opacity .45s ease!important}#tools.tools-idle{opacity:.12!important}#tools:not(.tools-idle){opacity:1!important}
 @media(orientation:landscape){body.has-tools #tools{left:auto!important;right:calc(8px + env(safe-area-inset-right,0px))!important;top:50%!important;bottom:auto!important;width:min(360px,40vw)!important;max-height:calc(100dvh - 16px);overflow-y:auto;transform:translateY(-50%)!important;padding:6px!important;border-radius:12px}body.has-tools #tools .stage-pad-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}body.has-tools .wrap{padding-right:calc(min(360px,40vw) + 24px + env(safe-area-inset-right,0px))!important;padding-bottom:24px!important}body.has-tools #tools .tools-in{padding:0;gap:4px}body.has-tools #tools .stage-pads{width:100%}}
