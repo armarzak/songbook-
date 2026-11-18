@@ -1,0 +1,11 @@
+/* QR pairing protocol, version 1. No URLs or external signaling services. */
+window.FCPProtocol=(()=>{
+ const enc=new TextEncoder(),dec=new TextDecoder();
+ const base64=b=>btoa(String.fromCharCode(...b));
+ const unbase64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+ async function hash(bytes){return [...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(v=>v.toString(16).padStart(2,'0')).join('').slice(0,16)}
+ function validate(v){if(v?.app!=='FireChordsParty'||v.version!==1||!/^[-a-zA-Z0-9]{8,60}$/.test(v.id)||!['offer','answer'].includes(v.description?.type)||typeof v.description.sdp!=='string'||v.description.sdp.length>60000)throw Error('Некорректное приглашение Party');return v}
+ async function encode(value){validate(value);const bytes=new Uint8Array(await new Response(new Blob([JSON.stringify(value)]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer()),text=base64(bytes),sum=await hash(bytes),total=Math.ceil(text.length/480);if(total>24)throw Error('Приглашение слишком большое для QR');return Array.from({length:total},(_,i)=>`FCP1|${sum}|${i}|${total}|${text.slice(i*480,(i+1)*480)}`)}
+ function collector(){let sum='',parts=[],total=0;return {reset(){sum='';parts=[];total=0},async add(frame){const m=/^FCP1\|([a-f0-9]{16})\|(\d{1,2})\|(\d{1,2})\|([a-zA-Z0-9+/=]{1,480})$/.exec(frame||'');if(!m)throw Error('Это не QR FireChords Party');const i=+m[2],n=+m[3];if(n<1||n>24||i>=n)throw Error('Некорректная часть QR');if(sum!==m[1]){sum=m[1];total=n;parts=[]}if(total!==n)throw Error('Смешаны части QR');parts[i]=m[4];const count=parts.filter(Boolean).length;if(count!==total)return {count,total};const bytes=unbase64(parts.join(''));if(await hash(bytes)!==sum)throw Error('QR повреждён, повторите сканирование');const reader=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate')).getReader();let text='',length=0;try{while(true){const r=await reader.read();if(r.done)break;length+=r.value.length;if(length>64000)throw Error('Приглашение слишком большое');text+=dec.decode(r.value,{stream:true})}text+=dec.decode()}finally{await reader.cancel().catch(()=>{})}return {count,total,value:validate(JSON.parse(text))}}}}
+ return {encode,collector};
+})();
