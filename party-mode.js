@@ -7,6 +7,7 @@ window.FCParty = (() => {
   let qrFrames=[], qrIndex=0, qrTimer=0, stream=null, scanTimer=0, scanBusy=false, uiEpoch=0;
   let outputPeer=null, outputKind='', messageCounter=0, busy=false;
   let scanParts=FCPProtocol.collector();
+  let cameraAssist=false;const handshakeStreams=new Set();
   const badge=document.createElement('button');
   badge.className='party-badge';badge.hidden=true;badge.addEventListener('click',open);
   document.body.append(badge);
@@ -14,6 +15,13 @@ window.FCParty = (() => {
   const activePeers=()=>[...peers.values()].filter(p=>p.dc?.readyState==='open');
   const isGuest=()=>role==='guest';
   const say=text=>{const el=document.getElementById('party-note');if(el)el.textContent=text;else toast(text)};
+  function diagnostics(){
+    const describe=pc=>{
+      const counts=sdp=>{const lines=(sdp||'').split('\n').filter(l=>l.startsWith('a=candidate:'));return {total:lines.length,mdns:lines.filter(l=>l.includes('.local')).length,udp:lines.filter(l=>/ udp /i.test(l)).length}};
+      return {connection:pc.connectionState,ice:pc.iceConnectionState,signaling:pc.signalingState,local:counts(pc.localDescription?.sdp),remote:counts(pc.remoteDescription?.sdp)};
+    };
+    return {role:role||'none',cameraAssist,visibility:document.visibilityState,participants:activePeers().length,receivedAgoMs:received?Math.round(performance.now()-received.at):null,hasSong:!!current,markedLines:timing.marks.filter(v=>v!=null).length,peers:[...peers.values()].map(p=>({...describe(p.pc),channel:p.dc?.readyState||'none',rttMs:p.rtt?Math.round(p.rtt):null}))};
+  }
   function updateStatus(){
     const connected=guest?.dc?.readyState==='open';
     const stale=received&&performance.now()-received.at>2200;
@@ -22,6 +30,7 @@ window.FCParty = (() => {
     badge.hidden=!role;badge.textContent=text;
     document.body.classList.toggle('party-guest',isGuest());
     const el=document.getElementById('party-status');if(el)el.textContent=role?text:'Party не запущен';
+    const debug=document.getElementById('party-diagnostics');if(debug)debug.textContent=JSON.stringify(diagnostics(),null,2);
     for(const p of peers.values()){
       const row=document.querySelector(`[data-peer-status="${p.id}"]`);
       if(row)row.textContent=p.dc?.readyState==='open'?'Подключён':p.pc.connectionState==='failed'?'Ошибка связи':'Ожидание соединения';
@@ -31,7 +40,7 @@ window.FCParty = (() => {
     clearTimeout(scanTimer);scanTimer=0;
     stream?.getTracks().forEach(t=>t.stop());stream=null;
   }
-  function closeUI(){uiEpoch++;stopScanner();clearInterval(qrTimer);qrTimer=0}
+  function closeUI(){uiEpoch++;for(const s of handshakeStreams)s.getTracks().forEach(t=>t.stop());handshakeStreams.clear();stopScanner();clearInterval(qrTimer);qrTimer=0}
   function stop(){
     closeUI();cancelAnimationFrame(frame);frame=0;
     for(const p of peers.values()){clearTimeout(p.waitTimer);p.pc.close()}
@@ -157,6 +166,21 @@ window.FCParty = (() => {
   function supported(){
     if(!window.RTCPeerConnection||!window.CompressionStream||!window.DecompressionStream)throw Error('Для Party нужен современный Safari или Chrome');
   }
+  async function prepareDescription(pc,make){
+    const epoch=uiEpoch;let media=null;
+    try{
+      if(cameraAssist){
+        if(!navigator.mediaDevices?.getUserMedia)throw Error('Камера недоступна в этом браузере');
+        try{media=await navigator.mediaDevices.getUserMedia({video:true,audio:false})}catch{throw Error('Для проверки разрешите камеру или отключите помощь для точки доступа')}
+        handshakeStreams.add(media);
+      }
+      if(epoch!==uiEpoch)throw Error('Подключение отменено');
+      await pc.setLocalDescription(await make());
+      const result=await description(pc);
+      if(epoch!==uiEpoch)throw Error('Подключение отменено');
+      return result;
+    }finally{if(media){media.getTracks().forEach(t=>t.stop());handshakeStreams.delete(media)}}
+  }
   async function invite(){
     supported();if(isGuest())throw Error('Сначала выйдите из текущей Party');
     for(const p of peers.values())if(p.dc?.readyState!=='open'){p.pc.close();clearTimeout(p.waitTimer);peers.delete(p.id)}
@@ -164,8 +188,8 @@ window.FCParty = (() => {
     role='host';updateStatus();const p=createPeer(crypto.randomUUID());
     try{
       bindChannel(p,p.pc.createDataChannel('firechords-party'));
-      await p.pc.setLocalDescription(await p.pc.createOffer());
-      qrFrames=await FCPProtocol.encode({app:'FireChordsParty',version:1,id:p.id,description:await description(p.pc)});
+      const local=await prepareDescription(p.pc,()=>p.pc.createOffer());
+      qrFrames=await FCPProtocol.encode({app:'FireChordsParty',version:1,id:p.id,description:local});
       outputPeer=p.id;outputKind='offer';qrIndex=0;open();
     }catch(e){p.pc.close();peers.delete(p.id);throw e}
   }
@@ -183,8 +207,8 @@ window.FCParty = (() => {
     try{
       trackStop();metroStop();FireAlbumShelf.stop();stopAuto();closeHitmos();
       await guest.pc.setRemoteDescription(value.description);
-      await guest.pc.setLocalDescription(await guest.pc.createAnswer());
-      qrFrames=await FCPProtocol.encode({app:'FireChordsParty',version:1,id:value.id,description:await description(guest.pc)});
+      const local=await prepareDescription(guest.pc,()=>guest.pc.createAnswer());
+      qrFrames=await FCPProtocol.encode({app:'FireChordsParty',version:1,id:value.id,description:local});
       outputKind='answer';outputPeer=value.id;qrIndex=0;open();
     }catch(e){stop();throw e}
   }
@@ -236,10 +260,10 @@ window.FCParty = (() => {
     sheet.innerHTML=`<div class="panel party-panel" role="dialog" aria-label="FireChords Party"><div class="panel-top"><h2 class="ptitle">FireChords Party</h2><button class="btn" data-act="close">Закрыть</button></div>
       <p id="party-status" role="status"></p><p class="hint">Тестовый режим без интернета. Все телефоны подключите к точке доступа ведущего. FireChords, песни и минус сохраните заранее. Звук играет только у ведущего.</p>
       ${hasQR?`<h3>${outputKind==='offer'?'Приглашение участнику':'Ответ ведущему'}</h3><p>${outputKind==='offer'?'Участник: откройте Party → «Сканировать QR» и наведите камеру сюда. Затем ведущий сканирует ответ участника.':'Покажите этот QR ведущему: он нажимает «Сканировать QR» на своём телефоне.'}</p><div id="party-qr" class="party-qr"></div><div class="party-qr-nav"><button class="btn" data-party="prev" aria-label="Предыдущая часть QR">←</button><span id="party-qr-page"></span><button class="btn" data-party="next" aria-label="Следующая часть QR">→</button></div><p class="hint">Части QR меняются автоматически. Для одного участника — одно приглашение.</p>`:''}
-      <div class="actions">${!isGuest()?'<button class="btn primary" data-party="invite">'+(role?'Пригласить следующего':'Я ведущий · создать Party')+'</button>':''}<button class="btn" data-party="scan">Сканировать QR</button></div>
+      <label class="party-assist"><input id="party-camera-assist" type="checkbox" ${cameraAssist?'checked':''}> Помощь для точки доступа iPhone</label><p class="hint">Кратко включает камеру при подготовке QR, чтобы проверить доступ Safari к локальным адресам. Изображение не записывается и не передаётся. Включите на обоих телефонах перед новым подключением.</p><div class="actions">${!isGuest()?'<button class="btn primary" data-party="invite">'+(role?'Пригласить следующего':'Я ведущий · создать Party')+'</button>':''}<button class="btn" data-party="scan">Сканировать QR</button></div>
       <video id="party-video" autoplay muted playsinline hidden></video><label class="btn party-upload">Загрузить снимок QR<input id="party-image" type="file" accept="image/*" hidden></label>
       <p id="party-note" role="status">${role==='guest'?'После подключения закройте окно. Режим гитара / книга / караоке и размер текста каждый выбирает сам.':'Ведущий выбирает песню и запускает свой минус. Участники видят текст и аккорды.'}</p>
-      ${role?'<button class="btn" data-party="stop">Выйти из Party</button>':''}<p class="hint">При потере связи текст остановится. Подключитесь заново через QR. Ведущий держит приложение открытым. Совместимость точки доступа iPhone пока требует проверки на двух телефонах.</p>
+      <details><summary>Диагностика связи</summary><pre id="party-diagnostics" style="white-space:pre-wrap;font-size:12px"></pre></details>${role?'<button class="btn" data-party="stop">Выйти из Party</button>':''}<p class="hint">При потере связи текст остановится. Подключитесь заново через QR. Ведущий держит приложение открытым. Совместимость точки доступа iPhone пока требует проверки на двух телефонах.</p>
       </div>`;
     sheet.hidden=false;updateStatus();
     if(hasQR){drawQR();if(qrFrames.length>1)qrTimer=setInterval(()=>{qrIndex=(qrIndex+1)%qrFrames.length;drawQR()},1400)}
@@ -251,7 +275,7 @@ window.FCParty = (() => {
     if(name==='invite'){if(busy)return;busy=true;say('Готовлю приглашение…');try{await invite()}finally{busy=false}}
   }
   document.addEventListener('click',e=>{const b=e.target.closest('[data-party]');if(b)action(b.dataset.party).catch(e=>say(e.message))});
-  document.addEventListener('change',e=>{if(e.target.id==='party-image'){const file=e.target.files[0];e.target.value='';scanImage(file).catch(e=>say(e.message))}});
+  document.addEventListener('change',e=>{if(e.target.id==='party-camera-assist'){cameraAssist=e.target.checked;updateStatus()}if(e.target.id==='party-image'){const file=e.target.files[0];e.target.value='';scanImage(file).catch(e=>say(e.message))}});
   // The participant keeps display settings but never starts a second sound source.
   const forbidden=new Set(['t-play','v-play','v-reset','hitmos-play','edit','tr','t-mark','hm-start','hm-resume','scroll','metro','drums-open','ci-toggle','drum-pad','pads-groove','drummer-fill','drum-section']);
   document.addEventListener('click',e=>{const a=e.target.closest('[data-act]')?.dataset.act;if(isGuest()&&forbidden.has(a)){e.preventDefault();e.stopImmediatePropagation();toast('В Party музыкой управляет ведущий')}},true);
@@ -260,5 +284,5 @@ window.FCParty = (() => {
   document.addEventListener('visibilitychange',()=>{if(document.hidden)stopScanner();else if(isGuest()&&!frame)follow()});
   setInterval(()=>{if(role==='host')broadcast();updateStatus()},250);
   setInterval(()=>{for(const p of activePeers())send(p,{type:'ping',at:performance.now()})},2000);
-  return {open,stop,isGuest};
+  return {open,stop,isGuest,diagnostics};
 })();

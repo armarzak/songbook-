@@ -27,3 +27,11 @@ The leader sends state four times per second. Followers estimate one-way latency
 - Physical iPhone-to-iPhone tests with the hotspot WAN disabled are still required. Safari local candidate permissions, mDNS and hotspot client isolation can prevent connections. QR signaling alone cannot override those network restrictions. Do not claim universal offline hotspot compatibility before that test.
 
 Third-party code: qrcode-generator 1.4.4 (Kazuhiko Arase, MIT), jsQR 1.4.0 (Cosmo Wolfe, Apache-2.0). Pinned copies and license notices are under `vendor/`.
+
+## Hotspot troubleshooting (v176)
+
+The Party dialog includes an optional “Помощь для точки доступа iPhone” checkbox. Enable it on both devices before starting a fresh QR exchange. While preparing the local connection description, the app briefly requests a camera stream (video only), keeps it active during ICE gathering, and immediately stops all its tracks. It does not add tracks to the peer connection, record frames or send video. This probes Safari's media-permission-dependent exposure of local ICE candidates; it is an experimental workaround, not proof of iPhone hotspot compatibility. Disable the option if camera access is unwanted or unavailable.
+
+“Диагностика связи” shows signaling / ICE / connection / data-channel states, local and remote candidate counts, mDNS counts, RTT and age of the last received state. It includes no SDP, passwords or full IP addresses. The user can report this diagnostic text to distinguish failed routing from missing song timing. Upstream background: https://webkit.org/blog/7763/a-closer-look-into-webrtc/
+
+The Chrome integration test also exercises the camera-assisted path with fake camera devices, verifies tracks are stopped, and checks diagnostic candidate counts. Physical hotspot tests remain required.

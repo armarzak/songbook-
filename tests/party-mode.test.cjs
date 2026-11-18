@@ -12,7 +12,7 @@ class CDP{
 (async()=>{
  const server=http.createServer((req,res)=>{const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);const file=path.join(root,pathname==='/'?'index.html':pathname);if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return}fs.readFile(file,(err,b)=>{if(err){res.writeHead(404).end();return}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.jpg':'image/jpeg','.png':'image/png'})[path.extname(file)]||'application/octet-stream');res.end(b)})});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const port=server.address().port,profile=fs.mkdtempSync(path.join(os.tmpdir(),'fc-party-test-'));
- const chrome=spawn(process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',['--headless=new','--no-first-run','--no-default-browser-check','--remote-debugging-port=0','--disable-background-networking','--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows','--autoplay-policy=no-user-gesture-required','--user-data-dir='+profile,'about:blank'],{stdio:['ignore','ignore','pipe']});
+ const chrome=spawn(process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',['--headless=new','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--no-first-run','--no-default-browser-check','--remote-debugging-port=0','--disable-background-networking','--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows','--autoplay-policy=no-user-gesture-required','--user-data-dir='+profile,'about:blank'],{stdio:['ignore','ignore','pipe']});
  let clients=[];const fatal=setTimeout(()=>{chrome.kill();server.close();console.error('Party test timed out');process.exitCode=1},90000);
  try{
  const debuggerPort=await new Promise((r,j)=>{let text='';chrome.stderr.on('data',b=>{text+=b;const m=text.match(/DevTools listening on ws:\/\/127\.0\.0\.1:(\d+)/);if(m)r(+m[1])});chrome.on('error',j);chrome.on('exit',code=>j(Error('Chrome exited '+code)))});
@@ -40,17 +40,17 @@ class CDP{
  await host.eval('TR.el.currentTime=3.1;TR.el.paused=true');await delay(800);
  assert.equal(await guest.eval(`document.querySelector('.ln.cur')?.dataset.li`),'1','pause and backward seek');await delay(600);
  assert.equal(await guest.eval(`document.querySelector('.ln.cur')?.dataset.li`),'1','pause freezes text');
- const secondGuest=await tab();await host.eval(`FCParty.open();document.querySelector('[data-party="invite"]').click()`);
+ const secondGuest=await tab();for(const p of [host,secondGuest])await p.eval(`FCParty.open();window.partyTestStreams=[];const gum=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);navigator.mediaDevices.getUserMedia=async c=>{const s=await gum(c);partyTestStreams.push(s);return s};const checkbox=document.getElementById('party-camera-assist');checkbox.checked=true;checkbox.dispatchEvent(new Event('change',{bubbles:true}));`);await host.eval(`FCParty.open();document.querySelector('[data-party="invite"]').click()`);
  for(let n=0;n<100;n++){if(await host.eval('!!document.querySelector("#party-qr svg")'))break;await delay(100)}
  await exchange(host,secondGuest,`document.querySelector('.party-panel h3')?.textContent==='Ответ ведущему'`);
  await exchange(secondGuest,host,`!document.querySelector('#party-qr')`);await delay(600);
  assert.equal(await host.eval(`document.getElementById('party-status').textContent.includes('участников: 2')`),true,'two simultaneous guests');
  await secondGuest.eval('closeSheet()');await delay(300);
- assert.equal(await secondGuest.eval(`document.querySelector('.ln.cur')?.dataset.li`),'1','late participant receives paused position');
+ assert.equal(await secondGuest.eval(`document.querySelector('.ln.cur')?.dataset.li`),'1','late participant receives paused position');for(const p of [host,secondGuest])assert.equal(await p.eval('partyTestStreams.length>0&&partyTestStreams.every(s=>s.getTracks().every(t=>t.readyState==="ended"))'),true,'helper camera stops after gathering');assert.equal(await host.eval('FCParty.diagnostics().peers.every(p=>p.local.total>0&&p.remote.total>0)'),true,'connection diagnostics include candidate counts');
  assert.equal(await guest.eval(`document.querySelector('.ln.cur')?.dataset.li`),'1','first participant remains synchronized');
  await host.eval('FCParty.stop()');await delay(400);
  assert.equal(await guest.eval(`document.querySelector('.party-badge').textContent.includes('нет соединения')`),true,'disconnect visible');
  await guest.eval('FCParty.stop()');assert.equal(await guest.eval('document.body.classList.contains("party-guest")'),false);
- console.log(JSON.stringify({PASS:true,offerParts,answerParts,checks:['QR image round trip','offline local WebRTC connection','backing time sync','guest silent','independent karaoke','seek and pause','two simultaneous guests','late join at paused position','disconnect and leave']}));
+ console.log(JSON.stringify({PASS:true,offerParts,answerParts,checks:['camera-assisted pairing and capture cleanup','connection diagnostics','QR image round trip','offline local WebRTC connection','backing time sync','guest silent','independent karaoke','seek and pause','two simultaneous guests','late join at paused position','disconnect and leave']}));
  }finally{clearTimeout(fatal);clients.forEach(c=>c.close());chrome.kill();server.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
