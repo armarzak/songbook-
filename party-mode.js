@@ -6,6 +6,12 @@ window.FCParty = (() => {
   let role='', guest=null, received=null, current=null, lastLine=-2, frame=0;
   let qrFrames=[], qrIndex=0, qrTimer=0, stream=null, scanTimer=0, scanBusy=false, uiEpoch=0;
   let outputPeer=null, outputKind='', messageCounter=0, busy=false;
+  let wakeLock=null;
+  async function keepAwake(){
+    if(!role||document.hidden||wakeLock||!navigator.wakeLock?.request)return;
+    try{const lock=await navigator.wakeLock.request('screen');if(!role||document.hidden){await lock.release();return}wakeLock=lock;lock.addEventListener('release',()=>{if(wakeLock===lock)wakeLock=null})}catch{}
+  }
+  function requestSync(){if(isGuest()&&guest)send(guest,{type:'sync-request'})}
   let scanParts=FCPProtocol.collector();
   let cameraAssist=false;const handshakeStreams=new Set();
   const badge=document.createElement('button');
@@ -42,7 +48,7 @@ window.FCParty = (() => {
   }
   function closeUI(){uiEpoch++;for(const s of handshakeStreams)s.getTracks().forEach(t=>t.stop());handshakeStreams.clear();stopScanner();clearInterval(qrTimer);qrTimer=0}
   function stop(){
-    closeUI();cancelAnimationFrame(frame);frame=0;
+    closeUI();cancelAnimationFrame(frame);frame=0;if(wakeLock){wakeLock.release().catch(()=>{});wakeLock=null}
     for(const p of peers.values()){clearTimeout(p.waitTimer);p.pc.close()}
     peers.clear();role='';guest=null;received=null;current=null;qrFrames=[];outputPeer=null;
     wordClear(timing);lineHL(-1,'cur');
@@ -121,6 +127,7 @@ window.FCParty = (() => {
     try{
       if(typeof e.data!=='string'||e.data.length>40000)return;
       const m=JSON.parse(e.data);
+      if(m.type==='sync-request'&&role==='host'){p.songKey=null;broadcast(p);return}
       if(m.type==='ping'){send(p,{type:'pong',at:m.at});return}
       if(m.type==='pong'){if(Number.isFinite(m.at))p.rtt=Math.max(0,Math.min(1000,performance.now()-m.at));return}
       if(!isGuest()||p!==guest)return;
@@ -140,9 +147,9 @@ window.FCParty = (() => {
   function bindChannel(p,dc){
     p.dc=dc;dc.onmessage=e=>onMessage(p,e);
     dc.onopen=()=>{
-      clearTimeout(p.waitTimer);p.songKey=null;updateStatus();
+      clearTimeout(p.waitTimer);p.songKey=null;keepAwake();updateStatus();
       say(role==='host'?'Участник подключён. Можно пригласить следующего.':'Подключено. Закройте окно — песней управляет ведущий.');
-      if(role==='host')broadcast(p);else follow();
+      if(role==='host')broadcast(p);else{requestSync();follow()}
     };
     dc.onclose=()=>{if(isGuest())received=null;updateStatus()};
     dc.onerror=()=>say('Сбой локальной связи Party');
@@ -150,7 +157,7 @@ window.FCParty = (() => {
   function createPeer(id){
     const pc=new RTCPeerConnection({iceServers:[]}),p={id,pc};peers.set(id,p);
     pc.ondatachannel=e=>bindChannel(p,e.channel);
-    pc.onconnectionstatechange=()=>{updateStatus();if(pc.connectionState==='failed')say('Нет локальной связи. Проверьте, что оба телефона в одной сети. Точка доступа может запрещать связь между устройствами.')};
+    pc.onconnectionstatechange=()=>{updateStatus();if(pc.connectionState==='connected'){if(role==='host'){p.songKey=null;broadcast(p)}else{requestSync();follow()}}if(pc.connectionState==='disconnected')say('Связь прервалась. Ждём восстановления сети — не закрывайте Party.');if(pc.connectionState==='failed')say('Нет локальной связи. Проверьте, что оба телефона в одной сети. Точка доступа может запрещать связь между устройствами.')};
     return p;
   }
   async function description(pc){
@@ -263,7 +270,7 @@ window.FCParty = (() => {
       <label class="party-assist"><input id="party-camera-assist" type="checkbox" ${cameraAssist?'checked':''}> Помощь для точки доступа iPhone</label><p class="hint">Кратко включает камеру при подготовке QR, чтобы проверить доступ Safari к локальным адресам. Изображение не записывается и не передаётся. Включите на обоих телефонах перед новым подключением.</p><div class="actions">${!isGuest()?'<button class="btn primary" data-party="invite">'+(role?'Пригласить следующего':'Я ведущий · создать Party')+'</button>':''}<button class="btn" data-party="scan">Сканировать QR</button></div>
       <video id="party-video" autoplay muted playsinline hidden></video><label class="btn party-upload">Загрузить снимок QR<input id="party-image" type="file" accept="image/*" hidden></label>
       <p id="party-note" role="status">${role==='guest'?'После подключения закройте окно. Режим гитара / книга / караоке и размер текста каждый выбирает сам.':'Ведущий выбирает песню и запускает свой минус. Участники видят текст и аккорды.'}</p>
-      <details><summary>Диагностика связи</summary><pre id="party-diagnostics" style="white-space:pre-wrap;font-size:12px"></pre></details>${role?'<button class="btn" data-party="stop">Выйти из Party</button>':''}<p class="hint">При потере связи текст остановится. Подключитесь заново через QR. Ведущий держит приложение открытым. Совместимость точки доступа iPhone пока требует проверки на двух телефонах.</p>
+      <details><summary>Диагностика связи</summary><pre id="party-diagnostics" style="white-space:pre-wrap;font-size:12px"></pre></details>${role?'<button class="btn" data-party="stop">Выйти из Party</button>':''}<p class="hint">При потере связи текст остановится. Подключитесь заново через QR. Ведущий держит приложение открытым. Держите FireChords на экране. Если браузер разрешает, Party предотвращает автоматическую блокировку экрана. После закрытия канала нужно новое подключение через QR.</p>
       </div>`;
     sheet.hidden=false;updateStatus();
     if(hasQR){drawQR();if(qrFrames.length>1)qrTimer=setInterval(()=>{qrIndex=(qrIndex+1)%qrFrames.length;drawQR()},1400)}
@@ -281,7 +288,8 @@ window.FCParty = (() => {
   document.addEventListener('click',e=>{const a=e.target.closest('[data-act]')?.dataset.act;if(isGuest()&&forbidden.has(a)){e.preventDefault();e.stopImmediatePropagation();toast('В Party музыкой управляет ведущий')}},true);
   document.addEventListener('play',e=>{if(isGuest()&&e.target instanceof HTMLMediaElement)e.target.pause()},true);
   new MutationObserver(()=>{if(sheet.hidden||!document.getElementById('party-video'))closeUI()}).observe(sheet,{childList:true,attributes:true,attributeFilter:['hidden']});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden)stopScanner();else if(isGuest()&&!frame)follow()});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)stopScanner();else{keepAwake();if(isGuest()){requestSync();follow()}else if(role==='host'){for(const p of activePeers())p.songKey=null;broadcast()}}});
+  addEventListener('online',()=>{keepAwake();requestSync();if(role==='host')broadcast()});
   setInterval(()=>{if(role==='host')broadcast();updateStatus()},250);
   setInterval(()=>{for(const p of activePeers())send(p,{type:'ping',at:performance.now()})},2000);
   return {open,stop,isGuest,diagnostics};
