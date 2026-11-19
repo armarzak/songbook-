@@ -1,0 +1,36 @@
+window.FCAIMarking=(()=>{
+ let worker=null,busy=false,snapshot=null,result=null,generation=0;
+ const note=text=>{const n=document.getElementById('ai-status');if(n)n.textContent=text};
+ function cancel(){generation++;worker?.terminate();worker=null;busy=false;note('Обработка остановлена')}
+ function rows(){return [...document.querySelectorAll('#body .ln[data-li]')].map(row=>{const li=+row.dataset.li,el=liEl(li);return {li,text:el?.classList.contains('ly')&&!el.classList.contains('tab')?[...el.querySelectorAll('.w')].map(w=>w.textContent).join(' '):''}})}
+ function open(){const s=findSong(S.cur);if(!s||s.demo)return;cancel();result=null;snapshot={id:s.id,body:s.body,rows:rows(),audio:hitmosAudioFor(s)};
+  sheet.innerHTML=`<div class="panel" role="dialog" aria-label="ИИ-разметка"><div class="panel-top"><h2 class="ptitle">ИИ-разметка · тест</h2><button class="btn" data-act="close">Закрыть</button></div><p>Выберите запись с вокалом. Аудио обрабатывается на этом устройстве; для загрузки модели нужен интернет. Повторный запуск офлайн зависит от кеша браузера. Модель может занимать десятки мегабайт, на iPhone обработка может быть медленной.</p><p class="hint">Минус без голоса не подходит для распознавания слов. Используйте ту же версию песни, для которой сохраняете тайминги. Поиск ниже открывает результаты в браузере; найденный текст не подставляется автоматически.</p><p><a class="btn" href="https://www.google.com/search?q=${encodeURIComponent([s.artist,s.title,'текст песни'].filter(Boolean).join(' '))}" target="_blank" rel="noopener noreferrer">Найти текст песни в интернете ↗</a></p><label>Аудиофайл с вокалом<input id="ai-audio" type="file" accept="audio/*"></label><label>Язык <select id="ai-language"><option value="russian">Русский</option><option value="ukrainian">Украинский</option><option value="english">Английский</option><option value="auto">Определить автоматически</option></select></label><label>Сохранить разметку для <select id="ai-target"><option value="backing">Минуса</option>${snapshot.audio?'<option value="hitmos">Hitmos</option>':''}</select></label><div class="actions"><button class="btn primary" data-ai="run">Загрузить модель и распознать</button><button class="btn" data-ai="cancel">Остановить</button></div><p id="ai-status" role="status"></p><div id="ai-result"></div></div>`;sheet.hidden=false;
+ }
+ async function run(){if(busy)return;const file=document.getElementById('ai-audio')?.files[0];if(!file)throw Error('Выберите файл с вокалом');if(file.size>80*1024*1024)throw Error('Для браузерного режима выберите файл до 80 МБ');
+  const language=document.getElementById('ai-language').value,runId=++generation;busy=true;note('Читаю аудио…');result=null;document.getElementById('ai-result').innerHTML='';
+  let context;
+  try{
+    context=new (window.AudioContext||window.webkitAudioContext)();const audio=await context.decodeAudioData(await file.arrayBuffer());if(audio.duration>600)throw Error('Для браузерного режима выберите запись до 10 минут');
+    const offline=new OfflineAudioContext(1,Math.ceil(audio.duration*16000),16000),source=offline.createBufferSource();source.buffer=audio;source.connect(offline.destination);source.start();const mono=await offline.startRendering();
+    if(!busy||sheet.hidden||runId!==generation)return;const samples=mono.getChannelData(0).slice();worker=new Worker('ai-worker.js?v=179',{type:'module'});
+    worker.onerror=()=>{cancel();note('Не удалось запустить модель. Проверьте интернет и свободную память.')};
+    worker.onmessage=e=>{if(runId!==generation)return;const m=e.data;if(m.type==='progress'){note(m.text);return}if(m.type==='error'){cancel();note(m.text);return}if(m.type==='result'){worker.terminate();worker=null;busy=false;result=m;preview()}};
+    worker.postMessage({samples,rows:snapshot.rows,language},[samples.buffer]);
+  }catch(e){busy=false;throw e}finally{if(context)await context.close().catch(()=>{})}
+ }
+ function preview(){const box=document.getElementById('ai-result');if(!box)return;
+  const matches=result.alignment?.marks.filter(x=>x!=null).length||0;note('Черновик готов. Совпало строк: '+matches+'. Проверьте время и слова перед сохранением. '+(result.warning||''));
+  box.innerHTML='<label>Распознанный текст<textarea id="ai-transcript" rows="6" style="width:100%"></textarea></label><button class="btn" data-ai="copy">Скопировать текст</button>'+(result.alignment?'<div class="ai-rows">'+snapshot.rows.filter(r=>r.text).map(r=>`<label style="display:block;margin:10px 0"><input data-ai-line="${r.li}" type="number" min="0" step="0.05" placeholder="Не найдено" value="${result.alignment.marks[r.li]??''}" style="width:90px"> сек · ${esc(r.text)}</label>`).join('')+'</div><button class="btn primary" data-ai="save">Сохранить проверенную разметку</button>':'');document.getElementById('ai-transcript').value=result.text;
+ }
+ async function save(){if(!result?.alignment||busy)return;const s=findSong(snapshot.id);if(!s||s.body!==snapshot.body)throw Error('Текст песни изменился. Запустите разметку заново');
+  const marks=Array(snapshot.rows.length).fill(null),wmarks=Array(snapshot.rows.length).fill(null);let last=-1;
+  document.querySelectorAll('[data-ai-line]').forEach(input=>{if(!input.value.trim())return;const t=Number(input.value),li=+input.dataset.aiLine;if(!Number.isFinite(t)||t<0||t<last)throw Error('Время строк должно идти по возрастанию');marks[li]=t;last=t;if(t===result.alignment.marks[li])wmarks[li]=result.alignment.wmarks[li]});if(!marks.some(x=>x!=null))throw Error('Нет временных меток для сохранения');
+  const target=document.getElementById('ai-target').value,old=target==='hitmos'?s.hitmosMarks:s.marks;if(old?.some(x=>x!=null)&&!confirm('Заменить существующую разметку выбранного плеера?'))return;
+  const now=Date.now();if(target==='hitmos'&&hitmosAudioFor(s)!==snapshot.audio)throw Error('Запись Hitmos изменилась. Откройте ИИ-разметку заново');
+  const patch=target==='hitmos'?{hitmosMarks:marks,hitmosMarksAudio:snapshot.audio,hitmosMarksAt:now,hitmosTimingSource:'hitmos',hitmosTimingSourceAt:now}:{marks,wmarks,marksAt:now,backingTimingSource:'backing',backingTimingSourceAt:now};
+  await store.patch(s.id,{...patch,updatedAt:now});closeSheet();if(S.view==='song'&&S.cur===s.id){TR.marks=playbackTiming(findSong(s.id),'backing').marks.slice();refreshTimingPickers(findSong(s.id));window.FCHitmosMark?.refresh();renderTools()}toast('ИИ-разметка сохранена');
+ }
+ document.addEventListener('click',e=>{const action=e.target.closest('[data-ai]')?.dataset.ai;if(!action)return;Promise.resolve().then(()=>{if(action==='run')return run();if(action==='save')return save();if(action==='cancel')cancel();if(action==='copy')return navigator.clipboard.writeText(document.getElementById('ai-transcript').value).then(()=>toast('Текст скопирован'))}).catch(e=>note(e.message))});
+ new MutationObserver(()=>{if(busy&&(sheet.hidden||!document.getElementById('ai-status')))cancel()}).observe(sheet,{childList:true,attributes:true,attributeFilter:['hidden']});
+ return {open};
+})();
