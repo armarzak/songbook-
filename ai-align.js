@@ -16,5 +16,14 @@
   }
   return {marks,wmarks,coverage};
  }
- root.FCAIAlign={align};
+ function quality(text,alignment,rows){
+  const words=String(text||'').toLowerCase().match(/[\p{L}\p{N}]+/gu)||[];
+  const grams=new Map();for(let i=0;i+3<words.length;i++){const key=words.slice(i,i+4).join(' ');grams.set(key,(grams.get(key)||0)+1)}
+  const repeated=Math.max(0,...grams.values());
+  if(words.length>=40&&repeated>=10&&repeated*4/words.length>.25)return 'Модель зациклилась на повторяющейся фразе. Результат нельзя использовать для разметки.';
+  const lyrics=rows.filter(r=>r.text?.trim()),matched=alignment?.marks.filter(x=>x!=null).length||0;
+  if(lyrics.length>=4&&matched/lyrics.length<.25)return 'Распознанное аудио плохо совпадает с текстом песни. Авторазметка отключена.';
+  return '';
+ }
+ root.FCAIAlign={align,quality};
 })(typeof window==='undefined'?globalThis:window);
