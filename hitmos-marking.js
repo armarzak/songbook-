@@ -17,7 +17,7 @@ window.FCHitmosMark=(()=>{
     else if(S.view==='song'&&S.cur===state.id&&(!TR.el||TR.el.paused)){
       const timing=playbackTiming(findSong(state.id),'hitmos',state.audio),marks=timing.marks;let current=-1;
       marks.forEach((time,i)=>{if(time!=null&&time<=p.currentTime+.05)current=i});
-      if(current!==state.current){state.current=current;lineHL(current,'cur',!p.paused)}
+      if(current!==state.current||(current>=0&&!liEl(current)?.classList.contains('cur'))){state.current=current;lineHL(current,'cur',!p.paused)}
       state.cur=current;state.marks=marks;state.wordMarks=timing.wmarks;
       wordFollow(p.currentTime,state);
     }
@@ -37,7 +37,8 @@ window.FCHitmosMark=(()=>{
       if(state.marking&&state.player!==player)finish(true);
       wordClear();wordClear(state);Object.assign(state,{id:song.id,audio,player,current:-2});follow();
     });
-    player.addEventListener('pause',update);
+    player.addEventListener('pause',()=>{update();if(state.player===player)follow()});
+    for(const event of ['playing','timeupdate'])player.addEventListener(event,()=>{if(state.player===player)follow()});
     player.addEventListener('loadedmetadata',update);
     player.addEventListener('seeked',()=>{if(state.player===player)follow()});
     player.addEventListener('ended',()=>{if(state.marking&&state.player===player)finish(true)});
