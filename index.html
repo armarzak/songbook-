@@ -3030,10 +3030,14 @@ function micFailText(k){
   return 'Не получилось включить микрофон.';
 }
 /* Pick timing data without copying or overwriting either recording's marks. */
+function hitmosAudioMatches(a,b){
+  if(!a||!b)return false;if(a===b)return true;
+  try{const x=new URL(a),y=new URL(b);return x.protocol==='https:'&&y.protocol==='https:'&&/(^|\.)hitmos\.fm$/i.test(x.hostname)&&/(^|\.)hitmos\.fm$/i.test(y.hostname)&&x.pathname===y.pathname}catch{return false}
+}
 function playbackTiming(song,target,audio){
   const s=song||{},source=s[target+'TimingSource']||(target==='hitmos'?'hitmos':'backing');
   if(source==='hitmos'){
-    const valid=target!=='hitmos'||!audio||s.hitmosMarksAudio===audio;
+    const valid=target!=='hitmos'||!audio||hitmosAudioMatches(s.hitmosMarksAudio,audio);
     return {source,marks:valid&&Array.isArray(s.hitmosMarks)?s.hitmosMarks:[],wmarks:null};
   }
   return {source:'backing',marks:Array.isArray(s.marks)?s.marks:[],wmarks:Array.isArray(s.wmarks)?s.wmarks:null};
@@ -4976,8 +4980,8 @@ initStore().then(st=>{
 });
 </script>
 
-<script src="hitmos-marking.js?v=183"></script>
-<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=183',{updateViaCache:'none'}).catch(()=>{}))</script>
+<script src="hitmos-marking.js?v=184"></script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=184',{updateViaCache:'none'}).catch(()=>{}))</script>
 <style>.stage-pads{margin:0 auto 4px!important;padding:4px 6px!important}.stage-pad-grid{gap:4px!important}.stage-pad-grid .drum-pad{height:36px!important;min-height:36px!important;flex-direction:row!important;padding:3px!important;gap:4px!important}.stage-pads-head{margin-bottom:3px!important}.stage-pads-head button{min-height:26px!important;padding:3px!important}.stage-pads-status{position:absolute!important}.drum-live button{min-height:32px!important;font-size:12px!important}</style><style>
 #tools{transition:opacity .45s ease!important}#tools.tools-idle{opacity:.12!important}#tools:not(.tools-idle){opacity:1!important}
 @media(orientation:landscape){body.has-tools #tools{left:auto!important;right:calc(8px + env(safe-area-inset-right,0px))!important;top:50%!important;bottom:auto!important;width:min(360px,40vw)!important;max-height:calc(100dvh - 16px);overflow-y:auto;transform:translateY(-50%)!important;padding:6px!important;border-radius:12px}body.has-tools #tools .stage-pad-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}body.has-tools .wrap{padding-right:calc(min(360px,40vw) + 24px + env(safe-area-inset-right,0px))!important;padding-bottom:24px!important}body.has-tools #tools .tools-in{padding:0;gap:4px}body.has-tools #tools .stage-pads{width:100%}}

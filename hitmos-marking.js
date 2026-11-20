@@ -25,10 +25,15 @@ window.FCHitmosMark=(()=>{
   }
   function buttons(){
     const box=document.getElementById('hitmosbox'),song=findSong(S.cur);if(!box||!song||!box.querySelector('audio'))return;
-    const has=song.hitmosMarksAudio===box.dataset.audio&&song.hitmosMarks?.some(t=>t!=null);
+    const has=hitmosAudioMatches(song.hitmosMarksAudio,box.dataset.audio)&&song.hitmosMarks?.some(t=>t!=null);
     let button=box.querySelector('[data-act="hm-resume"]');
     if(has&&!button){button=document.createElement('button');button.className='btn primary';button.dataset.act='hm-resume';button.textContent='Доразметить строки Hitmos';box.querySelector('audio').after(button)}
     if(button)button.hidden=!has;
+    let reuse=box.querySelector('[data-act="hm-rebind"]');
+    const mismatch=!has&&song.hitmosMarks?.some(t=>t!=null);
+    if(mismatch&&!reuse){reuse=document.createElement('button');reuse.className='btn primary';reuse.dataset.act='hm-rebind';box.querySelector('audio').after(reuse)}
+    if(reuse){reuse.hidden=!mismatch;reuse.textContent='Использовать сохранённую разметку · '+song.hitmosMarks.filter(t=>t!=null).length+' строки';reuse.title='Аудиоссылка изменилась. Проверьте, что это та же запись.'}
+
     const start=box.querySelector('[data-act="hm-start"]');if(start)start.textContent=has?'Разметить строки Hitmos заново':'Разметить строки Hitmos';
   }
   function bind(player,song,audio){
@@ -51,7 +56,7 @@ window.FCHitmosMark=(()=>{
     const n=document.querySelectorAll('.ln[data-li]').length;
     if(!n){toast('В песне нет строк текста');return}
     closeSheet();pauseBackingForHitmos();exitStage();wordClear();wordClear(state);
-    const saved=song.hitmosMarksAudio===box.dataset.audio?song.hitmosMarks||[]:[];
+    const saved=hitmosAudioMatches(song.hitmosMarksAudio,box.dataset.audio)?song.hitmosMarks||[]:[];
     from=Math.max(0,Math.min(Number(from)||0,saved.length,n-1));const prefix=saved.slice(0,from);
     Object.assign(state,{marking:true,id:song.id,audio:box.dataset.audio,player,marks:prefix,n,current:-1});
     document.getElementById('markbar')?.remove();lineHL(-1,'cur');lineHL(from,'next',true);
@@ -62,7 +67,7 @@ window.FCHitmosMark=(()=>{
   }
   function resume(){
     const song=findSong(S.cur),box=document.getElementById('hitmosbox');
-    if(!song||!box||song.hitmosMarksAudio!==box.dataset.audio){toast('Сначала выберите оригинал с сохранённой разметкой');return}
+    if(!song||!box||!hitmosAudioMatches(song.hitmosMarksAudio,box.dataset.audio)){toast('Сначала выберите оригинал с сохранённой разметкой');return}
     const lines=[...document.querySelectorAll('.ln[data-li]')],saved=song.hitmosMarks||[];
     if(!lines.length)return;
     const next=Math.min(saved.length,lines.length-1);
@@ -106,6 +111,12 @@ window.FCHitmosMark=(()=>{
   document.addEventListener('click',e=>{
     const action=e.target.closest?.('[data-act]')?.dataset.act;
     if(action==='hm-start')start();
+    else if(action==='hm-rebind'){
+      const song=findSong(S.cur),box=document.getElementById('hitmosbox');
+      if(!song||!box?.dataset.audio)return;
+      if(!confirm('Аудиоссылка отличается от сохранённой. Использовать прежние метки для текущей записи? Если версия песни другая, время строк может не совпасть.'))return;
+      const now=Date.now();store.patch(song.id,{hitmosMarksAudio:box.dataset.audio,hitmosMarksAt:now,hitmosTimingSource:'hitmos',hitmosTimingSourceAt:now,updatedAt:now}).then(()=>{refresh();refreshTimingPickers(findSong(song.id));toast('Сохранённая разметка подключена к текущему Hitmos')}).catch(saveErr);
+    }
     else if(action==='hm-resume')resume();
     else if(action==='hm-resume-go')start(+document.getElementById('hm-resume-line').value);
     else if(action==='hm-tap'&&e.detail===0)tap();
