@@ -23,7 +23,16 @@ window.FCHitmosMark=(()=>{
     }
     if(!p.paused)state.raf=requestAnimationFrame(follow);
   }
+  function buttons(){
+    const box=document.getElementById('hitmosbox'),song=findSong(S.cur);if(!box||!song||!box.querySelector('audio'))return;
+    const has=song.hitmosMarksAudio===box.dataset.audio&&song.hitmosMarks?.some(t=>t!=null);
+    let button=box.querySelector('[data-act="hm-resume"]');
+    if(has&&!button){button=document.createElement('button');button.className='btn primary';button.dataset.act='hm-resume';button.textContent='Доразметить строки Hitmos';box.querySelector('audio').after(button)}
+    if(button)button.hidden=!has;
+    const start=box.querySelector('[data-act="hm-start"]');if(start)start.textContent=has?'Разметить строки Hitmos заново':'Разметить строки Hitmos';
+  }
   function bind(player,song,audio){
+    buttons();
     player.addEventListener('play',()=>{
       if(state.marking&&state.player!==player)finish(true);
       wordClear();wordClear(state);Object.assign(state,{id:song.id,audio,player,current:-2});follow();
@@ -82,13 +91,13 @@ window.FCHitmosMark=(()=>{
     if(!save||!result.length)return;
     try{
       const now=Date.now();await store.patch(id,{hitmosMarks:result,hitmosMarksAudio:audio,hitmosMarksAt:now,hitmosTimingSource:'hitmos',hitmosTimingSourceAt:now,updatedAt:now});
-      refreshTimingPickers(findSong(id));
+      refreshTimingPickers(findSong(id));buttons();
       const button=document.querySelector('[data-act="hm-start"]');if(button&&S.cur===id)button.textContent='Разметить строки Hitmos заново';
       toast('Разметка Hitmos сохранена: '+result.length+' '+plural(result.length,'строка','строки','строк'));
     }catch(e){saveErr(e)}
   }
   function close(){if(state.marking)finish(true);cancelAnimationFrame(state.raf);state.raf=0;state.current=-1;wordClear(state);lineHL(-1,'cur')}
-  function refresh(){if(state.marking)return;wordClear(state);state.current=-2;if(state.player?.isConnected)follow()}
+  function refresh(){buttons();if(state.marking)return;wordClear(state);state.current=-2;if(state.player?.isConnected)follow()}
   document.addEventListener('pointerdown',e=>{
     if(e.button>0||!e.target.closest?.('[data-act="hm-tap"]'))return;
     tap();e.preventDefault();
@@ -105,5 +114,5 @@ window.FCHitmosMark=(()=>{
     else if(action==='hm-toggle'&&state.player){if(state.player.paused)state.player.play().then(follow).catch(()=>toast('Не удалось запустить Hitmos'));else state.player.pause()}
   });
   document.addEventListener('input',e=>{if(e.target.id==='hm-mark-seek'&&state.marking){state.player.currentTime=+e.target.value;update()}});
-  return {bind,start,close,finish,refresh,get marking(){return state.marking}};
+  return {bind,start,close,finish,refresh,buttons,get marking(){return state.marking}};
 })();
