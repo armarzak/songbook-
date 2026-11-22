@@ -32,7 +32,7 @@ class CDP{
  await delay(1500);
  assert.equal(await guest.eval(`document.querySelector('.ln.cur')?.dataset.li`),'2','guest follows backing time');
  assert.equal(await guest.eval('TR.el?.paused!==false'),true,'guest never plays backing');
- await guest.eval(`document.querySelector('[data-act="viewmode"][data-v="1"]').click();const s=document.getElementById('text-view');s.value='karaoke';s.dispatchEvent(new Event('change',{bubbles:true}))`);
+ await guest.eval(`document.querySelector('[data-act="viewmode"][data-v="1"]').click();document.querySelector('[data-text-view="karaoke"]').click()`);
  await delay(400);
  assert.equal(await guest.eval('document.body.classList.contains("karaoke")'),true,'independent guest karaoke');
  assert.equal(await host.eval('document.body.classList.contains("karaoke")'),false,'host display unchanged');
